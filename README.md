@@ -1,5 +1,7 @@
 # MR Radar
 
+[![CI](https://github.com/tfraczak/mr-radar/actions/workflows/ci.yml/badge.svg)](https://github.com/tfraczak/mr-radar/actions/workflows/ci.yml)
+
 A local macOS tool that watches your GitLab merge requests and tells you when
 something needs you — a comment, a review, an approval, a merge conflict, or a CI result —
 scoped to the tickets you're actually working on in Jira.
@@ -260,7 +262,7 @@ yarn lint
 
 Everything in `src/core/` is Electron-free and unit-tested; `src/main/` is the menu bar
 shell and `src/renderer/` the popover (design system in `src/renderer/ui.ts`).
-`.gitlab-ci.yml` runs typecheck + lint + test on every push/MR.
+GitHub Actions (`.github/workflows/ci.yml`) runs typecheck + lint + test + build on every push and PR, on Linux and macOS.
 
 Data lives in SQLite at `~/.local/state/mr-radar/mr-radar.db`. Delete it to reset; the next
 run reseeds silently.
