@@ -797,12 +797,12 @@ select option {
 }
 
 :root[data-theme='watermelon'][data-scheme='dark'] {
-  --bg: #2c1216;
-  --sheet: #381a1e;
-  --fg: #ffe9ec;
-  --fg-dim: #e0a3ad;
-  --fg-faint: #9c6a72;
-  --sep: rgba(255, 233, 236, 0.14);
+  --bg: #3a1013;
+  --sheet: #491719;
+  --fg: #ffe9e9;
+  --fg-dim: #efa0a4;
+  --fg-faint: #ab6b6e;
+  --sep: rgba(255, 233, 233, 0.13);
   --accent: #5cbf82;
   --accent-fg: #1c1510;
   --hover: rgba(92, 191, 130, 0.10);
