@@ -407,7 +407,8 @@
   --hover: rgba(226, 146, 115, 0.10);
 }
 
-/* Cocoa — hot-chocolate browns with a mint accent. */
+/* Cocoa — hot-chocolate browns with a white-chocolate accent (blonde
+   caramel in light mode, where true white-chocolate cream would vanish). */
 :root[data-theme='cocoa'][data-scheme='light'] {
   --bg: #f5efeb;
   --sheet: #fcf8f5;
@@ -415,8 +416,8 @@
   --fg-dim: #63534a;
   --fg-faint: #94827a;
   --sep: rgba(46,36,30, 0.14);
-  --accent: #2e8f6f;
-  --hover: rgba(46, 143, 111, 0.09);
+  --accent: #a48044;
+  --hover: rgba(164, 128, 68, 0.09);
 }
 
 :root[data-theme='cocoa'][data-scheme='dark'] {
@@ -426,8 +427,8 @@
   --fg-dim: #bda99e;
   --fg-faint: #7b6a60;
   --sep: rgba(243,235,230, 0.13);
-  --accent: #6fcaa8;
-  --hover: rgba(111, 202, 168, 0.10);
+  --accent: #f2ddab;
+  --hover: rgba(242, 221, 171, 0.10);
 }
 
 /* Peach — peach-flesh surfaces with a sage-leaf accent. */
