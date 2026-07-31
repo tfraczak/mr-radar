@@ -82,7 +82,7 @@
   --hover: rgba(255, 255, 255, 0.08);
 }
 
-/* Slate — cool steel blues, low saturation. */
+/* Slate — cool steel-blue stone with a weathered-copper accent. */
 :root[data-theme='slate'][data-scheme='light'] {
   --bg: #eceff3;
   --sheet: #f8fafc;
@@ -90,8 +90,8 @@
   --fg-dim: #4f5b6b;
   --fg-faint: #8493a5;
   --sep: rgba(29, 36, 46, 0.14);
-  --accent: #46698f;
-  --hover: rgba(70, 105, 143, 0.09);
+  --accent: #a8663a;
+  --hover: rgba(168, 102, 58, 0.09);
 }
 
 :root[data-theme='slate'][data-scheme='dark'] {
@@ -101,8 +101,8 @@
   --fg-dim: #9fadbd;
   --fg-faint: #64748b;
   --sep: rgba(231, 236, 242, 0.13);
-  --accent: #85a8cc;
-  --hover: rgba(133, 168, 204, 0.10);
+  --accent: #d9a06e;
+  --hover: rgba(217, 160, 110, 0.10);
 }
 
 /* Bubblegum — warm pinks; playful but still readable. */
@@ -223,7 +223,7 @@
   --hover: rgba(94,207,174, 0.10);
 }
 
-/* Quarry */
+/* Quarry — cut stone with iron-rust seams for the accent. */
 :root[data-theme='quarry'][data-scheme='light'] {
   --bg: #f0eeec;
   --sheet: #faf9f7;
@@ -231,8 +231,8 @@
   --fg-dim: #5b554e;
   --fg-faint: #8d857b;
   --sep: rgba(38,35,32, 0.14);
-  --accent: #6d5f4b;
-  --hover: rgba(109,95,75, 0.09);
+  --accent: #ab5226;
+  --hover: rgba(171, 82, 38, 0.09);
 }
 
 :root[data-theme='quarry'][data-scheme='dark'] {
@@ -242,8 +242,8 @@
   --fg-dim: #b1a89c;
   --fg-faint: #736a5e;
   --sep: rgba(239,236,232, 0.13);
-  --accent: #b4a184;
-  --hover: rgba(180,161,132, 0.10);
+  --accent: #e08a52;
+  --hover: rgba(224, 138, 82, 0.10);
 }
 
 /* Lilac — soft violet blooms for the surfaces, leaf green for the accent. */
@@ -315,7 +315,7 @@
   --hover: rgba(242, 202, 130, 0.10);
 }
 
-/* Oatmeal — dusky gray-beige grain, deeper than meringue, walnut accent. */
+/* Oatmeal — dusky gray-beige grain with a blueberry accent. */
 :root[data-theme='oatmeal'][data-scheme='light'] {
   --bg: #efe9dd;
   --sheet: #f8f4ea;
@@ -323,8 +323,8 @@
   --fg-dim: #60584a;
   --fg-faint: #8f8571;
   --sep: rgba(43, 39, 32, 0.15);
-  --accent: #7c5a33;
-  --hover: rgba(124, 90, 51, 0.09);
+  --accent: #5468b0;
+  --hover: rgba(84, 104, 176, 0.09);
 }
 
 :root[data-theme='oatmeal'][data-scheme='dark'] {
@@ -334,11 +334,11 @@
   --fg-dim: #b0a591;
   --fg-faint: #6d6453;
   --sep: rgba(239, 235, 225, 0.13);
-  --accent: #bd8f55;
-  --hover: rgba(189, 143, 85, 0.10);
+  --accent: #93a7ea;
+  --hover: rgba(147, 167, 234, 0.10);
 }
 
-/* Coral */
+/* Coral — warm reef-coral surfaces with a lagoon-teal accent. */
 :root[data-theme='coral'][data-scheme='light'] {
   --bg: #fcf1ee;
   --sheet: #fffaf8;
@@ -346,8 +346,8 @@
   --fg-dim: #6d5450;
   --fg-faint: #a08680;
   --sep: rgba(50,33,29, 0.14);
-  --accent: #e0584a;
-  --hover: rgba(224,88,74, 0.09);
+  --accent: #17838f;
+  --hover: rgba(23, 131, 143, 0.09);
 }
 
 :root[data-theme='coral'][data-scheme='dark'] {
@@ -357,8 +357,8 @@
   --fg-dim: #c6a89f;
   --fg-faint: #856b62;
   --sep: rgba(248,236,232, 0.13);
-  --accent: #ff8b77;
-  --hover: rgba(255,139,119, 0.10);
+  --accent: #59c4d1;
+  --hover: rgba(89, 196, 209, 0.10);
 }
 
 /* Glacier — icy cyan of glacial ice, crevasse-blue accent. */
@@ -384,7 +384,7 @@
   --hover: rgba(86, 200, 228, 0.10);
 }
 
-/* Moss — deep, cool forest-floor green; darker and cooler than matcha. */
+/* Moss — deep forest-floor green with a terracotta-pot accent. */
 :root[data-theme='moss'][data-scheme='light'] {
   --bg: #e7eedd;
   --sheet: #f3f8eb;
@@ -392,8 +392,8 @@
   --fg-dim: #4e6140;
   --fg-faint: #7f9170;
   --sep: rgba(31, 41, 21, 0.15);
-  --accent: #3f6524;
-  --hover: rgba(63, 101, 36, 0.09);
+  --accent: #ad5b3d;
+  --hover: rgba(173, 91, 61, 0.09);
 }
 
 :root[data-theme='moss'][data-scheme='dark'] {
@@ -403,11 +403,11 @@
   --fg-dim: #a3b58e;
   --fg-faint: #667754;
   --sep: rgba(233, 239, 224, 0.13);
-  --accent: #86b350;
-  --hover: rgba(134, 179, 80, 0.10);
+  --accent: #e29273;
+  --hover: rgba(226, 146, 115, 0.10);
 }
 
-/* Cocoa */
+/* Cocoa — hot-chocolate browns with a mint accent. */
 :root[data-theme='cocoa'][data-scheme='light'] {
   --bg: #f5efeb;
   --sheet: #fcf8f5;
@@ -415,8 +415,8 @@
   --fg-dim: #63534a;
   --fg-faint: #94827a;
   --sep: rgba(46,36,30, 0.14);
-  --accent: #79493a;
-  --hover: rgba(121,73,58, 0.09);
+  --accent: #2e8f6f;
+  --hover: rgba(46, 143, 111, 0.09);
 }
 
 :root[data-theme='cocoa'][data-scheme='dark'] {
@@ -426,11 +426,11 @@
   --fg-dim: #bda99e;
   --fg-faint: #7b6a60;
   --sep: rgba(243,235,230, 0.13);
-  --accent: #c98d75;
-  --hover: rgba(201,141,117, 0.10);
+  --accent: #6fcaa8;
+  --hover: rgba(111, 202, 168, 0.10);
 }
 
-/* Peach */
+/* Peach — peach-flesh surfaces with a sage-leaf accent. */
 :root[data-theme='peach'][data-scheme='light'] {
   --bg: #fdf3ec;
   --sheet: #fffaf6;
@@ -438,8 +438,8 @@
   --fg-dim: #6e5a4e;
   --fg-faint: #a18a7b;
   --sep: rgba(51,38,32, 0.14);
-  --accent: #d76b3f;
-  --hover: rgba(215,107,63, 0.09);
+  --accent: #5f8a52;
+  --hover: rgba(95, 138, 82, 0.09);
 }
 
 :root[data-theme='peach'][data-scheme='dark'] {
@@ -449,11 +449,11 @@
   --fg-dim: #c9ad9d;
   --fg-faint: #87715f;
   --sep: rgba(249,239,232, 0.13);
-  --accent: #ffa070;
-  --hover: rgba(255,160,112, 0.10);
+  --accent: #a3c98f;
+  --hover: rgba(163, 201, 143, 0.10);
 }
 
-/* Charcoal */
+/* Charcoal — neutral grays with a glowing-ember accent. */
 :root[data-theme='charcoal'][data-scheme='light'] {
   --bg: #f1f1f2;
   --sheet: #fafafb;
@@ -461,8 +461,8 @@
   --fg-dim: #57585c;
   --fg-faint: #898b90;
   --sep: rgba(34,35,38, 0.14);
-  --accent: #4b5563;
-  --hover: rgba(75,85,99, 0.09);
+  --accent: #c14e1f;
+  --hover: rgba(193, 78, 31, 0.09);
 }
 
 :root[data-theme='charcoal'][data-scheme='dark'] {
@@ -472,11 +472,11 @@
   --fg-dim: #adaeb3;
   --fg-faint: #6d6e73;
   --sep: rgba(240,240,241, 0.13);
-  --accent: #9aa4b2;
-  --hover: rgba(154,164,178, 0.10);
+  --accent: #ff7d45;
+  --hover: rgba(255, 125, 69, 0.10);
 }
 
-/* Parchment */
+/* Parchment — aged paper with an iron-gall ink accent. */
 :root[data-theme='parchment'][data-scheme='light'] {
   --bg: #f8f3e7;
   --sheet: #fdfaf2;
@@ -484,8 +484,8 @@
   --fg-dim: #6a6250;
   --fg-faint: #9a917c;
   --sep: rgba(51,45,32, 0.14);
-  --accent: #8c6d2f;
-  --hover: rgba(140,109,47, 0.09);
+  --accent: #35549c;
+  --hover: rgba(53, 84, 156, 0.09);
 }
 
 :root[data-theme='parchment'][data-scheme='dark'] {
@@ -495,11 +495,11 @@
   --fg-dim: #bfb5a0;
   --fg-faint: #7d7460;
   --sep: rgba(246,241,227, 0.13);
-  --accent: #d3b268;
-  --hover: rgba(211,178,104, 0.10);
+  --accent: #8ba3e8;
+  --hover: rgba(139, 163, 232, 0.10);
 }
 
-/* Storm */
+/* Storm — storm-cloud blues with a lightning-gold accent. */
 :root[data-theme='storm'][data-scheme='light'] {
   --bg: #eef0f5;
   --sheet: #f9fafc;
@@ -507,8 +507,8 @@
   --fg-dim: #535a6a;
   --fg-faint: #858c9c;
   --sep: rgba(32,36,46, 0.14);
-  --accent: #3b5aa0;
-  --hover: rgba(59,90,160, 0.09);
+  --accent: #a88700;
+  --hover: rgba(168, 135, 0, 0.09);
 }
 
 :root[data-theme='storm'][data-scheme='dark'] {
@@ -518,11 +518,11 @@
   --fg-dim: #a6aec2;
   --fg-faint: #697184;
   --sep: rgba(234,237,244, 0.13);
-  --accent: #87a2e0;
-  --hover: rgba(135,162,224, 0.10);
+  --accent: #ffd94a;
+  --hover: rgba(255, 217, 74, 0.10);
 }
 
-/* Mist */
+/* Mist — pale morning gray with a dawn-rose accent. */
 :root[data-theme='mist'][data-scheme='light'] {
   --bg: #f0f3f5;
   --sheet: #fafbfc;
@@ -530,8 +530,8 @@
   --fg-dim: #5a6368;
   --fg-faint: #8c959a;
   --sep: rgba(36,42,46, 0.14);
-  --accent: #5b7f8f;
-  --hover: rgba(91,127,143, 0.09);
+  --accent: #a86478;
+  --hover: rgba(168, 100, 120, 0.09);
 }
 
 :root[data-theme='mist'][data-scheme='dark'] {
@@ -541,11 +541,11 @@
   --fg-dim: #a8b3b8;
   --fg-faint: #6a757a;
   --sep: rgba(238,242,244, 0.13);
-  --accent: #9cc0cf;
-  --hover: rgba(156,192,207, 0.10);
+  --accent: #d9a3b3;
+  --hover: rgba(217, 163, 179, 0.10);
 }
 
-/* Lemonade */
+/* Lemonade — pink lemonade: lemon surfaces, raspberry accent. */
 :root[data-theme='lemonade'][data-scheme='light'] {
   --bg: #fdf9e0;
   --sheet: #fffdef;
@@ -553,8 +553,8 @@
   --fg-dim: #6f6233;
   --fg-faint: #a4945e;
   --sep: rgba(51, 44, 14, 0.14);
-  --accent: #c29a00;
-  --hover: rgba(194, 154, 0, 0.09);
+  --accent: #c04a75;
+  --hover: rgba(192, 74, 117, 0.09);
 }
 
 :root[data-theme='lemonade'][data-scheme='dark'] {
@@ -564,11 +564,11 @@
   --fg-dim: #c7bb8b;
   --fg-faint: #857a4e;
   --sep: rgba(249, 245, 221, 0.13);
-  --accent: #ffdf3d;
-  --hover: rgba(255, 223, 61, 0.10);
+  --accent: #ff8fb8;
+  --hover: rgba(255, 143, 184, 0.10);
 }
 
-/* Matcha — milky, yellow-toned latte surfaces with a bright powder-green accent. */
+/* Matcha — milky matcha-green surfaces with a sakura-pink accent. */
 :root[data-theme='matcha'][data-scheme='light'] {
   --bg: #f2f1de;
   --sheet: #fbfaee;
@@ -576,8 +576,8 @@
   --fg-dim: #5f6344;
   --fg-faint: #939578;
   --sep: rgba(43, 45, 24, 0.14);
-  --accent: #7a9c2e;
-  --hover: rgba(122, 156, 46, 0.09);
+  --accent: #b85f83;
+  --hover: rgba(184, 95, 131, 0.09);
 }
 
 :root[data-theme='matcha'][data-scheme='dark'] {
@@ -587,8 +587,8 @@
   --fg-dim: #c0c39a;
   --fg-faint: #7d8060;
   --sep: rgba(243, 244, 227, 0.13);
-  --accent: #bcd669;
-  --hover: rgba(188, 214, 105, 0.10);
+  --accent: #eba3c1;
+  --hover: rgba(235, 163, 193, 0.10);
 }
 
 /* Native <select> popups: Chromium paints the option list itself. Themed
