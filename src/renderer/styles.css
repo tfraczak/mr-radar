@@ -471,12 +471,12 @@
 
 /* Peach — peach-flesh surfaces with a sage-leaf accent. */
 :root[data-theme='peach'][data-scheme='light'] {
-  --bg: #fdf3ec;
-  --sheet: #fffaf6;
-  --fg: #332620;
-  --fg-dim: #6e5a4e;
-  --fg-faint: #a18a7b;
-  --sep: rgba(51,38,32, 0.14);
+  --bg: #ffe4cd;
+  --sheet: #fff4ea;
+  --fg: #3c2315;
+  --fg-dim: #7e523b;
+  --fg-faint: #b2806a;
+  --sep: rgba(60, 35, 21, 0.15);
   --accent: #5f8a52;
   --accent-fg: #1c1510;
   --hover: rgba(95, 138, 82, 0.09);
