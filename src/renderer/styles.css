@@ -242,7 +242,7 @@
   --hover: rgba(94, 207, 174, 0.10);
 }
 
-/* Quarry — warm earth-brown surfaces with granite-gray stone affordances. */
+/* Quarry — warm earth-brown surfaces with neutral stone-gray affordances. */
 :root[data-theme='quarry'][data-scheme='light'] {
   --bg: #f1eadf;
   --sheet: #faf6ee;
@@ -250,9 +250,9 @@
   --fg-dim: #615749;
   --fg-faint: #928779;
   --sep: rgba(42, 36, 28, 0.14);
-  --accent: #6a655c;
+  --accent: #666666;
   --accent-fg: #ffffff;
-  --hover: rgba(106, 101, 92, 0.09);
+  --hover: rgba(102, 102, 102, 0.09);
 }
 
 :root[data-theme='quarry'][data-scheme='dark'] {
@@ -262,9 +262,9 @@
   --fg-dim: #b4a892;
   --fg-faint: #756a58;
   --sep: rgba(241, 236, 227, 0.13);
-  --accent: #b3aca1;
+  --accent: #b0b0b0;
   --accent-fg: #1c1510;
-  --hover: rgba(179, 172, 161, 0.10);
+  --hover: rgba(176, 176, 176, 0.10);
 }
 
 /* Lilac — soft violet blooms for the surfaces, leaf green for the accent. */
