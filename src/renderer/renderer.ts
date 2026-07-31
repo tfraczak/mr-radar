@@ -956,7 +956,7 @@ const openSettings = async (): Promise<void> => {
     const snapshotRule = (): EditableSettings['statusRules'][number] => ({
       status: status.select.value,
       repo: repo.select.value,
-      field: field.select.value,
+      field: op.select.value === 'always' ? '' : field.select.value,
       op: op.select.value,
       value: value.value,
       then: thenSel.select.value,
@@ -1014,13 +1014,29 @@ const openSettings = async (): Promise<void> => {
       ruleRowsWrap.insertBefore(dragging, before ? root : root.nextSibling);
     });
     const controls = el('div', 'rule-controls');
+    const whenWord = el('span', 'rule-word', 'when');
+    const whenLine = el('div', 'rule-line');
+    whenLine.append(whenWord, field.root, op.root, value);
+    const elseWordLine = line('', 'else');
+    const elseLine = line('rule-branch', '→', elseSel.root);
     controls.append(
       line('', status.root, 'in', repo.root),
-      line('', 'when', field.root, op.root, value),
+      whenLine,
       line('rule-branch', '→', thenSel.root),
-      line('', 'else'),
-      line('rule-branch', '→', elseSel.root),
+      elseWordLine,
+      elseLine,
     );
+    // An unconditional rule reads as just "<status> in <repo> → <target>":
+    // no field, no else branch — only the op select stays as the way back.
+    const syncAlways = (): void => {
+      const isAlways = op.select.value === 'always';
+      whenWord.hidden = isAlways;
+      field.root.hidden = isAlways;
+      elseWordLine.hidden = isAlways;
+      elseLine.hidden = isAlways;
+    };
+    op.select.addEventListener('change', syncAlways);
+    syncAlways();
     root.append(grip, controls, clone, remove);
     ruleRowsWrap.append(root);
     ruleRows.push({ root, get: snapshotRule });

@@ -162,7 +162,8 @@ export const applyEditable = (
     next.statusRules = s.statusRules.flatMap((r): StatusRule[] => {
       const status = r.status?.trim();
       if (!status) return [];
-      if (!(RULE_FIELDS as readonly string[]).includes(r.field)) return [];
+      // Unconditional ('always') rules have no field; every other op needs one.
+      if (r.op !== 'always' && !(RULE_FIELDS as readonly string[]).includes(r.field)) return [];
       if (!(RULE_OPS as readonly string[]).includes(r.op)) return [];
       if (!(RULE_TARGETS as readonly string[]).includes(r.then)) return [];
       if (!(RULE_TARGETS as readonly string[]).includes(r.else)) return [];
@@ -170,7 +171,7 @@ export const applyEditable = (
         {
           status,
           ...(r.repo?.trim() ? { repo: r.repo.trim() } : {}),
-          field: r.field as StatusRule['field'],
+          ...(r.op === 'always' ? {} : { field: r.field as StatusRule['field'] }),
           op: r.op as StatusRule['op'],
           ...(r.value?.trim() ? { value: r.value.trim() } : {}),
           then: r.then as StatusRule['then'],

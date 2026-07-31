@@ -25,10 +25,10 @@ export const RULE_TARGETS: readonly RuleTarget[] = [
 ];
 
 export type RuleField = 'fixVersions' | 'issueType' | 'dueDate';
-export type RuleOp = 'empty' | 'present' | 'matches' | 'past';
+export type RuleOp = 'always' | 'empty' | 'present' | 'matches' | 'past';
 
 export const RULE_FIELDS: readonly RuleField[] = ['fixVersions', 'issueType', 'dueDate'];
-export const RULE_OPS: readonly RuleOp[] = ['empty', 'present', 'matches', 'past'];
+export const RULE_OPS: readonly RuleOp[] = ['always', 'empty', 'present', 'matches', 'past'];
 
 /**
  * One conditional routing rule: "for tickets in `status`, when `field` `op`
@@ -43,7 +43,8 @@ export interface StatusRule {
   status: string;
   /** Project path the rule applies to; absent/empty = any repo. */
   repo?: string;
-  field: RuleField;
+  /** Absent for op 'always' — an unconditional route needs no field. */
+  field?: RuleField;
   op: RuleOp;
   value?: string;
   then: RuleTarget;
@@ -285,7 +286,9 @@ const validate = (cfg: Config, path: string): void => {
   }
   for (const [i, rule] of cfg.statusRules.entries()) {
     if (!rule.status?.trim()) problems.push(`statusRules[${i}]: status is required`);
-    if (!RULE_FIELDS.includes(rule.field)) problems.push(`statusRules[${i}]: bad field "${rule.field}"`);
+    if (rule.op !== 'always' && !RULE_FIELDS.includes(rule.field as RuleField)) {
+      problems.push(`statusRules[${i}]: bad field "${rule.field}"`);
+    }
     if (!RULE_OPS.includes(rule.op)) problems.push(`statusRules[${i}]: bad op "${rule.op}"`);
     if (!RULE_TARGETS.includes(rule.then) || !RULE_TARGETS.includes(rule.else)) {
       problems.push(`statusRules[${i}]: then/else must be one of ${RULE_TARGETS.join(', ')}`);

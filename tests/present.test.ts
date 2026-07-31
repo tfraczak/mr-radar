@@ -274,6 +274,23 @@ describe('conditional routing rules', () => {
     expect(snap2.needsGroups).toHaveLength(1); // fell through to rule 2
   });
 
+  it("an unconditional 'always' rule routes with no field at all", () => {
+    // "Dev Complete in <repo> → Verification" — the simple form.
+    const rules: StatusRule[] = [
+      { status: 'Dev Complete', repo: 'acme/rocket', op: 'always', then: 'verification', else: 'next' },
+    ];
+    const snap = present(
+      stateWith([item({ ticket: dcTicket() })]),
+      ACTIVE,
+      NOW,
+      'rebase',
+      DEFAULT_CONFIG.statusSections,
+      rules,
+    );
+    expect(snap.verificationGroups).toHaveLength(1);
+    expect(snap.needsGroups).toHaveLength(0); // no empty-check ran, so no "needs" flag
+  });
+
   it('a repo-scoped rule only fires for that repo', () => {
     const rules: StatusRule[] = [
       { status: 'Dev Complete', repo: 'acme/gadget', field: 'fixVersions', op: 'empty', then: 'active', else: 'verification' },

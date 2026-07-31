@@ -114,6 +114,7 @@ const hiddenStaleClosed = (item: WatchItem, now: Date): boolean => {
  * an actionable state.
  */
 const rulePredicate = (rule: StatusRule, t: NonNullable<WatchItem['ticket']>, now: Date): boolean => {
+  if (rule.op === 'always') return true;
   if (rule.field === 'fixVersions') {
     const v = t.fixVersions;
     if (rule.op === 'empty') return v !== undefined && v.length === 0;
@@ -177,7 +178,7 @@ export const resolveRules = (
     const hit = rulePredicate(rule, t, now);
     const target = hit ? rule.then : rule.else;
     if (target === 'next') continue;
-    return { target, ...(hit && rule.op === 'empty' ? { needs: rule.field } : {}) };
+    return { target, ...(hit && rule.op === 'empty' && rule.field ? { needs: rule.field } : {}) };
   }
   return {};
 }
