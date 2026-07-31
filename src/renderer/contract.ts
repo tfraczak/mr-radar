@@ -8,6 +8,15 @@
  * these are a compile-time convenience, not a runtime guarantee.
  */
 
+export type RuleFieldName = 'fixVersions' | 'issueType' | 'dueDate';
+
+/** Humanized field names for the "Needs <field>" affordances. */
+export const FIELD_LABELS: Record<RuleFieldName, string> = {
+  fixVersions: 'fix version',
+  issueType: 'issue type',
+  dueDate: 'due date',
+};
+
 export interface UiSnapshot {
   at?: string | undefined;
   lastPollAt?: string | undefined;
@@ -23,7 +32,7 @@ export interface UiSnapshot {
   groups: UiGroup[];
   /** Dev Complete tickets still needing a fix version — actionable, own section.
    *  (Dev Complete WITH a version, or data fixes, land in otherGroups instead.) */
-  devCompleteGroups: UiGroup[];
+  needsGroups: UiGroup[];
   /** Statuses mapped to the Verification section (e.g. In QA, In Verification). */
   verificationGroups: UiStatusGroup[];
   /** Statuses mapped to Done — collapsed at the very bottom. */
@@ -53,7 +62,8 @@ export interface UiGroup {
         url: string;
         statusRank: number;
         /** Dev Complete, non-data-fix, no fix version — offer the picker. */
-        needsFixVersion?: boolean;
+        /** Set when a rule flagged this ticket as missing a value. */
+        needsField?: RuleFieldName;
       }
     | undefined;
   items: UiItem[];

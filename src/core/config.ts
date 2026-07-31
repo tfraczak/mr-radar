@@ -11,7 +11,7 @@ export type RuleTarget =
   | 'done'
   | 'ignore'
   | 'other'
-  | 'needs-fix-version'
+  | 'needs-value'
   | 'next';
 
 export const RULE_TARGETS: readonly RuleTarget[] = [
@@ -20,7 +20,7 @@ export const RULE_TARGETS: readonly RuleTarget[] = [
   'done',
   'ignore',
   'other',
-  'needs-fix-version',
+  'needs-value',
   'next',
 ];
 
@@ -199,9 +199,9 @@ export const DEFAULT_CONFIG: Config = {
   },
   statusRules: [
     // The example default: a Dev Complete ticket with no fix version still
-    // needs one (actionable), otherwise it's out of dev's hands. Edit or add
-    // rules in Settings → Jira → Advanced.
-    { status: 'Dev Complete', field: 'fixVersions', op: 'empty', then: 'needs-fix-version', else: 'verification' },
+    // needs one ("Needs fix version" section), otherwise it's out of dev's
+    // hands. Edit or add rules in Settings → Jira → Advanced.
+    { status: 'Dev Complete', field: 'fixVersions', op: 'empty', then: 'needs-value', else: 'verification' },
   ],
   recentDaysFallback: 0,
   ui: { theme: 'system', appearance: 'system' },
@@ -250,8 +250,25 @@ export const loadConfig = (path: string = CONFIG_PATH): Config => {
     throw new Error(`config at ${path} is not valid JSON: ${(err as Error).message}`, { cause: err });
   }
   const cfg = merge(DEFAULT_CONFIG, raw);
+  normalizeRuleTargets(cfg);
   validate(cfg, path);
   return cfg;
+}
+
+/**
+ * Older configs used the field-specific 'needs-fix-version' target. Also keep
+ * rules coherent: 'needs-value' only means something for an `empty` check, so
+ * other ops fall back to 'next'.
+ */
+const normalizeRuleTargets = (cfg: Config): void => {
+  for (const r of cfg.statusRules) {
+    if ((r.then as string) === 'needs-fix-version') r.then = 'needs-value';
+    if ((r.else as string) === 'needs-fix-version') r.else = 'needs-value';
+    if (r.op !== 'empty') {
+      if (r.then === 'needs-value') r.then = 'next';
+      if (r.else === 'needs-value') r.else = 'next';
+    }
+  }
 }
 
 const validate = (cfg: Config, path: string): void => {
@@ -311,6 +328,7 @@ export const readRawConfig = (path: string = CONFIG_PATH): Record<string, unknow
  */
 export const writeRawConfig = (raw: Record<string, unknown>, path: string = CONFIG_PATH): Config => {
   const full = merge(DEFAULT_CONFIG, raw);
+  normalizeRuleTargets(full);
   validate(full, path);
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify(raw, null, 2)}\n`, { mode: 0o600 });

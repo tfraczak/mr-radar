@@ -385,7 +385,7 @@ const registerIpc = (): void => {
     if (!jira) return { ok: false, message: 'Jira is not connected.' };
     try {
       await jira.setFixVersion(ticketKey, versionId);
-      // Re-poll so the ticket moves out of the needs-fix-version section.
+      // Re-poll so the ticket moves out of its 'Needs fix version' section.
       state.schedule = { ...state.schedule, quietCycles: 0 };
       void runCycle('manual');
       return { ok: true, message: `Fix version set on ${ticketKey}.` };

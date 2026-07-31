@@ -1,4 +1,5 @@
-import { DEFAULT_CONFIG, type Config, type RuleTarget, type StatusRule } from '../core/config';
+import { DEFAULT_CONFIG, type Config, type RuleField, type RuleTarget, type StatusRule } from '../core/config';
+import { FIELD_LABELS } from '../renderer/contract';
 import { unresolvedCount } from '../core/correlate';
 import { describePause } from '../core/schedule';
 import type { TestGate, WatchItem } from '../core/types';
@@ -57,7 +58,7 @@ export const present = (
     .filter((i) => !(i.ticket && hidden.has(i.ticket.status.toLowerCase())));
   const unreadKeys = new Set(state.unread.map((e) => e.mrKey));
 
-  const { groups, devCompleteGroups, verificationGroups, doneGroups, otherGroups } = groupItems(
+  const { groups, needsGroups, verificationGroups, doneGroups, otherGroups } = groupItems(
     items,
     unreadKeys,
     active,
@@ -84,7 +85,7 @@ export const present = (
     })),
     highlight: state.highlight,
     groups,
-    devCompleteGroups,
+    needsGroups,
     verificationGroups,
     doneGroups,
     otherGroups,
@@ -146,38 +147,47 @@ const safeMatch = (pattern: string | undefined, value: string): boolean => {
   }
 }
 
+export interface RuleOutcome {
+  target?: Exclude<RuleTarget, 'next'>;
+  /**
+   * Set when the terminating rule was a true `empty` check: the ticket is
+   * missing that field's value, wherever it was routed. Drives the
+   * "Needs <field>" affordances (attention line, fix-version picker) —
+   * deliberately independent of the target, so a custom rule routing Dev
+   * Complete into Active keeps the "assign one" ask visible.
+   */
+  needs?: RuleField;
+}
+
 /**
- * The first non-'next' target the rules produce for this ticket, if any.
- * Rules run top-to-bottom; 'next' defers to later rules, then to the plain
- * status→section mapping.
+ * Walk the rules top-to-bottom for this ticket; 'next' defers to later rules,
+ * then to the plain status→section mapping ({} = no rule terminated).
  */
+export const resolveRules = (
+  rules: StatusRule[],
+  t: WatchItem['ticket'],
+  now: Date,
+  projectPath: string,
+): RuleOutcome => {
+  if (!t) return {};
+  for (const rule of rules) {
+    if (rule.status.toLowerCase() !== t.status.toLowerCase()) continue;
+    // A rule can be pinned to one repo; empty/absent means any.
+    if (rule.repo && rule.repo !== projectPath) continue;
+    const hit = rulePredicate(rule, t, now);
+    const target = hit ? rule.then : rule.else;
+    if (target === 'next') continue;
+    return { target, ...(hit && rule.op === 'empty' ? { needs: rule.field } : {}) };
+  }
+  return {};
+}
+
 export const ruleTarget = (
   rules: StatusRule[],
   t: WatchItem['ticket'],
   now: Date,
   projectPath: string,
-): Exclude<RuleTarget, 'next'> | undefined => {
-  if (!t) return undefined;
-  for (const rule of rules) {
-    if (rule.status.toLowerCase() !== t.status.toLowerCase()) continue;
-    // A rule can be pinned to one repo; empty/absent means any.
-    if (rule.repo && rule.repo !== projectPath) continue;
-    const target = rulePredicate(rule, t, now) ? rule.then : rule.else;
-    if (target !== 'next') return target;
-  }
-  return undefined;
-}
-
-/**
- * Still needs a fix version? Drives the picker and the attention line wherever
- * the ticket lands — deliberately independent of the routing rules, so moving
- * Dev Complete into Active (a custom rule) keeps the "assign one" affordance.
- */
-export const needsFixVersion = (t: WatchItem['ticket']): boolean => {
-  if (!t || t.status.toLowerCase() !== 'dev complete') return false;
-  if (t.issueType && /data\s*fix/i.test(t.issueType)) return false;
-  return t.fixVersions !== undefined && t.fixVersions.length === 0;
-}
+): Exclude<RuleTarget, 'next'> | undefined => resolveRules(rules, t, now, projectPath).target;
 
 /**
  * Split in-scope items into two buckets:
@@ -196,13 +206,13 @@ const groupItems = (
   rules: StatusRule[],
 ): {
   groups: UiGroup[];
-  devCompleteGroups: UiGroup[];
+  needsGroups: UiGroup[];
   verificationGroups: UiStatusGroup[];
   doneGroups: UiStatusGroup[];
   otherGroups: UiStatusGroup[];
 } => {
   const byTicket = new Map<string, UiGroup>();
-  const devComplete = new Map<string, UiGroup>();
+  const needsMap = new Map<string, UiGroup>();
   const verification = new Map<string, UiStatusGroup>();
   const done = new Map<string, UiStatusGroup>();
   const byStatus = new Map<string, UiStatusGroup>();
@@ -215,23 +225,22 @@ const groupItems = (
     t !== undefined && active.has(t.status.toLowerCase());
 
   for (const item of items) {
-    const ui = toUiItem(item, unreadKeys.has(item.key), now, updateStyle);
-    const status = item.ticket?.status;
-    const needsFix = needsFixVersion(item.ticket);
-
-    // Conditional rules first (e.g. the default Dev Complete pair), then the
-    // plain status→section mapping. `needsFix` keeps the picker/attention
+    // Conditional rules first (e.g. the default Dev Complete rule), then the
+    // plain status→section mapping. `needs` keeps the picker/attention
     // wherever the ticket lands — routing and affordance are independent.
-    const target = ruleTarget(rules, item.ticket, now, item.projectPath);
+    const { target, needs } = resolveRules(rules, item.ticket, now, item.projectPath);
+    const ui = toUiItem(item, unreadKeys.has(item.key), now, updateStyle, needs);
+    const status = item.ticket?.status;
+
     if (target && item.ticket) {
       switch (target) {
         case 'ignore':
           continue;
-        case 'needs-fix-version':
-          addToTicketGroup(devComplete, item.ticket, ui, needsFix);
+        case 'needs-value':
+          addToTicketGroup(needsMap, item.ticket, ui, needs);
           continue;
         case 'active':
-          addToTicketGroup(byTicket, item.ticket, ui, needsFix);
+          addToTicketGroup(byTicket, item.ticket, ui, needs);
           continue;
         case 'verification':
           addToStatusGroup(verification, item.ticket.status, ui);
@@ -255,7 +264,7 @@ const groupItems = (
     }
 
     if (isActive(item.ticket) && item.ticket) {
-      addToTicketGroup(byTicket, item.ticket, ui, needsFix);
+      addToTicketGroup(byTicket, item.ticket, ui, needs);
       continue;
     }
 
@@ -265,7 +274,7 @@ const groupItems = (
 
   return {
     groups: [...byTicket.values()],
-    devCompleteGroups: [...devComplete.values()],
+    needsGroups: [...needsMap.values()],
     verificationGroups: [...verification.values()],
     doneGroups: [...done.values()],
     otherGroups: [...byStatus.values()],
@@ -276,7 +285,7 @@ const addToTicketGroup = (
   map: Map<string, UiGroup>,
   ticket: NonNullable<WatchItem['ticket']>,
   ui: UiItem,
-  needsFix: boolean,
+  needsField?: RuleField,
 ): void => {
   const existing = map.get(ticket.key);
   if (existing) {
@@ -289,7 +298,7 @@ const addToTicketGroup = (
       status: ticket.status,
       url: ticket.url,
       statusRank: statusRank(ticket.status),
-      ...(needsFix ? { needsFixVersion: true } : {}),
+      ...(needsField ? { needsField } : {}),
     },
     items: [ui],
   });
@@ -301,7 +310,13 @@ const addToStatusGroup = (map: Map<string, UiStatusGroup>, status: string, ui: U
   else map.set(status, { status, statusRank: statusRank(status), items: [ui] });
 }
 
-const toUiItem = (item: WatchItem, unread: boolean, now: Date, updateStyle: UpdateStyle): UiItem => {
+const toUiItem = (
+  item: WatchItem,
+  unread: boolean,
+  now: Date,
+  updateStyle: UpdateStyle,
+  needsField?: RuleField,
+): UiItem => {
   const threads = item.threads ?? [];
   // When the detail fetch was skipped this cycle, `threads` is absent — fall
   // back to the last-known unresolved count so the row and attention stay right.
@@ -323,7 +338,7 @@ const toUiItem = (item: WatchItem, unread: boolean, now: Date, updateStyle: Upda
   // Two discrete signals beat one muddled sentence: a clean MR aimed at a
   // release branch shows a good "Checks passed" AND a warn "Target not main"
   // — never a bare "Ready to merge" that invites a reflex merge.
-  let attention = attentionOf(item, { unresolved, ci, overdue }, updateStyle);
+  let attention = attentionOf(item, { unresolved, ci, overdue }, updateStyle, needsField);
   let attentionExtra: Attention | undefined;
   if (attention.text === 'Ready to merge' && !isMainline(item.targetBranch)) {
     attention = { text: 'Checks passed', tone: 'good', rank: attention.rank };
@@ -373,6 +388,7 @@ const attentionOf = (
   item: WatchItem,
   d: { unresolved: number; ci: UiItem['ci']; overdue: boolean },
   updateStyle: UpdateStyle = 'rebase',
+  needsField?: RuleField,
 ): Attention => {
   const approvalsLeft = item.approvals?.left ?? 0;
   const verifiedPass = item.testGate?.kind === 'verified' && item.testGate.result === 'succeeded';
@@ -385,10 +401,11 @@ const attentionOf = (
   if (d.ci.tone === 'bad' && item.testGate?.kind === 'verified') {
     return { text: `Tests failing: ${d.ci.detail ?? 'CI'}`, tone: 'bad', rank: 1 };
   }
-  // Dev Complete without a fix version blocks the release train — more urgent
-  // than review traffic, less than broken code.
-  if (needsFixVersion(item.ticket)) {
-    return { text: 'Dev Complete — needs a fix version', tone: 'warn', rank: 2 };
+  // A rule-flagged missing value blocks the pipeline (e.g. Dev Complete
+  // without a fix version can't ride a release) — more urgent than review
+  // traffic, less than broken code.
+  if (needsField && item.ticket) {
+    return { text: `${item.ticket.status} — needs a ${FIELD_LABELS[needsField]}`, tone: 'warn', rank: 2 };
   }
   if (item.reason === 'reviewer') return { text: 'Your review is requested', tone: 'info', rank: 2 };
   if (item.reason === 'participating') {

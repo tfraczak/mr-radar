@@ -1,4 +1,5 @@
 import type { EditableSettings, RadarApi, StatusSection, UiGroup, UiItem, UiSnapshot, UiStatusGroup } from './contract';
+import { FIELD_LABELS } from './contract.js';
 import {
   createSelect,
   applyTheme,
@@ -169,7 +170,7 @@ byId('tabs').replaceWith(mainTabs.root);
 const paintTabs = (s: UiSnapshot): void => {
   const items = [
     ...s.groups,
-    ...(s.devCompleteGroups ?? []),
+    ...(s.needsGroups ?? []),
     ...(s.verificationGroups ?? []),
     ...(s.doneGroups ?? []),
     ...s.otherGroups,
@@ -436,7 +437,7 @@ const renderList = (s: UiSnapshot): void => {
   const tabbed = s.groups
     .map((g) => ({ ...g, items: g.items.filter((i) => inTab(i, prefs.tab)) }))
     .filter((g) => g.items.length > 0);
-  const tabbedDevComplete = (s.devCompleteGroups ?? [])
+  const tabbedNeeds = (s.needsGroups ?? [])
     .map((g) => ({ ...g, items: g.items.filter((i) => inTab(i, prefs.tab)) }))
     .filter((g) => g.items.length > 0);
   const tabStatusGroups = (gs: UiStatusGroup[]): UiStatusGroup[] =>
@@ -445,12 +446,12 @@ const renderList = (s: UiSnapshot): void => {
       .filter((g) => g.items.length > 0);
 
   const groups = sortedGroups(filteredGroups(tabbed), prefs.sort);
-  const devComplete = sortedGroups(filteredGroups(tabbedDevComplete), prefs.sort);
+  const needs = sortedGroups(filteredGroups(tabbedNeeds), prefs.sort);
   const verification = otherView(tabStatusGroups(s.verificationGroups ?? []));
   const done = otherView(tabStatusGroups(s.doneGroups ?? []));
   const other = otherView(tabStatusGroups(s.otherGroups));
 
-  if (groups.length === 0 && devComplete.length === 0 && verification.length === 0 && done.length === 0 && other.length === 0) {
+  if (groups.length === 0 && needs.length === 0 && verification.length === 0 && done.length === 0 && other.length === 0) {
     const emptyByTab: Record<Tab, string> = {
       work: 'No authored MRs in scope.',
       reviews: 'No reviews on your radar — nothing you approved or were asked to review.',
@@ -458,18 +459,26 @@ const renderList = (s: UiSnapshot): void => {
         'Nothing you commented on or were mentioned in (outside your own MRs and reviews).',
     };
     const anyInTab =
-      tabbed.length + tabbedDevComplete.length + verification.length + done.length + other.length > 0;
+      tabbed.length + tabbedNeeds.length + verification.length + done.length + other.length > 0;
     const msg = anyInTab ? 'No MRs match the current filters.' : emptyByTab[prefs.tab];
     listEl.append(el('p', 'empty', msg));
     return;
   }
   for (const group of groups) listEl.append(renderGroup(group));
-  if (devComplete.length > 0) {
-    // Dev Complete needing a fix version: no longer editable, but blocked from
-    // release — its own section so the ask is unmissable.
-    const head = el('div', 'other-status section-heading', `Dev Complete — needs a fix version (${devComplete.length})`);
-    listEl.append(head);
-    for (const group of devComplete) listEl.append(renderGroup(group));
+  if (needs.length > 0) {
+    // Tickets a rule flagged as missing a value: one unmissable section per
+    // missing field ("Needs fix version", "Needs due date", ...).
+    const byLabel = new Map<string, UiGroup[]>();
+    for (const g of needs) {
+      const label = g.ticket?.needsField ? FIELD_LABELS[g.ticket.needsField] : 'attention';
+      const bucket = byLabel.get(label) ?? [];
+      bucket.push(g);
+      byLabel.set(label, bucket);
+    }
+    for (const [label, gs] of byLabel) {
+      listEl.append(el('div', 'other-status section-heading', `Needs ${label} (${gs.length})`));
+      for (const group of gs) listEl.append(renderGroup(group));
+    }
   }
   if (verification.length > 0) {
     listEl.append(renderStatusSection('Verification', verification, 'mr-radar-verification-collapsed', true));
@@ -520,7 +529,7 @@ const renderGroup = (group: UiGroup): HTMLElement => {
     const url = group.ticket.url;
     head.title = 'Open in Jira';
     head.addEventListener('click', () => void window.radar.openUrl(url));
-    if (group.ticket.needsFixVersion) head.append(fixVersionControl(group.ticket.key));
+    if (group.ticket.needsField === 'fixVersions') head.append(fixVersionControl(group.ticket.key));
     wrap.append(head);
   } else {
     wrap.append(el('div', 'group-head', 'No active ticket'));

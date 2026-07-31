@@ -87,7 +87,7 @@ window.radar = {
     // The confirm lives shell-side by design (Electron shows a native dialog).
     const items = [
       ...(lastSnapshot?.groups ?? []),
-      ...(lastSnapshot?.devCompleteGroups ?? []),
+      ...(lastSnapshot?.needsGroups ?? []),
       ...(lastSnapshot?.verificationGroups ?? []),
       ...(lastSnapshot?.doneGroups ?? []),
       ...(lastSnapshot?.otherGroups ?? []),

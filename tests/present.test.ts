@@ -171,7 +171,7 @@ describe('Dev Complete routing', () => {
     const snap = present(stateWith([item({ ticket: t })]), ACTIVE, NOW);
     return {
       active: snap.groups.length,
-      devComplete: snap.devCompleteGroups.length,
+      needs: snap.needsGroups.length,
       verification: snap.verificationGroups.length,
       other: snap.otherGroups.length,
       snap,
@@ -180,18 +180,18 @@ describe('Dev Complete routing', () => {
 
   it('needs-fix-version → its own section, flagged for the picker', () => {
     const b = buckets(dc());
-    expect(b.devComplete).toBe(1);
+    expect(b.needs).toBe(1);
     expect(b.active).toBe(0);
     expect(b.other).toBe(0);
-    expect(b.snap.devCompleteGroups[0]?.ticket?.needsFixVersion).toBe(true);
-    expect(b.snap.devCompleteGroups[0]?.items[0]?.attention.text).toBe(
+    expect(b.snap.needsGroups[0]?.ticket?.needsField).toBe('fixVersions');
+    expect(b.snap.needsGroups[0]?.items[0]?.attention.text).toBe(
       'Dev Complete — needs a fix version',
     );
   });
 
   it('with a fix version assigned → effectively in QA: Verification section', () => {
     const b = buckets(dc({ fixVersions: [{ id: '1', name: '2026.31' }] }));
-    expect(b.devComplete).toBe(0);
+    expect(b.needs).toBe(0);
     expect(b.verification).toBe(1);
   });
 
@@ -210,7 +210,7 @@ describe('Dev Complete routing', () => {
       DEFAULT_CONFIG.statusSections,
       rules,
     );
-    expect(snap.devCompleteGroups).toHaveLength(0);
+    expect(snap.needsGroups).toHaveLength(0);
     expect(snap.verificationGroups).toHaveLength(1);
   });
 
@@ -218,7 +218,7 @@ describe('Dev Complete routing', () => {
     const t = dc();
     delete t.fixVersions;
     const b = buckets(t);
-    expect(b.devComplete).toBe(0); // waits for fresh Jira data instead
+    expect(b.needs).toBe(0); // waits for fresh Jira data instead
     expect(b.verification).toBe(1);
   });
 });
@@ -241,8 +241,8 @@ describe('conditional routing rules', () => {
       rules,
     );
     expect(snap.groups).toHaveLength(1); // Active, not the dedicated section
-    expect(snap.devCompleteGroups).toHaveLength(0);
-    expect(snap.groups[0]?.ticket?.needsFixVersion).toBe(true); // picker follows the ticket
+    expect(snap.needsGroups).toHaveLength(0);
+    expect(snap.groups[0]?.ticket?.needsField).toBe('fixVersions'); // picker follows the ticket
     expect(snap.groups[0]?.items[0]?.attention.text).toBe('Dev Complete — needs a fix version');
   });
 
@@ -271,7 +271,7 @@ describe('conditional routing rules', () => {
     const snap = present(stateWith([item({ ticket: dcTicket({ issueType: 'DataFix' }) })]), ACTIVE, NOW, ...args);
     expect(snap.verificationGroups).toHaveLength(1); // matched rule 1's then-branch
     const snap2 = present(stateWith([item({ ticket: dcTicket() })]), ACTIVE, NOW, ...args);
-    expect(snap2.devCompleteGroups).toHaveLength(1); // fell through to rule 2
+    expect(snap2.needsGroups).toHaveLength(1); // fell through to rule 2
   });
 
   it('a repo-scoped rule only fires for that repo', () => {
@@ -289,12 +289,12 @@ describe('conditional routing rules', () => {
       rules,
     );
     expect(snap.groups).toHaveLength(1); // Dev Complete is in ACTIVE statuses
-    expect(snap.devCompleteGroups).toHaveLength(0);
+    expect(snap.needsGroups).toHaveLength(0);
     const scoped: StatusRule[] = [
-      { status: 'Dev Complete', repo: 'acme/rocket', field: 'fixVersions', op: 'empty', then: 'needs-fix-version', else: 'verification' },
+      { status: 'Dev Complete', repo: 'acme/rocket', field: 'fixVersions', op: 'empty', then: 'needs-value', else: 'verification' },
     ];
     const snap2 = present(stateWith([item({ ticket: dcTicket() })]), ACTIVE, NOW, 'rebase', DEFAULT_CONFIG.statusSections, scoped);
-    expect(snap2.devCompleteGroups).toHaveLength(1); // matching repo → rule fires
+    expect(snap2.needsGroups).toHaveLength(1); // matching repo → rule fires
   });
 
   it('a past-due rule can escalate tickets', () => {

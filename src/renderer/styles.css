@@ -1745,7 +1745,7 @@ button.link {
 .rule-clone,
 .rule-remove {
   flex: 0 0 auto;
-  align-self: center;
+  align-self: flex-start;
 }
 
 /* Breathing room between settings fields — the panel was claustrophobic. */

@@ -295,7 +295,7 @@ const webHandlers = () => ({
     if (!jira) return { ok: false, message: 'Jira is not connected.' };
     try {
       await jira.setFixVersion(ticketKey, versionId);
-      requestCycle(); // move the ticket out of the needs-fix-version section
+      requestCycle(); // move the ticket out of its 'Needs fix version' section
       return { ok: true, message: `Fix version set on ${ticketKey}.` };
     } catch (err) {
       return { ok: false, message: err instanceof Error ? err.message : String(err) };
