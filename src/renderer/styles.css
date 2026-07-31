@@ -191,7 +191,8 @@
   --hover: rgba(168, 155, 240, 0.10);
 }
 
-/* Pizza — golden crust surfaces (a wood-fired oven in dark), tomato accent. */
+/* Pizza — golden crust surfaces; tomato accents in light, melted-mozzarella
+   gold in the wood-fired dark half. */
 :root[data-theme='pizza'][data-scheme='light'] {
   --bg: #f8e7c7;
   --sheet: #fef4de;
@@ -211,9 +212,9 @@
   --fg-dim: #dab983;
   --fg-faint: #977a44;
   --sep: rgba(249, 237, 214, 0.13);
-  --accent: #ff7a5c;
+  --accent: #f3d892;
   --accent-fg: #1c1510;
-  --hover: rgba(255, 122, 92, 0.10);
+  --hover: rgba(243, 216, 146, 0.10);
 }
 
 /* Seafoam — foam-mint surfaces over deep seawater, sea-glass accent. */
