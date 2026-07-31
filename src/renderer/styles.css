@@ -391,26 +391,26 @@
   --hover: rgba(89, 196, 209, 0.10);
 }
 
-/* Glacier — icy cyan of glacial ice, crevasse-blue accent. */
+/* Glacier — crystalline ice surfaces with a deep crevasse-blue accent. */
 :root[data-theme='glacier'][data-scheme='light'] {
-  --bg: #e3f1f4;
-  --sheet: #f4fbfc;
-  --fg: #14313a;
-  --fg-dim: #46656e;
-  --fg-faint: #7899a1;
-  --sep: rgba(20, 49, 58, 0.14);
-  --accent: #1180a4;
+  --bg: #e8f4f7;
+  --sheet: #f6fbfc;
+  --fg: #123340;
+  --fg-dim: #43666f;
+  --fg-faint: #7599a2;
+  --sep: rgba(18, 51, 64, 0.14);
+  --accent: #0d6f93;
   --accent-fg: #ffffff;
-  --hover: rgba(17, 128, 164, 0.09);
+  --hover: rgba(13, 111, 147, 0.09);
 }
 
 :root[data-theme='glacier'][data-scheme='dark'] {
-  --bg: #0f2129;
-  --sheet: #172d36;
+  --bg: #0d1f28;
+  --sheet: #17303b;
   --fg: #e6f4f8;
   --fg-dim: #9ec4cf;
   --fg-faint: #5f8390;
-  --sep: rgba(230, 244, 248, 0.13);
+  --sep: rgba(230, 244, 248, 0.14);
   --accent: #56c8e4;
   --accent-fg: #1c1510;
   --hover: rgba(86, 200, 228, 0.10);
@@ -650,6 +650,158 @@
 select option {
   background-color: var(--sheet);
   color: var(--fg);
+}
+
+
+/* Juniper — glaucous forest green with dusty berry-blue affordances. */
+:root[data-theme='juniper'][data-scheme='light'] {
+  --bg: #ebf1ec;
+  --sheet: #f7faf7;
+  --fg: #1e2b24;
+  --fg-dim: #4d6156;
+  --fg-faint: #7f9488;
+  --sep: rgba(30, 43, 36, 0.14);
+  --accent: #55628e;
+  --accent-fg: #ffffff;
+  --hover: rgba(85, 98, 142, 0.09);
+}
+
+:root[data-theme='juniper'][data-scheme='dark'] {
+  --bg: #172420;
+  --sheet: #1f2e29;
+  --fg: #e8f0ea;
+  --fg-dim: #a4b8ab;
+  --fg-faint: #66796d;
+  --sep: rgba(232, 240, 234, 0.14);
+  --accent: #9aa8dc;
+  --accent-fg: #1c1510;
+  --hover: rgba(154, 168, 220, 0.10);
+}
+
+/* Harbor — canvas and sea trade places by scheme: canvas sails with
+   sea-blue affordances in light; harbor water with canvas affordances in dark. */
+:root[data-theme='harbor'][data-scheme='light'] {
+  --bg: #f4efe2;
+  --sheet: #fbf8f0;
+  --fg: #2b2a20;
+  --fg-dim: #5f5c4c;
+  --fg-faint: #8f8b77;
+  --sep: rgba(43, 42, 32, 0.14);
+  --accent: #22648f;
+  --accent-fg: #ffffff;
+  --hover: rgba(34, 100, 143, 0.09);
+}
+
+:root[data-theme='harbor'][data-scheme='dark'] {
+  --bg: #0f2433;
+  --sheet: #16303f;
+  --fg: #e9f1f6;
+  --fg-dim: #9fbccb;
+  --fg-faint: #61808f;
+  --sep: rgba(233, 241, 246, 0.14);
+  --accent: #e6dcbf;
+  --accent-fg: #1c1510;
+  --hover: rgba(230, 220, 191, 0.10);
+}
+
+/* Rain — overcast gray surfaces with a clear rain-water blue accent. */
+:root[data-theme='rain'][data-scheme='light'] {
+  --bg: #edf1f5;
+  --sheet: #f9fbfd;
+  --fg: #232a31;
+  --fg-dim: #566270;
+  --fg-faint: #8794a1;
+  --sep: rgba(35, 42, 49, 0.14);
+  --accent: #2f6fa3;
+  --accent-fg: #ffffff;
+  --hover: rgba(47, 111, 163, 0.09);
+}
+
+:root[data-theme='rain'][data-scheme='dark'] {
+  --bg: #171d24;
+  --sheet: #202834;
+  --fg: #eaeff4;
+  --fg-dim: #a5b2c0;
+  --fg-faint: #67788a;
+  --sep: rgba(234, 239, 244, 0.14);
+  --accent: #74aede;
+  --accent-fg: #1c1510;
+  --hover: rgba(116, 174, 222, 0.10);
+}
+
+/* Pumpkin — pumpkin-flesh orange surfaces with vine-green affordances. */
+:root[data-theme='pumpkin'][data-scheme='light'] {
+  --bg: #fdead2;
+  --sheet: #fff7ec;
+  --fg: #37220f;
+  --fg-dim: #71563a;
+  --fg-faint: #a2865f;
+  --sep: rgba(55, 34, 15, 0.14);
+  --accent: #4a6b35;
+  --accent-fg: #ffffff;
+  --hover: rgba(74, 107, 53, 0.09);
+}
+
+:root[data-theme='pumpkin'][data-scheme='dark'] {
+  --bg: #2d1c0c;
+  --sheet: #38240f;
+  --fg: #fcecd8;
+  --fg-dim: #dcab7e;
+  --fg-faint: #987450;
+  --sep: rgba(252, 236, 216, 0.14);
+  --accent: #97b25c;
+  --accent-fg: #1c1510;
+  --hover: rgba(151, 178, 92, 0.10);
+}
+
+/* Mulberry — fresh leaf-green surfaces with fruit-stain burgundy affordances. */
+:root[data-theme='mulberry'][data-scheme='light'] {
+  --bg: #ecf3e2;
+  --sheet: #f8fbf0;
+  --fg: #232d18;
+  --fg-dim: #556346;
+  --fg-faint: #879478;
+  --sep: rgba(35, 45, 24, 0.14);
+  --accent: #7c2d43;
+  --accent-fg: #ffffff;
+  --hover: rgba(124, 45, 67, 0.09);
+}
+
+:root[data-theme='mulberry'][data-scheme='dark'] {
+  --bg: #1b2513;
+  --sheet: #242f1a;
+  --fg: #eef3e4;
+  --fg-dim: #b1bf9c;
+  --fg-faint: #71805c;
+  --sep: rgba(238, 243, 228, 0.14);
+  --accent: #c95f85;
+  --accent-fg: #1c1510;
+  --hover: rgba(201, 95, 133, 0.10);
+}
+
+/* Watermelon — flesh-red surfaces, rind-green affordances, seed-black text. */
+:root[data-theme='watermelon'][data-scheme='light'] {
+  --bg: #fde7e3;
+  --sheet: #fffaf8;
+  --fg: #241114;
+  --fg-dim: #6b4046;
+  --fg-faint: #a17a80;
+  --sep: rgba(36, 17, 20, 0.14);
+  --accent: #2e8248;
+  --accent-fg: #ffffff;
+  --hover: rgba(46, 130, 72, 0.09);
+}
+
+:root[data-theme='watermelon'][data-scheme='dark'] {
+  --bg: #2c1216;
+  --sheet: #381a1e;
+  --fg: #ffe9ec;
+  --fg-dim: #e0a3ad;
+  --fg-faint: #9c6a72;
+  --sep: rgba(255, 233, 236, 0.14);
+  --accent: #5cbf82;
+  --accent-fg: #1c1510;
+  --hover: rgba(92, 191, 130, 0.10);
 }
 
 * {
