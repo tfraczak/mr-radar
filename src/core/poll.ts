@@ -69,7 +69,8 @@ export interface PollResult {
 export const pollOnce = async (deps: PollDeps, opts: { dryRun?: boolean } = {}): Promise<PollResult> => {
   const { db, config, gitlab, rwx } = deps;
   // Optional-called so test fakes without the probe default to available.
-  const rwxOn = config.rwx.enabled && ((await rwx.available?.()) ?? true);
+  const rwxAvailable = (await rwx.available?.()) ?? true;
+  const rwxOn = config.rwx.enabled && rwxAvailable;
   const now = deps.now?.() ?? new Date();
   const nowIso = now.toISOString();
   const log = deps.log ?? (() => {});
@@ -192,8 +193,11 @@ export const pollOnce = async (deps: PollDeps, opts: { dryRun?: boolean } = {}):
       sources.rwx = { ok: false, at: nowIso, error: msg(err) };
       log(`rwx failed: ${msg(err)}`);
     }
+  } else if (!config.rwx.enabled) {
+    sources.rwx = { ok: true, at: nowIso }; // user-disabled: healthy, idle
   } else {
-    sources.rwx = { ok: true, at: nowIso };
+    sources.rwx = { ok: false, at: nowIso, error: 'rwx CLI not found' };
+    log('rwx CLI not found on PATH — RWX coverage skipped this cycle');
   }
 
   // 6. Pipelines — one call per distinct in-scope project.
@@ -217,6 +221,14 @@ export const pollOnce = async (deps: PollDeps, opts: { dryRun?: boolean } = {}):
   const forceReconcile = shouldReconcile(db, now, config);
   if (forceReconcile) log('full reconcile sweep');
 
+  // Runs we started, checked by id BEFORE enrichment, so in-flight runs join
+  // coverage (re-attributed ahead of the API list) and the chip flips to
+  // "RWX running" the moment Start run fires.
+  const watched = rwxOn
+    ? await checkWatchedRuns(deps, nowIso, log)
+    : { events: [], commit: () => {}, live: [] as RwxRun[] };
+  if (watched.live.length) rwxRuns = dedupeRuns([...watched.live, ...rwxRuns]);
+
   for (const item of inScope) {
     try {
       await enrich({ deps, item, rwxRuns, pipelinesByProject, roles, forceReconcile, stats });
@@ -225,13 +237,6 @@ export const pollOnce = async (deps: PollDeps, opts: { dryRun?: boolean } = {}):
       log(`enrich ${item.key} failed: ${msg(err)}`);
     }
   }
-
-  const watched = rwxOn
-    ? await checkWatchedRuns(deps, nowIso, log)
-    : { events: [], commit: () => {}, live: [] as RwxRun[] };
-  // Runs we started join the pool ahead of the API list, so their
-  // re-attributed Branch/CommitSha win the dedupe.
-  if (watched.live.length) rwxRuns = dedupeRuns([...watched.live, ...rwxRuns]);
 
   // 10. Diff, notify, persist. Results of runs we started (watched.events) join
   // the normal diff events; the shared `ci_result` dedup keeps any run from

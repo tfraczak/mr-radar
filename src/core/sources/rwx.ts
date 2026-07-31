@@ -18,12 +18,23 @@ export class RwxSource {
   private availability: Promise<boolean> | undefined;
 
   /**
-   * Whether the CLI exists at all — probed once per process, so installs
-   * without RWX skip the integration silently instead of erroring every cycle.
+   * Whether the CLI exists at all, so installs without RWX skip the
+   * integration instead of erroring every cycle. Only ENOENT means missing —
+   * a nonzero exit or timeout still proves the binary exists. Success is
+   * cached for the process; failure is NOT, so a transient startup problem
+   * (PATH still being fixed up, slow first exec) can't disable RWX forever.
    */
   available(): Promise<boolean> {
     this.availability ??= new Promise((resolve) => {
-      execFile(this.rwx, ['--version'], { timeout: 10_000 }, (err) => resolve(!err));
+      execFile(this.rwx, ['--version'], { timeout: 10_000 }, (err) => {
+        const missing = (err as NodeJS.ErrnoException | null)?.code === 'ENOENT';
+        if (missing || (err && !err.killed)) {
+          // Missing or odd failure: report accordingly but let the next
+          // cycle re-probe rather than caching a possibly-transient answer.
+          this.availability = undefined;
+        }
+        resolve(!missing);
+      });
     });
     return this.availability;
   }
