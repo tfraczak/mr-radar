@@ -264,8 +264,8 @@ export interface SelectOption {
 export const createSelect = (
   options: (string | SelectOption)[],
   value: string,
-): { root: HTMLElement; select: HTMLSelectElement } => {
-  const opts: SelectOption[] = options.map((o) => (typeof o === 'string' ? { value: o } : o));
+): { root: HTMLElement; select: HTMLSelectElement; setOptions: (options: (string | SelectOption)[]) => void } => {
+  let opts: SelectOption[] = options.map((o) => (typeof o === 'string' ? { value: o } : o));
   if (value && !opts.some((o) => o.value === value)) opts.unshift({ value });
   const labelOf = (v: string): string => {
     const o = opts.find((x) => x.value === v);
@@ -275,6 +275,16 @@ export const createSelect = (
   const root = el('span', 'select-wrap');
   const select = el('select', 'field-input');
   select.hidden = true;
+  const paintNative = (): void => {
+    const current = select.value;
+    select.replaceChildren();
+    for (const o of opts) {
+      const opt = el('option', undefined, o.label ?? o.value);
+      opt.value = o.value;
+      if (o.value === current || (!current && o.value === value)) opt.selected = true;
+      select.append(opt);
+    }
+  };
   for (const o of opts) {
     const opt = el('option', undefined, o.label ?? o.value);
     opt.value = o.value;
@@ -321,7 +331,23 @@ export const createSelect = (
     triggerLabel.textContent = labelOf(select.value);
   });
   root.append(select, trigger, panel);
-  return { root, select };
+  /**
+   * Swap the choice list. The current value is kept when still offered;
+   * otherwise the first option wins and a 'change' event fires so callers
+   * and the trigger label stay in sync.
+   */
+  const setOptions = (next: (string | SelectOption)[]): void => {
+    const keep = select.value;
+    opts = next.map((o) => (typeof o === 'string' ? { value: o } : o));
+    paintNative();
+    if (opts.some((o) => o.value === keep)) select.value = keep;
+    else {
+      select.value = opts[0]?.value ?? '';
+      select.dispatchEvent(new Event('change'));
+    }
+    triggerLabel.textContent = labelOf(select.value);
+  };
+  return { root, select, setOptions };
 };
 
 // ---------------------------------------------------------------------------

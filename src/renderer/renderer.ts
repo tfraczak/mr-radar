@@ -935,13 +935,24 @@ const openSettings = async (): Promise<void> => {
     value.type = 'text';
     value.value = r.value ?? '';
     value.placeholder = 'pattern';
+    // 'needs-value' only means something for an empty-check; other ops hide
+    // it, and a target holding it falls back to 'next'.
+    const targetChoices = (opValue: string): string[] =>
+      opValue === 'empty' ? s.ruleTargetChoices : s.ruleTargetChoices.filter((c) => c !== 'needs-value');
+    const thenSel = mkSelect(targetChoices(r.op), r.then);
+    const elseSel = mkSelect(targetChoices(r.op), r.else);
     const syncValue = (): void => {
       value.hidden = op.select.value !== 'matches';
+      for (const sel of [thenSel, elseSel]) {
+        if (op.select.value !== 'empty' && sel.select.value === 'needs-value') {
+          sel.select.value = 'next';
+          sel.select.dispatchEvent(new Event('change'));
+        }
+        sel.setOptions(targetChoices(op.select.value));
+      }
     };
     op.select.addEventListener('change', syncValue);
     syncValue();
-    const thenSel = mkSelect(s.ruleTargetChoices, r.then);
-    const elseSel = mkSelect(s.ruleTargetChoices, r.else);
     const snapshotRule = (): EditableSettings['statusRules'][number] => ({
       status: status.select.value,
       repo: repo.select.value,
@@ -977,6 +988,31 @@ const openSettings = async (): Promise<void> => {
       d.append(...kids.map((k) => (typeof k === 'string' ? el('span', 'rule-word', k) : k)));
       return d;
     };
+    // Rules are order-sensitive ('next' falls through), so cards can be
+    // dragged into a new order by their grip. The DOM order IS the saved
+    // order — collection reads children, not insertion order.
+    const grip = el('span', 'rule-grip', '⠿');
+    grip.title = 'Drag to reorder — rules run top to bottom';
+    grip.addEventListener('mousedown', () => {
+      root.draggable = true;
+    });
+    root.addEventListener('dragstart', (e) => {
+      root.classList.add('dragging');
+      e.dataTransfer?.setData('text/plain', '');
+      if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+    });
+    root.addEventListener('dragend', () => {
+      root.classList.remove('dragging');
+      root.draggable = false;
+    });
+    root.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      const dragging = ruleRowsWrap.querySelector('.dragging');
+      if (!dragging || dragging === root) return;
+      const rect = root.getBoundingClientRect();
+      const before = e.clientY < rect.top + rect.height / 2;
+      ruleRowsWrap.insertBefore(dragging, before ? root : root.nextSibling);
+    });
     const controls = el('div', 'rule-controls');
     controls.append(
       line('', status.root, 'in', repo.root),
@@ -985,7 +1021,7 @@ const openSettings = async (): Promise<void> => {
       line('', 'else'),
       line('rule-branch', '→', elseSel.root),
     );
-    root.append(controls, clone, remove);
+    root.append(grip, controls, clone, remove);
     ruleRowsWrap.append(root);
     ruleRows.push({ root, get: snapshotRule });
     paintRulesHead();
@@ -1128,7 +1164,11 @@ const openSettings = async (): Promise<void> => {
         .map((a) => a.status),
       statusAssignments: [...assignments.values()],
       sectionChoices: s.sectionChoices,
-      statusRules: ruleRows.map((r) => r.get()),
+      // Saved order = on-screen order (rows may have been drag-reordered).
+      statusRules: [...ruleRowsWrap.children]
+        .map((rowEl) => ruleRows.find((r) => r.root === rowEl))
+        .filter((r): r is (typeof ruleRows)[number] => r !== undefined)
+        .map((r) => r.get()),
       ruleFieldChoices: s.ruleFieldChoices,
       ruleOpChoices: s.ruleOpChoices,
       ruleTargetChoices: s.ruleTargetChoices,

@@ -1859,3 +1859,17 @@ button.select-trigger {
   width: 12px;
   font-size: 10px;
 }
+
+/* Rule drag handle: grab to reorder; the card dims while in flight. */
+.rule-grip {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  padding: 4px 2px;
+  color: var(--fg-faint);
+  cursor: grab;
+  user-select: none;
+}
+
+.rule-row.dragging {
+  opacity: 0.45;
+}
