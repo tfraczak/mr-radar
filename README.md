@@ -16,58 +16,50 @@ It exists to close three gaps that make MR activity easy to miss:
   to "what needs my attention" to "did it actually pass".
 - **Reviews are invisible until you go looking.** This brings them to the menu bar.
 
-## Getting set up, step by step
-
-The app shells out to the `glab` and `rwx` CLIs, so it never holds those credentials and
-never asks you for them. Total setup time is about ten minutes.
-
-### Step 0 — prerequisites
-
-1. **Node ≥ 22.5** (an `.nvmrc` pins the version used for development):
-
-   ```bash
-   nvm install && nvm use
-   ```
-
-2. **Yarn 4** comes via corepack — no global install:
-
-   ```bash
-   corepack enable
-   ```
-
-3. **The GitLab CLI**, authenticated against your GitLab host:
-
-   ```bash
-   brew install glab
-   glab auth login
-   ```
-
-   Sanity check: `glab api user --jq .username` should print your username.
-
-4. **The RWX CLI** — only if any of your repos run their specs on
-   [RWX](https://rwx.com); skip otherwise:
-
-   ```bash
-   brew install rwx-cloud/tap/rwx
-   rwx login
-   ```
-
-### Step 1 — install and launch
+## Install
 
 ```bash
-git clone <this repo> && cd mr-radar
-yarn install
-yarn dev      # builds, then launches the menu bar app
+git clone https://github.com/tfraczak/mr-radar.git && cd mr-radar
+./install.sh
 ```
 
-A **radar icon** appears in your menu bar. On this first launch the app already works in a
-degraded mode: it lists your open MRs and review requests scoped by *recent activity*,
-because it doesn't know your Jira tickets yet. The footer of the popover shows per-source
-health, so you can see at a glance what's connected.
+That's the whole install. The script checks prerequisites, installs
+dependencies, builds, and registers the menu bar app under launchd — it starts
+at login, restarts on crash, and the script is safe to re-run any time
+(including after `git pull`, to update).
 
-Click the icon → **Open** for the popover.
+It expects two things to exist already:
 
-### Step 2 — connect Jira
+- **Node ≥ 22.5** — `nvm install` in this directory picks up the `.nvmrc`
+- **[`glab`](https://gitlab.com/gitlab-org/cli)** — `brew install glab`, then `glab auth login`
+
+The [`rwx`](https://rwx.com) CLI is optional — only needed if some of your
+repos gate their specs on RWX (`brew install rwx-cloud/tap/rwx`, `rwx login`).
+
+A **radar icon** appears in your menu bar when it's done. Click it → **Open**
+for the popover, then walk through the first-run setup below.
+
+## Manual installation
+
+If the script trips on something, the steps it automates are each one command:
+
+```bash
+corepack enable   # provides Yarn 4, no global install
+yarn install
+yarn build
+yarn tray:install # register + start the launchd agent
+```
+
+`yarn tray:uninstall` removes the agent again. For a one-off run without
+installing anything: `yarn install && yarn dev` (dies with the terminal).
+If Electron can't run on your machine at all, there's a headless poller with a
+web UI instead — see its section below (`yarn poller:install`). A normal
+packaged `.app` also builds with `yarn package` (ad-hoc signed: first launch
+may need right-click → Open, and app-control software may block it outright).
+
+## First-run setup
+
+### Step 1 — connect Jira
 
 This is what turns the wall of MRs into "the handful actually in flight". Ticket scoping,
 the fix-version picker, and status sections all need it.
@@ -84,7 +76,7 @@ the fix-version picker, and status sections all need it.
 Within a poll cycle the popover regroups by Jira ticket, and the footer's Jira source goes
 green.
 
-### Step 3 — tell it how your statuses map (optional)
+### Step 2 — tell it how your statuses map (optional)
 
 Settings → **Jira** also holds the status→section mapping. Every status the app has ever
 seen on your tickets is offered as a chip in four multi-selects:
@@ -101,7 +93,7 @@ Dev Complete ticket with *no fix version* to its own "needs a fix version" secti
 in-app picker) and versioned ones to Verification. Rules support per-repo scoping, issue-type
 regexes, due dates, clone/remove, and fall-through.
 
-### Step 4 — repos and CI (only for RWX users)
+### Step 3 — repos and CI (only for RWX users)
 
 Settings → **General** grows one row per repo the app has seen you working in:
 
@@ -115,7 +107,7 @@ Settings → **General** grows one row per repo the app has seen you working in:
 - **Use RWX for CI status** — the global switch. With it off (or with no `rwx` CLI
   installed), the app is GitLab-pipelines-only and never invokes `rwx`.
 
-### Step 5 — notifications
+### Step 4 — notifications
 
 Settings → **Notifications**: pick a sound and a delivery method, then verify with the menu
 bar icon → **Send test notification**.
@@ -127,32 +119,7 @@ bar icon → **Send test notification**.
 - `terminal-notifier` — icon + click-to-open for the headless poller
   (`brew install terminal-notifier`). Some application-control software blocks it.
 
-### Step 6 — make it permanent
-
-`yarn dev` dies with your terminal. Install it under launchd instead — starts at login,
-restarts on crash:
-
-```bash
-yarn tray:install
-```
-
-This runs the app via the distributor-signed Electron binary in node_modules — a launch
-path that also tends to survive application-control software (ThreatLocker and similar),
-which often blocks ad-hoc-signed packaged apps but allows the signed Electron binary.
-
-**Alternative — the headless poller.** If Electron can't run on your machine at all,
-`yarn poller:install` registers a plain Node process instead, which notifies via
-`osascript`/`terminal-notifier` and serves the *identical* popover UI as a web page at
-<http://127.0.0.1:8942> (`yarn ui` opens it). Both forms share the same core, config,
-database, and Keychain token; each installer removes the other agent, so you can flip
-between them with one command.
-
-You can also build a normal `.app` (`yarn package`, then drag
-`release/mac-arm64/MR Radar.app` to Applications). It's ad-hoc signed, not notarized, so the
-first launch may need **right-click → Open**; on app-control-managed machines it may be
-blocked outright — use `yarn tray:install` instead.
-
-### Step 7 — verify
+### Step 5 — verify
 
 ```bash
 yarn status       # one live read-only cycle: source health, in-scope MRs, would-be events
@@ -174,7 +141,7 @@ yarn tray:logs    # follow the running agent's log ("cycle ok · N api calls" is
 ### Updating
 
 ```bash
-git pull && yarn install && yarn build && yarn tray:restart
+git pull && ./install.sh
 ```
 
 ## API tokens — where they live
