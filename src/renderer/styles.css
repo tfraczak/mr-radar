@@ -756,7 +756,9 @@ select option {
   --hover: rgba(111, 191, 98, 0.10);
 }
 
-/* Mulberry — fresh leaf-green surfaces with fruit-stain burgundy affordances. */
+/* Mulberry — leaf and fruit trade places by scheme: leaf-green surfaces
+   with fruit-burgundy affordances in light; ripe wine-purple surfaces with
+   leaf-green affordances in dark. */
 :root[data-theme='mulberry'][data-scheme='light'] {
   --bg: #ecf3e2;
   --sheet: #f8fbf0;
@@ -770,15 +772,15 @@ select option {
 }
 
 :root[data-theme='mulberry'][data-scheme='dark'] {
-  --bg: #1b2513;
-  --sheet: #242f1a;
-  --fg: #eef3e4;
-  --fg-dim: #b1bf9c;
-  --fg-faint: #71805c;
-  --sep: rgba(238, 243, 228, 0.14);
-  --accent: #c95f85;
+  --bg: #2b1322;
+  --sheet: #381b2d;
+  --fg: #f7e9f1;
+  --fg-dim: #cfa6bd;
+  --fg-faint: #8f6a7e;
+  --sep: rgba(247, 233, 241, 0.13);
+  --accent: #8dbb6a;
   --accent-fg: #1c1510;
-  --hover: rgba(201, 95, 133, 0.10);
+  --hover: rgba(141, 187, 106, 0.10);
 }
 
 /* Watermelon — flesh-red surfaces, rind-green affordances, seed-black text. */
