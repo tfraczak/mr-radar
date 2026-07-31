@@ -166,92 +166,92 @@
 
 /* -- extended themes (generated, one hue identity each) -------------------- */
 
-/* Bubbles — airy soap-film blues with an iridescent periwinkle sheen. */
+/* Bubbles — airy soap-film blue with an iridescent-violet shimmer accent. */
 :root[data-theme='bubbles'][data-scheme='light'] {
-  --bg: #f1f4fe;
-  --sheet: #fafcff;
-  --fg: #232838;
-  --fg-dim: #575f78;
-  --fg-faint: #8a92ab;
-  --sep: rgba(35, 40, 56, 0.13);
+  --bg: #eef4fe;
+  --sheet: #fbfdff;
+  --fg: #212637;
+  --fg-dim: #545c76;
+  --fg-faint: #8790aa;
+  --sep: rgba(33, 38, 55, 0.14);
   --accent: #7b6ce4;
   --accent-fg: #1c1510;
   --hover: rgba(123, 108, 228, 0.09);
 }
 
 :root[data-theme='bubbles'][data-scheme='dark'] {
-  --bg: #191c2b;
-  --sheet: #22263a;
+  --bg: #171a2e;
+  --sheet: #21253c;
   --fg: #edeffa;
   --fg-dim: #a9aecb;
   --fg-faint: #6a7090;
-  --sep: rgba(237, 239, 250, 0.13);
+  --sep: rgba(237, 239, 250, 0.14);
   --accent: #a89bf0;
   --accent-fg: #1c1510;
   --hover: rgba(168, 155, 240, 0.10);
 }
 
-/* Pizza */
+/* Pizza — golden crust surfaces (a wood-fired oven in dark), tomato accent. */
 :root[data-theme='pizza'][data-scheme='light'] {
-  --bg: #faf1e8;
-  --sheet: #fffaf4;
-  --fg: #33231a;
-  --fg-dim: #6e5749;
-  --fg-faint: #a08874;
-  --sep: rgba(51,35,26, 0.14);
+  --bg: #f9edda;
+  --sheet: #fffaf0;
+  --fg: #382517;
+  --fg-dim: #6f5641;
+  --fg-faint: #a3866a;
+  --sep: rgba(56, 37, 23, 0.14);
   --accent: #c23a22;
   --accent-fg: #ffffff;
-  --hover: rgba(194,58,34, 0.09);
+  --hover: rgba(194, 58, 34, 0.09);
 }
 
 :root[data-theme='pizza'][data-scheme='dark'] {
-  --bg: #241a15;
-  --sheet: #2d211b;
-  --fg: #f5ece4;
-  --fg-dim: #c3ab9b;
-  --fg-faint: #83705f;
-  --sep: rgba(245,236,228, 0.13);
+  --bg: #29190f;
+  --sheet: #332014;
+  --fg: #f7ecdd;
+  --fg-dim: #cfab88;
+  --fg-faint: #8a7052;
+  --sep: rgba(247, 236, 221, 0.14);
   --accent: #ff7a5c;
   --accent-fg: #1c1510;
-  --hover: rgba(255,122,92, 0.10);
+  --hover: rgba(255, 122, 92, 0.10);
 }
 
-/* Seafoam */
+/* Seafoam — foam-mint surfaces over deep seawater, sea-glass accent. */
 :root[data-theme='seafoam'][data-scheme='light'] {
-  --bg: #ecf6f2;
-  --sheet: #f8fcfa;
-  --fg: #1c2e28;
-  --fg-dim: #4d685f;
-  --fg-faint: #7f988e;
-  --sep: rgba(28,46,40, 0.14);
+  --bg: #e6f5ec;
+  --sheet: #f8fdfa;
+  --fg: #1a2f27;
+  --fg-dim: #4a685c;
+  --fg-faint: #7c988a;
+  --sep: rgba(26, 47, 39, 0.14);
   --accent: #1f8a70;
   --accent-fg: #ffffff;
-  --hover: rgba(31,138,112, 0.09);
+  --hover: rgba(31, 138, 112, 0.09);
 }
 
 :root[data-theme='seafoam'][data-scheme='dark'] {
-  --bg: #15211d;
-  --sheet: #1d2b26;
-  --fg: #e8f4ef;
-  --fg-dim: #a2bcb2;
-  --fg-faint: #668074;
-  --sep: rgba(232,244,239, 0.13);
+  --bg: #10231d;
+  --sheet: #183028;
+  --fg: #e6f5ee;
+  --fg-dim: #9fc0b2;
+  --fg-faint: #628274;
+  --sep: rgba(230, 245, 238, 0.14);
   --accent: #5ecfae;
   --accent-fg: #1c1510;
-  --hover: rgba(94,207,174, 0.10);
+  --hover: rgba(94, 207, 174, 0.10);
 }
 
-/* Quarry — cut stone with iron-rust seams for the accent. */
+/* Quarry — cut stone through and through: granite-gray affordances. */
 :root[data-theme='quarry'][data-scheme='light'] {
   --bg: #f0eeec;
   --sheet: #faf9f7;
   --fg: #262320;
   --fg-dim: #5b554e;
   --fg-faint: #8d857b;
-  --sep: rgba(38,35,32, 0.14);
-  --accent: #ab5226;
+  --sep: rgba(38, 35, 32, 0.14);
+  --accent: #6a655c;
   --accent-fg: #ffffff;
-  --hover: rgba(171, 82, 38, 0.09);
+  --hover: rgba(106, 101, 92, 0.09);
 }
 
 :root[data-theme='quarry'][data-scheme='dark'] {
@@ -260,10 +260,10 @@
   --fg: #efece8;
   --fg-dim: #b1a89c;
   --fg-faint: #736a5e;
-  --sep: rgba(239,236,232, 0.13);
-  --accent: #e08a52;
+  --sep: rgba(239, 236, 232, 0.14);
+  --accent: #b3aca1;
   --accent-fg: #1c1510;
-  --hover: rgba(224, 138, 82, 0.10);
+  --hover: rgba(179, 172, 161, 0.10);
 }
 
 /* Lilac — soft violet blooms for the surfaces, leaf green for the accent. */
@@ -518,26 +518,26 @@
   --hover: rgba(255, 125, 69, 0.10);
 }
 
-/* Parchment — aged paper with an iron-gall ink accent. */
+/* Parchment — yellowed manuscript (candlelit leather in dark), ink accent. */
 :root[data-theme='parchment'][data-scheme='light'] {
-  --bg: #f8f3e7;
-  --sheet: #fdfaf2;
-  --fg: #332d20;
-  --fg-dim: #6a6250;
-  --fg-faint: #9a917c;
-  --sep: rgba(51,45,32, 0.14);
+  --bg: #f7f0dd;
+  --sheet: #fdf9ec;
+  --fg: #352d1c;
+  --fg-dim: #6c624a;
+  --fg-faint: #9c9176;
+  --sep: rgba(53, 45, 28, 0.14);
   --accent: #35549c;
   --accent-fg: #ffffff;
   --hover: rgba(53, 84, 156, 0.09);
 }
 
 :root[data-theme='parchment'][data-scheme='dark'] {
-  --bg: #232014;
-  --sheet: #2c281c;
-  --fg: #f6f1e3;
-  --fg-dim: #bfb5a0;
-  --fg-faint: #7d7460;
-  --sep: rgba(246,241,227, 0.13);
+  --bg: #282112;
+  --sheet: #322a18;
+  --fg: #f6efdc;
+  --fg-dim: #c4b694;
+  --fg-faint: #82775c;
+  --sep: rgba(246, 239, 220, 0.14);
   --accent: #8ba3e8;
   --accent-fg: #1c1510;
   --hover: rgba(139, 163, 232, 0.10);
