@@ -732,27 +732,27 @@ select option {
 
 /* Pumpkin — pumpkin-flesh orange surfaces with vine-green affordances. */
 :root[data-theme='pumpkin'][data-scheme='light'] {
-  --bg: #fdead2;
-  --sheet: #fff7ec;
-  --fg: #37220f;
-  --fg-dim: #71563a;
-  --fg-faint: #a2865f;
-  --sep: rgba(55, 34, 15, 0.14);
-  --accent: #4a6b35;
+  --bg: #ffe2b3;
+  --sheet: #fff3dd;
+  --fg: #3d2408;
+  --fg-dim: #7d552a;
+  --fg-faint: #b08350;
+  --sep: rgba(61, 36, 8, 0.15);
+  --accent: #3d7d33;
   --accent-fg: #ffffff;
-  --hover: rgba(74, 107, 53, 0.09);
+  --hover: rgba(61, 125, 51, 0.09);
 }
 
 :root[data-theme='pumpkin'][data-scheme='dark'] {
-  --bg: #2d1c0c;
-  --sheet: #38240f;
-  --fg: #fcecd8;
-  --fg-dim: #dcab7e;
-  --fg-faint: #987450;
-  --sep: rgba(252, 236, 216, 0.14);
-  --accent: #97b25c;
+  --bg: #38200a;
+  --sheet: #45290d;
+  --fg: #ffedd6;
+  --fg-dim: #f0b478;
+  --fg-faint: #a97b47;
+  --sep: rgba(255, 237, 214, 0.13);
+  --accent: #6fbf62;
   --accent-fg: #1c1510;
-  --hover: rgba(151, 178, 92, 0.10);
+  --hover: rgba(111, 191, 98, 0.10);
 }
 
 /* Mulberry — fresh leaf-green surfaces with fruit-stain burgundy affordances. */
