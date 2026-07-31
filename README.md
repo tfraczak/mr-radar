@@ -28,13 +28,11 @@ dependencies, builds, and registers the menu bar app under launchd — it starts
 at login, restarts on crash, and the script is safe to re-run any time
 (including after `git pull`, to update).
 
-It expects two things to exist already:
-
-- **Node ≥ 22.5** — `nvm install` in this directory picks up the `.nvmrc`
-- **[`glab`](https://gitlab.com/gitlab-org/cli)** — `brew install glab`, then `glab auth login`
-
-The [`rwx`](https://rwx.com) CLI is optional — only needed if some of your
-repos gate their specs on RWX (`brew install rwx-cloud/tap/rwx`, `rwx login`).
+It installs anything that's missing along the way: Homebrew (asks first),
+nvm + the pinned Node, and [`glab`](https://gitlab.com/gitlab-org/cli) via
+brew — and it walks you through `glab auth login` if you aren't authenticated
+yet. The optional [`rwx`](https://rwx.com) CLI is offered during install
+(answer no unless some of your repos gate their specs on RWX).
 
 A **radar icon** appears in your menu bar when it's done. Click it → **Open**
 for the popover, then walk through the first-run setup below.
