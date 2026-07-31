@@ -519,7 +519,8 @@
   --hover: rgba(255, 125, 69, 0.10);
 }
 
-/* Parchment — yellowed manuscript (candlelit leather in dark), ink accent. */
+/* Parchment — yellowed manuscript (candlelit leather in dark) with faded
+   sepia-ink affordances. */
 :root[data-theme='parchment'][data-scheme='light'] {
   --bg: #f7f0dd;
   --sheet: #fdf9ec;
@@ -527,9 +528,9 @@
   --fg-dim: #6c624a;
   --fg-faint: #9c9176;
   --sep: rgba(53, 45, 28, 0.14);
-  --accent: #35549c;
+  --accent: #55452e;
   --accent-fg: #ffffff;
-  --hover: rgba(53, 84, 156, 0.09);
+  --hover: rgba(85, 69, 46, 0.09);
 }
 
 :root[data-theme='parchment'][data-scheme='dark'] {
@@ -539,9 +540,9 @@
   --fg-dim: #c4b694;
   --fg-faint: #82775c;
   --sep: rgba(246, 239, 220, 0.14);
-  --accent: #8ba3e8;
+  --accent: #bfa375;
   --accent-fg: #1c1510;
-  --hover: rgba(139, 163, 232, 0.10);
+  --hover: rgba(191, 163, 117, 0.10);
 }
 
 /* Storm — storm-cloud blues with a lightning-gold accent. */
