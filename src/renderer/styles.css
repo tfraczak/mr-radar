@@ -482,12 +482,12 @@
 }
 
 :root[data-theme='peach'][data-scheme='dark'] {
-  --bg: #261d18;
-  --sheet: #2f2420;
-  --fg: #f9efe8;
-  --fg-dim: #c9ad9d;
-  --fg-faint: #87715f;
-  --sep: rgba(249,239,232, 0.13);
+  --bg: #2e1b12;
+  --sheet: #3a2318;
+  --fg: #ffe9d8;
+  --fg-dim: #e2ac89;
+  --fg-faint: #a1725a;
+  --sep: rgba(255, 233, 216, 0.13);
   --accent: #a3c98f;
   --accent-fg: #1c1510;
   --hover: rgba(163, 201, 143, 0.10);
