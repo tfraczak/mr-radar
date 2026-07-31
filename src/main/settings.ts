@@ -1,4 +1,5 @@
-import { APPEARANCES, NOTIFICATION_METHODS, NOTIFICATION_SOUNDS, RULE_FIELDS, RULE_OPS, RULE_TARGETS, THEMES, type Config, type StatusRule } from '../core/config';
+import {
+  type RuleField, APPEARANCES, NOTIFICATION_METHODS, NOTIFICATION_SOUNDS, RULE_FIELDS, RULE_OPS, RULE_TARGETS, THEMES, type Config, type StatusRule } from '../core/config';
 import type { Db } from '../core/db';
 import { isPinnedHttpsOrigin } from '../core/sources/jira';
 import type { EditableSettings } from '../renderer/contract';
@@ -58,7 +59,7 @@ export const toEditable = (config: Config, repoChoices: string[] = []): Editable
     activeStatuses: config.jira.activeStatuses,
     statusAssignments: toAssignments(config),
     sectionChoices: ['active', 'verification', 'done', 'ignore', 'other'],
-    statusRules: config.statusRules.map((r) => ({ ...r })),
+    statusRules: config.statusRules.map((r) => ({ ...r, field: r.field ?? '', repo: r.repo ?? '', value: r.value ?? '' })),
     ruleRepoChoices: repoChoices.length ? repoChoices : Object.keys(config.repos).sort(),
     ruleFieldChoices: [...RULE_FIELDS],
     ruleOpChoices: [...RULE_OPS],
@@ -167,17 +168,16 @@ export const applyEditable = (
       if (!(RULE_OPS as readonly string[]).includes(r.op)) return [];
       if (!(RULE_TARGETS as readonly string[]).includes(r.then)) return [];
       if (!(RULE_TARGETS as readonly string[]).includes(r.else)) return [];
-      return [
-        {
-          status,
-          ...(r.repo?.trim() ? { repo: r.repo.trim() } : {}),
-          ...(r.op === 'always' ? {} : { field: r.field as StatusRule['field'] }),
-          op: r.op as StatusRule['op'],
-          ...(r.value?.trim() ? { value: r.value.trim() } : {}),
-          then: r.then as StatusRule['then'],
-          else: r.else as StatusRule['else'],
-        },
-      ];
+      const rule: StatusRule = {
+        status,
+        ...(r.repo?.trim() ? { repo: r.repo.trim() } : {}),
+        op: r.op as StatusRule['op'],
+        ...(r.value?.trim() ? { value: r.value.trim() } : {}),
+        then: r.then as StatusRule['then'],
+        else: r.else as StatusRule['else'],
+      };
+      if (r.op !== 'always') rule.field = r.field as RuleField;
+      return [rule];
     });
   }
 
