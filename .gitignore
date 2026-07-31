@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+.DS_Store
+*.log
+
+# Raw API captures contain real comment bodies from work repos. The committed
+# fixtures under tests/fixtures/ are sanitized derivatives of these.
+# Regenerate with `yarn verify:fixtures`.
+tests/fixtures/raw/
+
+# electron-builder output
+release/
+
+# stray compiled output must not live beside sources
+src/**/*.js
+src/**/*.js.map

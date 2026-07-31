@@ -1,0 +1,1653 @@
+/*
+ * Popover styling.
+ *
+ * Follows the system appearance by default: the palette below is light, and the
+ * `prefers-color-scheme: dark` block overrides it — so with no OS setting at all
+ * it renders light, and it tracks the system toggle live either way. Concrete
+ * values rather than the `-apple-system-*` color keywords, which don't render
+ * reliably and can't be previewed outside a native window.
+ *
+ * `color-scheme` tells the engine to theme form controls and scrollbars for both.
+ */
+:root {
+  color-scheme: light dark;
+  accent-color: var(--accent);
+
+  /* Light (default / system-light). */
+  --bg: #f6f6f7;
+  --sheet: #ffffff;
+  --fg: #1d1d1f;
+  --fg-dim: #55555a;
+  --fg-faint: #8e8e93;
+  --sep: rgba(0, 0, 0, 0.12);
+  --accent: #0a6cff;
+  --good: #1a9d3f;
+  --bad: #d70015;
+  --warn: #b25000;
+  --hover: rgba(0, 0, 0, 0.06);
+  --row-gap: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e20;
+    --sheet: #262628;
+    --fg: #f5f5f7;
+    --fg-dim: #a1a1a6;
+    --fg-faint: #6e6e73;
+    --sep: rgba(255, 255, 255, 0.14);
+    --accent: #4aa3ff;
+    --good: #40d05f;
+    --bad: #ff6961;
+    --warn: #ff9f0a;
+    --hover: rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* -- themes ------------------------------------------------------------------
+   The renderer resolves the effective scheme in JS (ui.ts applyTheme): it sets
+   data-scheme="light|dark" (appearance setting, or the OS when 'system') and
+   data-theme="<name>" on <html>. The :root/@media blocks above remain as the
+   pre-JS fallback so there is no flash. Each theme defines BOTH halves —
+   theme = personality, appearance = luminosity — and inherits any token it
+   doesn't override (good/bad/warn stay legible everywhere). */
+
+:root[data-scheme='light'] {
+  color-scheme: light;
+  --bg: #f6f6f7;
+  --sheet: #ffffff;
+  --fg: #1d1d1f;
+  --fg-dim: #55555a;
+  --fg-faint: #8e8e93;
+  --sep: rgba(0, 0, 0, 0.12);
+  --accent: #0a6cff;
+  --good: #1a9d3f;
+  --bad: #d70015;
+  --warn: #b25000;
+  --hover: rgba(0, 0, 0, 0.06);
+}
+
+:root[data-scheme='dark'] {
+  color-scheme: dark;
+  --bg: #1e1e20;
+  --sheet: #262628;
+  --fg: #f5f5f7;
+  --fg-dim: #a1a1a6;
+  --fg-faint: #6e6e73;
+  --sep: rgba(255, 255, 255, 0.14);
+  --accent: #4aa3ff;
+  --good: #40d05f;
+  --bad: #ff6961;
+  --warn: #ff9f0a;
+  --hover: rgba(255, 255, 255, 0.08);
+}
+
+/* Slate — cool steel blues, low saturation. */
+:root[data-theme='slate'][data-scheme='light'] {
+  --bg: #eceff3;
+  --sheet: #f8fafc;
+  --fg: #1d242e;
+  --fg-dim: #4f5b6b;
+  --fg-faint: #8493a5;
+  --sep: rgba(29, 36, 46, 0.14);
+  --accent: #46698f;
+  --hover: rgba(70, 105, 143, 0.09);
+}
+
+:root[data-theme='slate'][data-scheme='dark'] {
+  --bg: #151a21;
+  --sheet: #1d242e;
+  --fg: #e7ecf2;
+  --fg-dim: #9fadbd;
+  --fg-faint: #64748b;
+  --sep: rgba(231, 236, 242, 0.13);
+  --accent: #85a8cc;
+  --hover: rgba(133, 168, 204, 0.10);
+}
+
+/* Bubblegum — warm pinks; playful but still readable. */
+:root[data-theme='bubblegum'][data-scheme='light'] {
+  --bg: #fdf1f6;
+  --sheet: #fffafc;
+  --fg: #33202a;
+  --fg-dim: #6e5260;
+  --fg-faint: #a3899a;
+  --sep: rgba(51, 32, 42, 0.13);
+  --accent: #d64d8f;
+  --hover: rgba(214, 77, 143, 0.08);
+}
+
+:root[data-theme='bubblegum'][data-scheme='dark'] {
+  --bg: #231821;
+  --sheet: #2c1f2a;
+  --fg: #f7ebf1;
+  --fg-dim: #c2a4b5;
+  --fg-faint: #82687a;
+  --sep: rgba(247, 235, 241, 0.13);
+  --accent: #ff8fc2;
+  --hover: rgba(255, 143, 194, 0.10);
+}
+
+/* Pine — forest-green needles for the surfaces, bark brown for the accent. */
+:root[data-theme='pine'][data-scheme='light'] {
+  --bg: #eef3ee;
+  --sheet: #f9fcf9;
+  --fg: #1e2a22;
+  --fg-dim: #4d6155;
+  --fg-faint: #7f9488;
+  --sep: rgba(30, 42, 34, 0.14);
+  --accent: #7a5230;
+  --hover: rgba(122, 82, 48, 0.09);
+}
+
+:root[data-theme='pine'][data-scheme='dark'] {
+  --bg: #161f19;
+  --sheet: #1e2a22;
+  --fg: #e9f1ec;
+  --fg-dim: #a3b8ab;
+  --fg-faint: #66796d;
+  --sep: rgba(233, 241, 236, 0.13);
+  --accent: #c49a6c;
+  --hover: rgba(196, 154, 108, 0.10);
+}
+
+
+/* -- extended themes (generated, one hue identity each) -------------------- */
+
+/* Bubbles — airy soap-film blues with an iridescent periwinkle sheen. */
+:root[data-theme='bubbles'][data-scheme='light'] {
+  --bg: #f1f4fe;
+  --sheet: #fafcff;
+  --fg: #232838;
+  --fg-dim: #575f78;
+  --fg-faint: #8a92ab;
+  --sep: rgba(35, 40, 56, 0.13);
+  --accent: #7b6ce4;
+  --hover: rgba(123, 108, 228, 0.09);
+}
+
+:root[data-theme='bubbles'][data-scheme='dark'] {
+  --bg: #191c2b;
+  --sheet: #22263a;
+  --fg: #edeffa;
+  --fg-dim: #a9aecb;
+  --fg-faint: #6a7090;
+  --sep: rgba(237, 239, 250, 0.13);
+  --accent: #a89bf0;
+  --hover: rgba(168, 155, 240, 0.10);
+}
+
+/* Pizza */
+:root[data-theme='pizza'][data-scheme='light'] {
+  --bg: #faf1e8;
+  --sheet: #fffaf4;
+  --fg: #33231a;
+  --fg-dim: #6e5749;
+  --fg-faint: #a08874;
+  --sep: rgba(51,35,26, 0.14);
+  --accent: #c23a22;
+  --hover: rgba(194,58,34, 0.09);
+}
+
+:root[data-theme='pizza'][data-scheme='dark'] {
+  --bg: #241a15;
+  --sheet: #2d211b;
+  --fg: #f5ece4;
+  --fg-dim: #c3ab9b;
+  --fg-faint: #83705f;
+  --sep: rgba(245,236,228, 0.13);
+  --accent: #ff7a5c;
+  --hover: rgba(255,122,92, 0.10);
+}
+
+/* Seafoam */
+:root[data-theme='seafoam'][data-scheme='light'] {
+  --bg: #ecf6f2;
+  --sheet: #f8fcfa;
+  --fg: #1c2e28;
+  --fg-dim: #4d685f;
+  --fg-faint: #7f988e;
+  --sep: rgba(28,46,40, 0.14);
+  --accent: #1f8a70;
+  --hover: rgba(31,138,112, 0.09);
+}
+
+:root[data-theme='seafoam'][data-scheme='dark'] {
+  --bg: #15211d;
+  --sheet: #1d2b26;
+  --fg: #e8f4ef;
+  --fg-dim: #a2bcb2;
+  --fg-faint: #668074;
+  --sep: rgba(232,244,239, 0.13);
+  --accent: #5ecfae;
+  --hover: rgba(94,207,174, 0.10);
+}
+
+/* Quarry */
+:root[data-theme='quarry'][data-scheme='light'] {
+  --bg: #f0eeec;
+  --sheet: #faf9f7;
+  --fg: #262320;
+  --fg-dim: #5b554e;
+  --fg-faint: #8d857b;
+  --sep: rgba(38,35,32, 0.14);
+  --accent: #6d5f4b;
+  --hover: rgba(109,95,75, 0.09);
+}
+
+:root[data-theme='quarry'][data-scheme='dark'] {
+  --bg: #1d1b18;
+  --sheet: #262320;
+  --fg: #efece8;
+  --fg-dim: #b1a89c;
+  --fg-faint: #736a5e;
+  --sep: rgba(239,236,232, 0.13);
+  --accent: #b4a184;
+  --hover: rgba(180,161,132, 0.10);
+}
+
+/* Lilac — soft violet blooms for the surfaces, leaf green for the accent. */
+:root[data-theme='lilac'][data-scheme='light'] {
+  --bg: #f0e7fa;
+  --sheet: #faf6fe;
+  --fg: #2a2038;
+  --fg-dim: #605073;
+  --fg-faint: #9486a4;
+  --sep: rgba(42, 32, 56, 0.14);
+  --accent: #4a7c3f;
+  --hover: rgba(74, 124, 63, 0.09);
+}
+
+:root[data-theme='lilac'][data-scheme='dark'] {
+  --bg: #221a30;
+  --sheet: #2c223c;
+  --fg: #f1eaf8;
+  --fg-dim: #b9a9cc;
+  --fg-faint: #786a88;
+  --sep: rgba(241, 234, 248, 0.13);
+  --accent: #8ec47e;
+  --hover: rgba(142, 196, 126, 0.10);
+}
+
+/* Sunflower — golden-yellow petals for the surfaces, leaf green for the accent. */
+:root[data-theme='sunflower'][data-scheme='light'] {
+  --bg: #fbf0c2;
+  --sheet: #fffce1;
+  --fg: #33290d;
+  --fg-dim: #6d5f26;
+  --fg-faint: #a2924f;
+  --sep: rgba(51, 41, 13, 0.15);
+  --accent: #4f7d22;
+  --hover: rgba(79, 125, 34, 0.09);
+}
+
+:root[data-theme='sunflower'][data-scheme='dark'] {
+  --bg: #262008;
+  --sheet: #312a10;
+  --fg: #f9f2cd;
+  --fg-dim: #d1c06e;
+  --fg-faint: #8d7f45;
+  --sep: rgba(249, 242, 205, 0.13);
+  --accent: #9ccf52;
+  --hover: rgba(156, 207, 82, 0.10);
+}
+
+/* Meringue — airy near-white ivory with a toasted-gold tip of an accent. */
+:root[data-theme='meringue'][data-scheme='light'] {
+  --bg: #fdfaf2;
+  --sheet: #fffefb;
+  --fg: #332c1f;
+  --fg-dim: #6f6350;
+  --fg-faint: #a3967f;
+  --sep: rgba(51, 44, 31, 0.13);
+  --accent: #c08b2f;
+  --hover: rgba(192, 139, 47, 0.09);
+}
+
+:root[data-theme='meringue'][data-scheme='dark'] {
+  --bg: #272217;
+  --sheet: #312b1e;
+  --fg: #f9f5eb;
+  --fg-dim: #d3c5a7;
+  --fg-faint: #8a7d63;
+  --sep: rgba(249, 245, 235, 0.13);
+  --accent: #f2ca82;
+  --hover: rgba(242, 202, 130, 0.10);
+}
+
+/* Oatmeal — dusky gray-beige grain, deeper than meringue, walnut accent. */
+:root[data-theme='oatmeal'][data-scheme='light'] {
+  --bg: #efe9dd;
+  --sheet: #f8f4ea;
+  --fg: #2b2720;
+  --fg-dim: #60584a;
+  --fg-faint: #8f8571;
+  --sep: rgba(43, 39, 32, 0.15);
+  --accent: #7c5a33;
+  --hover: rgba(124, 90, 51, 0.09);
+}
+
+:root[data-theme='oatmeal'][data-scheme='dark'] {
+  --bg: #1e1c16;
+  --sheet: #27241d;
+  --fg: #efebe1;
+  --fg-dim: #b0a591;
+  --fg-faint: #6d6453;
+  --sep: rgba(239, 235, 225, 0.13);
+  --accent: #bd8f55;
+  --hover: rgba(189, 143, 85, 0.10);
+}
+
+/* Coral */
+:root[data-theme='coral'][data-scheme='light'] {
+  --bg: #fcf1ee;
+  --sheet: #fffaf8;
+  --fg: #32211d;
+  --fg-dim: #6d5450;
+  --fg-faint: #a08680;
+  --sep: rgba(50,33,29, 0.14);
+  --accent: #e0584a;
+  --hover: rgba(224,88,74, 0.09);
+}
+
+:root[data-theme='coral'][data-scheme='dark'] {
+  --bg: #251a18;
+  --sheet: #2e211e;
+  --fg: #f8ece8;
+  --fg-dim: #c6a89f;
+  --fg-faint: #856b62;
+  --sep: rgba(248,236,232, 0.13);
+  --accent: #ff8b77;
+  --hover: rgba(255,139,119, 0.10);
+}
+
+/* Glacier — icy cyan of glacial ice, crevasse-blue accent. */
+:root[data-theme='glacier'][data-scheme='light'] {
+  --bg: #e3f1f4;
+  --sheet: #f4fbfc;
+  --fg: #14313a;
+  --fg-dim: #46656e;
+  --fg-faint: #7899a1;
+  --sep: rgba(20, 49, 58, 0.14);
+  --accent: #1180a4;
+  --hover: rgba(17, 128, 164, 0.09);
+}
+
+:root[data-theme='glacier'][data-scheme='dark'] {
+  --bg: #0f2129;
+  --sheet: #172d36;
+  --fg: #e6f4f8;
+  --fg-dim: #9ec4cf;
+  --fg-faint: #5f8390;
+  --sep: rgba(230, 244, 248, 0.13);
+  --accent: #56c8e4;
+  --hover: rgba(86, 200, 228, 0.10);
+}
+
+/* Moss — deep, cool forest-floor green; darker and cooler than matcha. */
+:root[data-theme='moss'][data-scheme='light'] {
+  --bg: #e7eedd;
+  --sheet: #f3f8eb;
+  --fg: #1f2915;
+  --fg-dim: #4e6140;
+  --fg-faint: #7f9170;
+  --sep: rgba(31, 41, 21, 0.15);
+  --accent: #3f6524;
+  --hover: rgba(63, 101, 36, 0.09);
+}
+
+:root[data-theme='moss'][data-scheme='dark'] {
+  --bg: #161c0f;
+  --sheet: #1f2716;
+  --fg: #e9efe0;
+  --fg-dim: #a3b58e;
+  --fg-faint: #667754;
+  --sep: rgba(233, 239, 224, 0.13);
+  --accent: #86b350;
+  --hover: rgba(134, 179, 80, 0.10);
+}
+
+/* Cocoa */
+:root[data-theme='cocoa'][data-scheme='light'] {
+  --bg: #f5efeb;
+  --sheet: #fcf8f5;
+  --fg: #2e241e;
+  --fg-dim: #63534a;
+  --fg-faint: #94827a;
+  --sep: rgba(46,36,30, 0.14);
+  --accent: #79493a;
+  --hover: rgba(121,73,58, 0.09);
+}
+
+:root[data-theme='cocoa'][data-scheme='dark'] {
+  --bg: #211a16;
+  --sheet: #2a211c;
+  --fg: #f3ebe6;
+  --fg-dim: #bda99e;
+  --fg-faint: #7b6a60;
+  --sep: rgba(243,235,230, 0.13);
+  --accent: #c98d75;
+  --hover: rgba(201,141,117, 0.10);
+}
+
+/* Peach */
+:root[data-theme='peach'][data-scheme='light'] {
+  --bg: #fdf3ec;
+  --sheet: #fffaf6;
+  --fg: #332620;
+  --fg-dim: #6e5a4e;
+  --fg-faint: #a18a7b;
+  --sep: rgba(51,38,32, 0.14);
+  --accent: #d76b3f;
+  --hover: rgba(215,107,63, 0.09);
+}
+
+:root[data-theme='peach'][data-scheme='dark'] {
+  --bg: #261d18;
+  --sheet: #2f2420;
+  --fg: #f9efe8;
+  --fg-dim: #c9ad9d;
+  --fg-faint: #87715f;
+  --sep: rgba(249,239,232, 0.13);
+  --accent: #ffa070;
+  --hover: rgba(255,160,112, 0.10);
+}
+
+/* Charcoal */
+:root[data-theme='charcoal'][data-scheme='light'] {
+  --bg: #f1f1f2;
+  --sheet: #fafafb;
+  --fg: #222326;
+  --fg-dim: #57585c;
+  --fg-faint: #898b90;
+  --sep: rgba(34,35,38, 0.14);
+  --accent: #4b5563;
+  --hover: rgba(75,85,99, 0.09);
+}
+
+:root[data-theme='charcoal'][data-scheme='dark'] {
+  --bg: #191a1c;
+  --sheet: #212225;
+  --fg: #f0f0f1;
+  --fg-dim: #adaeb3;
+  --fg-faint: #6d6e73;
+  --sep: rgba(240,240,241, 0.13);
+  --accent: #9aa4b2;
+  --hover: rgba(154,164,178, 0.10);
+}
+
+/* Parchment */
+:root[data-theme='parchment'][data-scheme='light'] {
+  --bg: #f8f3e7;
+  --sheet: #fdfaf2;
+  --fg: #332d20;
+  --fg-dim: #6a6250;
+  --fg-faint: #9a917c;
+  --sep: rgba(51,45,32, 0.14);
+  --accent: #8c6d2f;
+  --hover: rgba(140,109,47, 0.09);
+}
+
+:root[data-theme='parchment'][data-scheme='dark'] {
+  --bg: #232014;
+  --sheet: #2c281c;
+  --fg: #f6f1e3;
+  --fg-dim: #bfb5a0;
+  --fg-faint: #7d7460;
+  --sep: rgba(246,241,227, 0.13);
+  --accent: #d3b268;
+  --hover: rgba(211,178,104, 0.10);
+}
+
+/* Storm */
+:root[data-theme='storm'][data-scheme='light'] {
+  --bg: #eef0f5;
+  --sheet: #f9fafc;
+  --fg: #20242e;
+  --fg-dim: #535a6a;
+  --fg-faint: #858c9c;
+  --sep: rgba(32,36,46, 0.14);
+  --accent: #3b5aa0;
+  --hover: rgba(59,90,160, 0.09);
+}
+
+:root[data-theme='storm'][data-scheme='dark'] {
+  --bg: #161923;
+  --sheet: #1e222e;
+  --fg: #eaedf4;
+  --fg-dim: #a6aec2;
+  --fg-faint: #697184;
+  --sep: rgba(234,237,244, 0.13);
+  --accent: #87a2e0;
+  --hover: rgba(135,162,224, 0.10);
+}
+
+/* Mist */
+:root[data-theme='mist'][data-scheme='light'] {
+  --bg: #f0f3f5;
+  --sheet: #fafbfc;
+  --fg: #242a2e;
+  --fg-dim: #5a6368;
+  --fg-faint: #8c959a;
+  --sep: rgba(36,42,46, 0.14);
+  --accent: #5b7f8f;
+  --hover: rgba(91,127,143, 0.09);
+}
+
+:root[data-theme='mist'][data-scheme='dark'] {
+  --bg: #181d20;
+  --sheet: #212729;
+  --fg: #eef2f4;
+  --fg-dim: #a8b3b8;
+  --fg-faint: #6a757a;
+  --sep: rgba(238,242,244, 0.13);
+  --accent: #9cc0cf;
+  --hover: rgba(156,192,207, 0.10);
+}
+
+/* Lemonade */
+:root[data-theme='lemonade'][data-scheme='light'] {
+  --bg: #fdf9e0;
+  --sheet: #fffdef;
+  --fg: #332c0e;
+  --fg-dim: #6f6233;
+  --fg-faint: #a4945e;
+  --sep: rgba(51, 44, 14, 0.14);
+  --accent: #c29a00;
+  --hover: rgba(194, 154, 0, 0.09);
+}
+
+:root[data-theme='lemonade'][data-scheme='dark'] {
+  --bg: #24200d;
+  --sheet: #2d2914;
+  --fg: #f9f5dd;
+  --fg-dim: #c7bb8b;
+  --fg-faint: #857a4e;
+  --sep: rgba(249, 245, 221, 0.13);
+  --accent: #ffdf3d;
+  --hover: rgba(255, 223, 61, 0.10);
+}
+
+/* Matcha — milky, yellow-toned latte surfaces with a bright powder-green accent. */
+:root[data-theme='matcha'][data-scheme='light'] {
+  --bg: #f2f1de;
+  --sheet: #fbfaee;
+  --fg: #2b2d18;
+  --fg-dim: #5f6344;
+  --fg-faint: #939578;
+  --sep: rgba(43, 45, 24, 0.14);
+  --accent: #7a9c2e;
+  --hover: rgba(122, 156, 46, 0.09);
+}
+
+:root[data-theme='matcha'][data-scheme='dark'] {
+  --bg: #202213;
+  --sheet: #2a2c1a;
+  --fg: #f3f4e3;
+  --fg-dim: #c0c39a;
+  --fg-faint: #7d8060;
+  --sep: rgba(243, 244, 227, 0.13);
+  --accent: #bcd669;
+  --hover: rgba(188, 214, 105, 0.10);
+}
+
+/* Native <select> popups: Chromium paints the option list itself. Themed
+   option colors plus the scheme-matched color-scheme above keep it on the
+   app's palette instead of the system's. (The hover/selection highlight is
+   still drawn by the OS and follows the system accent.) */
+select option {
+  background-color: var(--sheet);
+  color: var(--fg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* An ID rule like `#settings { display: flex }` outspecifies the UA's
+   `[hidden] { display: none }`, so `hidden` alone wouldn't hide it and the empty
+   overlay painted over everything. Force it. */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  font: 13px/1.4 -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--fg);
+  /* Opaque, theme-aware — the popover window is no longer vibrant, so the body
+     paints the background and content stays legible whether or not it's focused. */
+  background: var(--bg);
+  user-select: none;
+  cursor: default;
+}
+
+/* -- header ---------------------------------------------------------------- */
+
+#header {
+  flex: 0 0 auto;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--sep);
+  -webkit-app-region: drag;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  -webkit-app-region: no-drag;
+}
+
+button {
+  font: inherit;
+  font-size: 11px;
+  color: var(--fg-dim);
+  background: var(--hover);
+  border: 1px solid var(--sep);
+  border-radius: 5px;
+  padding: 2px 8px;
+  cursor: default;
+}
+
+button:hover:not(:disabled) {
+  color: var(--fg);
+  background: var(--hover);
+}
+
+button:disabled {
+  opacity: 0.4;
+}
+
+button.link {
+  border: 0;
+  background: none;
+  padding: 2px 4px;
+}
+
+.status {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+
+.status.error {
+  color: var(--bad);
+}
+
+.status.paused {
+  color: var(--warn);
+}
+
+/* -- connect (in-app Jira token) ------------------------------------------- */
+
+#connect {
+  flex: 0 0 auto;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--sep);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.connect-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.connect-sub {
+  margin-top: 2px;
+  font-size: 10px;
+  color: var(--fg-dim);
+}
+
+.connect-row {
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
+}
+
+.connect-input {
+  flex: 1 1 auto;
+  font: inherit;
+  font-size: 12px;
+  color: var(--fg);
+  background: var(--hover);
+  border: 1px solid var(--sep);
+  border-radius: 5px;
+  padding: 4px 8px;
+  -webkit-app-region: no-drag;
+}
+
+.connect-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.connect-msg {
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--fg-dim);
+  min-height: 12px;
+}
+
+.connect-msg.ok {
+  color: var(--good);
+}
+
+.connect-msg.err {
+  color: var(--bad);
+}
+
+/* -- toolbar (sort + filter) ----------------------------------------------- */
+
+/* Design-system tab bar (`createTabBar` in the renderer): one look, one hit
+   area, everywhere tabs appear. */
+.tabs {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 6px 12px 0;
+  border-bottom: 1px solid var(--sep);
+}
+
+.tab {
+  appearance: none;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  /* Browser-tab shape: rounded top, square bottom — so the active underline
+     stays a straight bar (the global button radius would curve its ends). */
+  border-radius: 6px 6px 0 0;
+  color: var(--fg-dim);
+  font: inherit;
+  font-size: 12px;
+  /* A comfortable, uniform hit target — label boxes never shrink-wrap. */
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px 6px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--fg);
+  background: var(--hover);
+}
+
+.tab[aria-selected='true'] {
+  color: var(--fg);
+  /* Faux-bold via stroke: real font-weight changes glyph widths and makes the
+     whole tab row shift when the selection moves. Stroke thickens in place. */
+  -webkit-text-stroke: 0.35px currentColor;
+  background: var(--hover);
+  border-bottom-color: var(--accent);
+}
+
+#toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--sep);
+  position: relative;
+}
+
+.toolbar-sort {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+
+#sort {
+  font: inherit;
+  font-size: 11px;
+  color: var(--fg);
+  background: var(--hover);
+  border: 1px solid var(--sep);
+  border-radius: 5px;
+  padding: 2px 6px;
+}
+
+#filter-btn {
+  font-size: 11px;
+}
+
+#filter-btn.active {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+#filter-menu {
+  position: absolute;
+  top: 34px;
+  right: 12px;
+  z-index: 20;
+  min-width: 180px;
+  padding: 6px;
+  border: 1px solid var(--sep);
+  border-radius: 8px;
+  background: var(--sheet);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 6px;
+  font-size: 12px;
+  border-radius: 5px;
+}
+
+.filter-row:hover {
+  background: var(--hover);
+}
+
+.filter-clear {
+  width: 100%;
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+/* -- list ------------------------------------------------------------------ */
+
+#list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 6px 0 8px;
+}
+
+.empty {
+  margin: 24px 12px;
+  color: var(--fg-faint);
+  font-size: 12px;
+  text-align: center;
+}
+
+.group {
+  margin: 0 0 8px;
+}
+
+.group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.group-head:hover .ticket-key {
+  text-decoration: underline;
+}
+
+.ticket-key {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.ticket-status {
+  font-size: 10px;
+  color: var(--fg-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 3px 1fr auto;
+  gap: 0 8px;
+  align-items: start;
+  padding: 5px 12px 6px;
+  margin-bottom: var(--row-gap);
+  cursor: pointer;
+}
+
+.row:hover {
+  background: var(--hover);
+}
+
+.unread-dot {
+  grid-column: 1;
+  align-self: stretch;
+  border-radius: 2px;
+  background: transparent;
+}
+
+.row.unread .unread-dot {
+  background: var(--accent);
+}
+
+.row-main {
+  grid-column: 2;
+  min-width: 0;
+}
+
+.row-title {
+  font-size: 12px;
+  line-height: 1.35;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.attention {
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.attention-good {
+  color: var(--good);
+}
+.attention-bad {
+  color: var(--bad);
+}
+.attention-warn {
+  color: var(--warn);
+}
+.attention-info {
+  color: var(--accent);
+}
+.attention-muted {
+  color: var(--fg-faint);
+  font-weight: 400;
+}
+
+.row-meta {
+  margin-top: 3px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 10px;
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.row-side {
+  grid-column: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+/* -- "Other" collapsed section --------------------------------------------- */
+
+.other-section {
+  margin-top: 4px;
+  border-top: 1px solid var(--sep);
+}
+
+.other-header {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-dim);
+  border-radius: 0;
+}
+
+.other-header:hover {
+  color: var(--fg);
+  background: var(--hover);
+}
+
+.other-status {
+  padding: 6px 12px 2px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-faint);
+}
+
+/* -- chips ----------------------------------------------------------------- */
+
+.chip {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.chip-good {
+  color: var(--good);
+  border-color: color-mix(in srgb, var(--good) 40%, transparent);
+  background: color-mix(in srgb, var(--good) 12%, transparent);
+}
+
+.chip-bad {
+  color: var(--bad);
+  border-color: color-mix(in srgb, var(--bad) 45%, transparent);
+  background: color-mix(in srgb, var(--bad) 12%, transparent);
+}
+
+.chip-busy {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.chip-warn {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 40%, transparent);
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+}
+
+.chip-none {
+  color: var(--fg-faint);
+  border-color: var(--sep);
+}
+
+.chip.clickable:hover {
+  filter: brightness(1.15);
+}
+
+.chip-detail {
+  font-size: 10px;
+  color: var(--fg-faint);
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.start-run {
+  font-size: 10px;
+  padding: 1px 7px;
+  color: var(--bad);
+  border-color: color-mix(in srgb, var(--bad) 45%, transparent);
+}
+
+/* Once a run is going it's no longer an action to take — recolor from the
+   alarming red "Start run" to a calm blue "Current run" link. */
+.start-run.current-run {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* Status-section multi-selects: a chips field that opens a checklist. */
+.msf {
+  position: relative;
+}
+
+.msf-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 26px;
+  padding: 4px 8px;
+  background: var(--bg);
+  border: 1px solid var(--sep);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.msf-placeholder {
+  color: var(--fg-faint);
+  font-size: 11px;
+  align-self: center;
+}
+
+.msf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  font-size: 11px;
+  background: var(--hover);
+  border: 1px solid var(--sep);
+  border-radius: 10px;
+  color: var(--fg);
+  white-space: nowrap;
+}
+
+.msf-chip-x {
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+
+.msf-chip-x:hover {
+  color: var(--bad);
+}
+
+.msf-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--sheet);
+  border: 1px solid var(--sep);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.msf-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.msf-row:hover {
+  background: var(--hover);
+}
+
+.msf-row-check {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Where the status currently lives, when it's another section. */
+.msf-row-where {
+  color: var(--fg-faint);
+  font-size: 10px;
+}
+
+/* Heading above the Dev Complete needs-fix-version block. */
+.section-heading {
+  padding: 10px 12px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--warn);
+  border-top: 1px solid var(--sep);
+}
+
+.fixversion {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
+  align-items: center;
+}
+
+.fixversion select {
+  max-width: 160px;
+  font-size: 11px;
+}
+
+/* Design-system badges: one component (`createBadge`), tone-driven color.
+   Row badges, secondary-check badges, and future annotations all use these. */
+.badge-accent {
+  color: var(--accent);
+}
+.badge-bad {
+  color: var(--bad);
+}
+.badge-good {
+  color: var(--good);
+}
+.badge-warn {
+  color: var(--warn);
+}
+.badge-muted {
+  color: var(--fg-faint);
+}
+
+/* -- settings panel -------------------------------------------------------- */
+
+#settings-btn {
+  padding: 2px 7px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* Overlays the list + footer so it reads as a modal sheet, not another row. */
+#settings {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  /* The panel overlays the window header, whose -webkit-app-region: drag
+     swallows clicks EVEN UNDER covering DOM (Electron computes drag regions
+     from layout, not stacking). Without this carve-out, the top half of the
+     settings tabs — which sits inside the header's box — starts a window drag
+     instead of clicking. The web build ignores this property entirely. */
+  -webkit-app-region: no-drag;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px 12px;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.settings-head h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.field-label {
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+
+.field-input {
+  font: inherit;
+  font-size: 12px;
+  color: var(--fg);
+  background: var(--hover);
+  border: 1px solid var(--sep);
+  border-radius: 5px;
+  padding: 4px 8px;
+}
+
+.field-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.field-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.field-check .field-label {
+  font-size: 12px;
+  color: var(--fg);
+}
+
+.settings-sub {
+  padding-left: 4px;
+  border-left: 2px solid var(--sep);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-days {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.day {
+  font-size: 10px;
+  padding: 2px 6px;
+  color: var(--fg-dim);
+  background: var(--hover);
+  border: 1px solid var(--sep);
+  border-radius: 4px;
+}
+
+.day.on {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.settings-times {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-times .field {
+  flex: 1 1 0;
+}
+
+.btn-primary,
+.settings-save {
+  margin-top: 12px;
+  align-self: flex-start;
+  font-size: 12px;
+  padding: 4px 14px;
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.settings-msg {
+  margin-top: 6px;
+  font-size: 11px;
+  min-height: 13px;
+  color: var(--fg-dim);
+}
+
+.settings-msg.ok {
+  color: var(--good);
+}
+
+.settings-msg.err {
+  color: var(--bad);
+}
+
+/* -- footer ---------------------------------------------------------------- */
+
+#footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px 7px;
+  border-top: 1px solid var(--sep);
+  font-size: 10px;
+  color: var(--fg-dim);
+}
+
+.sources {
+  display: flex;
+  gap: 10px;
+}
+
+.source {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.source::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--good);
+}
+
+.source.down::before {
+  background: var(--bad);
+}
+
+.source.stale::before {
+  background: var(--warn);
+}
+
+#list::-webkit-scrollbar {
+  width: 8px;
+}
+
+#list::-webkit-scrollbar-thumb {
+  background: var(--sep);
+  border-radius: 4px;
+}
+
+/* Export/import settings row below Save. */
+.settings-share {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* Advanced conditional-rule rows. */
+.rule-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.rule-row select,
+.rule-row input.rule-value {
+  flex: 1 1 100px;
+  width: auto;
+  min-width: 80px;
+  max-width: 240px;
+}
+
+.rule-word {
+  color: var(--fg-faint);
+  font-size: 11px;
+}
+
+/* Settings variant: same component, just breathing room below and no side
+   padding (the settings panel provides its own gutters). */
+.settings-tabs {
+  padding-left: 0;
+  padding-right: 0;
+  margin-bottom: 10px;
+}
+
+/* Paired attention signals ("Checks passed" + "Target not main"). */
+.attention-part + .attention-part {
+  margin-left: 10px;
+}
+
+/* Destructive buttons: removal actions read as red everywhere. */
+.btn-destructive {
+  color: var(--bad);
+  border-color: color-mix(in srgb, var(--bad) 45%, transparent);
+}
+
+.btn-destructive:hover:not(:disabled) {
+  color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 12%, transparent);
+}
+
+/* Clone sits just left of remove at the row's far right edge. */
+.rule-clone {
+  margin-left: auto;
+}
+
+/* Notification click-through: pulse the row the banner pointed at. */
+@keyframes row-flash {
+  0%, 60% {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+.row-flash {
+  animation: row-flash 2.5s ease-out;
+}
+
+/* Rule rows: a card per rule; clone/× pin to the card's top-right corner. */
+.rule-row {
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  padding: 8px 10px;
+  background: var(--sheet);
+  border: 1px solid var(--sep);
+  border-radius: 8px;
+}
+
+/* The rule list stacks its cards with air, and keeps Add rule off the last card. */
+.rule-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.rule-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* One line of the rule sentence; controls flow inline and wrap if cramped. */
+.rule-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* The → target lines indent under their when/else keyword. */
+.rule-branch {
+  padding-left: 18px;
+}
+
+.rule-clone,
+.rule-remove {
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+/* Breathing room between settings fields — the panel was claustrophobic. */
+.settings-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.status-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Status messages fade out (createStatusMessage adds .msg-fade after ~5s on
+   success); the transition lives on the base classes so the fade is smooth. */
+.settings-msg,
+.connect-msg {
+  transition: opacity 0.6s ease;
+}
+
+.msg-fade {
+  opacity: 0;
+}
+
+/* Repo rows in General settings: checkout path stretches, gate pin stays compact. */
+.repo-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.repo-row .field:first-child {
+  flex: 1;
+}
+
+/* Themed select (createSelect): the trigger reads as a field input; the panel
+   replaces the OS popup so dropdowns follow the theme exactly. */
+.select-wrap {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+
+.field > .select-wrap {
+  display: flex;
+}
+
+button.select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.select-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-chevron {
+  flex: 0 0 auto;
+  font-size: 9px;
+  opacity: 0.55;
+}
+
+.select-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 60;
+  min-width: 100%;
+  max-width: 320px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--sheet);
+  border: 1px solid var(--sep);
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+}
+
+.select-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px 5px 6px;
+  border-radius: 5px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.select-option:hover {
+  background: var(--hover);
+}
+
+.select-option[aria-selected='true'] {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.select-check {
+  flex: 0 0 auto;
+  width: 12px;
+  font-size: 10px;
+}

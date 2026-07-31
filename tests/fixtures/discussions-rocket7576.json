@@ -1,0 +1,1860 @@
+[
+  {
+    "id": "8a25b6f1b502993ed1144ba2b67d77fc6cc15d3d",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000207,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "assigned to @mira.dev",
+        "created_at": "2026-07-07T13:01:00.915Z",
+        "updated_at": "2026-07-07T13:01:00.917Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "0e820341660edef27ebb835e7832556a4a454719",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000208,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-07T13:01:40.920Z",
+        "updated_at": "2026-07-07T13:01:40.922Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "50c51e0491bb81a0c97b3ee71d6228b0622dfd5f",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000209,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-07T13:01:56.804Z",
+        "updated_at": "2026-07-07T13:01:56.805Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "ac757065c5fdf1522d8ae3539579a29549a05b81",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000210,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-07T16:51:23.169Z",
+        "updated_at": "2026-07-07T16:51:23.171Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "8b5946b846352409dbde4c58c2b236451e1cae07",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000211,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-07T16:53:00.367Z",
+        "updated_at": "2026-07-07T16:53:00.369Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "dd871f481a1002270daa3353fb1d46798935dfe2",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000217,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "added 1 commit\n\n<ul><li>418ac3ef - ENG-1",
+        "created_at": "2026-07-08T17:58:41.721Z",
+        "updated_at": "2026-07-08T17:58:41.723Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "6f6e930da1272dfbc4866b377e822c9d386f1e22",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000218,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-08T17:58:52.437Z",
+        "updated_at": "2026-07-08T17:58:52.438Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "08febc42334d273f708a52d068df4855d67f8480",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000219,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-08T17:59:27.618Z",
+        "updated_at": "2026-07-08T17:59:27.620Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "cb36de7f234940f8182df1f913a4e028e0230242",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000220,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "redacted comment 1",
+        "created_at": "2026-07-08T18:02:09.969Z",
+        "updated_at": "2026-07-28T20:54:01.238Z",
+        "system": false,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "10bfc3fdd23030e70b5bd0a60b060d4492d9196f",
+    "individual_note": false,
+    "notes": [
+      {
+        "id": 1000222,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "redacted comment 2",
+        "created_at": "2026-07-08T18:02:11.470Z",
+        "updated_at": "2026-07-08T21:01:59.598Z",
+        "system": false,
+        "resolvable": true,
+        "resolved": true,
+        "position": {
+          "new_path": "app/controllers/concerns/vendor_payoff_by_date.rb",
+          "new_line": 49
+        }
+      },
+      {
+        "id": 1000225,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "changed this line in [version 4 of the d",
+        "created_at": "2026-07-08T21:00:31.966Z",
+        "updated_at": "2026-07-08T21:00:31.966Z",
+        "system": true,
+        "resolvable": false,
+        "position": {
+          "new_path": "app/controllers/concerns/vendor_payoff_by_date.rb",
+          "new_line": 49
+        }
+      }
+    ]
+  },
+  {
+    "id": "ebf097aaebf6db70d1d0e3827d7a1830db461110",
+    "individual_note": false,
+    "notes": [
+      {
+        "id": 1000221,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "redacted comment 3",
+        "created_at": "2026-07-08T18:02:11.485Z",
+        "updated_at": "2026-07-08T21:01:59.614Z",
+        "system": false,
+        "resolvable": true,
+        "resolved": true,
+        "position": {
+          "new_path": "app/controllers/portal/orders_controller.rb",
+          "new_line": 488
+        }
+      },
+      {
+        "id": 1000232,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "changed this line in [version 5 of the d",
+        "created_at": "2026-07-09T02:51:27.612Z",
+        "updated_at": "2026-07-09T02:51:27.612Z",
+        "system": true,
+        "resolvable": false,
+        "position": {
+          "new_path": "app/controllers/portal/orders_controller.rb",
+          "new_line": 488
+        }
+      }
+    ]
+  },
+  {
+    "id": "d755e947c61c0660ef84fbaec160c1420d39bf2f",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000223,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "added 1 commit\n\n<ul><li>3b97cc30 - ENG-1",
+        "created_at": "2026-07-08T18:15:57.884Z",
+        "updated_at": "2026-07-08T18:15:57.886Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "8d1a8eb0ca7ba20fcdc50be9978bb5a37024ca59",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000224,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-08T18:16:36.107Z",
+        "updated_at": "2026-07-08T18:16:36.108Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "7564474b59b2cf43b86c1a73c0af5597ca75c5f7",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000226,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "added 1 commit\n\n<ul><li>5df51749 - ENG-1",
+        "created_at": "2026-07-08T21:00:32.332Z",
+        "updated_at": "2026-07-08T21:00:32.334Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "34191ecf342b69e3a5be23578a8bd9b932efd37f",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000227,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-08T21:01:24.642Z",
+        "updated_at": "2026-07-08T21:01:24.644Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "4829d1041f37c8a5c50ca9b5ef2388c6aea6a9d6",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000228,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "redacted comment 4",
+        "created_at": "2026-07-08T21:01:45.621Z",
+        "updated_at": "2026-07-08T21:01:52.222Z",
+        "system": false,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "b199f3bcc18afd3e39a3f215e9eeddd96e44cda6",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000229,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "redacted comment 5",
+        "created_at": "2026-07-08T21:01:52.759Z",
+        "updated_at": "2026-07-28T20:54:01.259Z",
+        "system": false,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "5f90f97ebbae026024c3da657993c5ac610d936e",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000230,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "resolved all threads",
+        "created_at": "2026-07-08T21:01:59.645Z",
+        "updated_at": "2026-07-08T21:01:59.650Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "7da11d770d1dc77735d803d9b906349aa266ebc5",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000231,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "resolved all threads",
+        "created_at": "2026-07-08T21:01:59.669Z",
+        "updated_at": "2026-07-08T21:01:59.683Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "752b6165ee3027ffae4fbacba7a25c768a8a6dde",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000233,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "added 1 commit\n\n<ul><li>1a48af35 - ENG-1",
+        "created_at": "2026-07-09T02:51:27.868Z",
+        "updated_at": "2026-07-09T02:51:27.870Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "4bb42c4dbe92794100c9b046d73ff92be6891f88",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000234,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-09T02:51:54.460Z",
+        "updated_at": "2026-07-09T02:51:54.461Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "2334b75a68f60fa430a133cd4408e1130ef03b0b",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000235,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "redacted comment 6",
+        "created_at": "2026-07-09T02:52:07.413Z",
+        "updated_at": "2026-07-09T02:52:10.943Z",
+        "system": false,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "25f2aa1b2086c0d6fe91e983cffe73627b7f9e8f",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000236,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "redacted comment 7",
+        "created_at": "2026-07-09T02:52:11.804Z",
+        "updated_at": "2026-07-28T20:54:01.230Z",
+        "system": false,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "dba3af6e75dc9d99e9cf6ba87a721afa734c8b69",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000237,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "added 1 commit\n\n<ul><li>e285b18c - ENG-1",
+        "created_at": "2026-07-09T03:03:21.601Z",
+        "updated_at": "2026-07-09T03:03:21.602Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "9f53718e0d26ff46cceee624b5bbb0fb27d749eb",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000238,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-09T03:03:49.729Z",
+        "updated_at": "2026-07-09T03:03:49.731Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "451f0a84da727843339eeabcec1d2447b06946f7",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000239,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "redacted comment 8",
+        "created_at": "2026-07-09T03:07:25.033Z",
+        "updated_at": "2026-07-28T20:54:01.223Z",
+        "system": false,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "6ebf8341275bd8c935b186f4f9bdfd8f552c279a",
+    "individual_note": false,
+    "notes": [
+      {
+        "id": 1000240,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "redacted comment 9",
+        "created_at": "2026-07-09T03:07:25.876Z",
+        "updated_at": "2026-07-09T03:41:18.558Z",
+        "system": false,
+        "resolvable": true,
+        "resolved": true,
+        "position": {
+          "new_path": "app/controllers/concerns/vendor_payoff_by_date.rb",
+          "new_line": 87
+        }
+      },
+      {
+        "id": 1000250,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "changed this line in [version 10 of the ",
+        "created_at": "2026-07-10T17:12:40.757Z",
+        "updated_at": "2026-07-10T17:12:40.757Z",
+        "system": true,
+        "resolvable": false,
+        "position": {
+          "new_path": "app/controllers/concerns/vendor_payoff_by_date.rb",
+          "new_line": 87
+        }
+      }
+    ]
+  },
+  {
+    "id": "f89bd83566d05bcc7ae75d1bdd4c85f7bfd9202d",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000241,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "added 1 commit\n\n<ul><li>0888b191 - ENG-1",
+        "created_at": "2026-07-09T03:25:01.159Z",
+        "updated_at": "2026-07-09T03:25:01.161Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "7d1ab7a6fe7dfa7beca4752235024817cc802322",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000242,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-09T03:25:49.672Z",
+        "updated_at": "2026-07-09T03:25:49.673Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "4a4598bc796103af87ee07fcc81ee8b5c355d550",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000243,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "added 1 commit\n\n<ul><li>039b78b5 - ENG-1",
+        "created_at": "2026-07-09T03:40:41.608Z",
+        "updated_at": "2026-07-09T03:40:41.610Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "24de07a37cfcdb1e18efdf6e5cf1dfffe0f85190",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000244,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-09T03:41:06.041Z",
+        "updated_at": "2026-07-09T03:41:06.043Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "31bf2b5cd8c55eb90f992a73d46a46cd5e596d56",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000245,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "resolved all threads",
+        "created_at": "2026-07-09T03:41:18.586Z",
+        "updated_at": "2026-07-09T03:41:18.594Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "f433037b361bf700330ee6f7f70dca4cf3d3f187",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000246,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "redacted comment 10",
+        "created_at": "2026-07-09T03:42:34.776Z",
+        "updated_at": "2026-07-09T03:42:38.250Z",
+        "system": false,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "ce846dc019f0255f54c81ebc535c009014e823c3",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000247,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "redacted comment 11",
+        "created_at": "2026-07-09T03:42:38.949Z",
+        "updated_at": "2026-07-28T20:54:01.227Z",
+        "system": false,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "8ba2f2f8a1835f8a82f1ed6bfceaa13e99cb78d5",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000248,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "added 153 commits\n\n<ul><li>039b78b5...be",
+        "created_at": "2026-07-09T03:43:55.204Z",
+        "updated_at": "2026-07-09T03:43:55.205Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "febc301bbe584136424fa481c14745b95d865f27",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000249,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-09T03:44:18.302Z",
+        "updated_at": "2026-07-09T03:44:18.303Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "693de9754d3f897e00bcfd334fd07bfdfef7d15f",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000251,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "added 1 commit\n\n<ul><li>c8f56c56 - ENG-1",
+        "created_at": "2026-07-10T17:12:40.975Z",
+        "updated_at": "2026-07-10T17:12:40.976Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "464546ad35795d347e3a3505db6d8f4cb18735d2",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000252,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-10T17:13:08.039Z",
+        "updated_at": "2026-07-10T17:13:08.041Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "617ec64365d2c9a2b9f4b712f35800c987cfc446",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000253,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "added 1 commit\n\n<ul><li>f3a95cfc - ENG-1",
+        "created_at": "2026-07-10T17:32:03.448Z",
+        "updated_at": "2026-07-10T17:32:03.450Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "de6254d0bfb1c8648e3e65c08115cdacee85e092",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000254,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "redacted comment 12",
+        "created_at": "2026-07-10T17:32:17.064Z",
+        "updated_at": "2026-07-10T17:32:22.058Z",
+        "system": false,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "32ae72b96814afe1719c9055c49525e1d8a97ed6",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000255,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "redacted comment 13",
+        "created_at": "2026-07-10T17:32:24.075Z",
+        "updated_at": "2026-07-28T20:54:01.341Z",
+        "system": false,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "14792193156cfad0ac142e6fe79bf4b7982e3ccd",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000256,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-10T17:32:26.042Z",
+        "updated_at": "2026-07-10T17:32:26.044Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "f0dbd57f1a8242e2a5c8ca0eeee6529cd4348a95",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000257,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "redacted comment 14",
+        "created_at": "2026-07-10T17:34:39.631Z",
+        "updated_at": "2026-07-28T20:54:01.217Z",
+        "system": false,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "526098d5183e3c28650c0f775d3637fa93f56b34",
+    "individual_note": false,
+    "notes": [
+      {
+        "id": 1000258,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "redacted comment 15",
+        "created_at": "2026-07-10T17:34:40.575Z",
+        "updated_at": "2026-07-17T15:31:36.414Z",
+        "system": false,
+        "resolvable": true,
+        "resolved": true,
+        "position": {
+          "new_path": "app/controllers/concerns/express_orders.rb",
+          "new_line": 895
+        }
+      },
+      {
+        "id": 1000268,
+        "author": {
+          "id": 1000027,
+          "username": "sam.rios",
+          "name": "sam.rios"
+        },
+        "body": "redacted comment 16",
+        "created_at": "2026-07-13T18:37:55.620Z",
+        "updated_at": "2026-07-17T15:31:36.414Z",
+        "system": false,
+        "resolvable": true,
+        "resolved": true,
+        "position": {
+          "new_path": "app/controllers/concerns/express_orders.rb",
+          "new_line": 895
+        }
+      },
+      {
+        "id": 1000274,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "redacted comment 17",
+        "created_at": "2026-07-16T11:23:19.027Z",
+        "updated_at": "2026-07-17T15:31:40.902Z",
+        "system": false,
+        "resolvable": true,
+        "resolved": true,
+        "position": {
+          "new_path": "app/controllers/concerns/express_orders.rb",
+          "new_line": 895
+        }
+      },
+      {
+        "id": 1000276,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "changed this line in [version 14 of the ",
+        "created_at": "2026-07-17T15:30:42.059Z",
+        "updated_at": "2026-07-17T15:30:42.059Z",
+        "system": true,
+        "resolvable": false,
+        "position": {
+          "new_path": "app/controllers/concerns/express_orders.rb",
+          "new_line": 895
+        }
+      }
+    ]
+  },
+  {
+    "id": "54a64e7eeeea4d03d279e453bfff5a2d9f539218",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000259,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "added 1 commit\n\n<ul><li>937c1f62 - ENG-1",
+        "created_at": "2026-07-10T18:08:13.690Z",
+        "updated_at": "2026-07-10T18:08:13.692Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "40e0412c0d4e9519d3193ec3ea4395306dee8469",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000260,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-10T18:08:43.310Z",
+        "updated_at": "2026-07-10T18:08:43.313Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "f4b2e1971a0007dca25158c14639567c0013bb14",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000261,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "<p>changed title from <code class=\"idiff",
+        "created_at": "2026-07-10T18:08:52.253Z",
+        "updated_at": "2026-07-10T18:08:52.255Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "4f09c88329fc0b30bc242b87bc663ba292b90e56",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000262,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-10T18:08:52.281Z",
+        "updated_at": "2026-07-10T18:08:52.282Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "b6891e785d8d1ab0dfb119f556cb791f93ccc818",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000263,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "resolved all threads",
+        "created_at": "2026-07-10T18:09:00.166Z",
+        "updated_at": "2026-07-10T18:09:00.170Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "129aea1fb78123d571a7b80618f0ddeef22ad2b5",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000264,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "redacted comment 18",
+        "created_at": "2026-07-10T18:13:06.137Z",
+        "updated_at": "2026-07-10T18:13:12.215Z",
+        "system": false,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "9818b6dc52ee7204d95bbbad973dfd16ace58d16",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000265,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "redacted comment 19",
+        "created_at": "2026-07-10T18:13:13.485Z",
+        "updated_at": "2026-07-28T20:54:01.265Z",
+        "system": false,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "6a49604891f3d8c923406d71d5d24e6e58366649",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000266,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "mentioned in merge request !7607",
+        "created_at": "2026-07-10T19:52:05.522Z",
+        "updated_at": "2026-07-10T19:52:05.524Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "209fda39e8bae94c5038c839a0166c4585159a06",
+    "individual_note": false,
+    "notes": [
+      {
+        "id": 1000267,
+        "author": {
+          "id": 1000001,
+          "username": "alex.harper",
+          "name": "alex.harper"
+        },
+        "body": "redacted comment 20",
+        "created_at": "2026-07-13T18:31:30.736Z",
+        "updated_at": "2026-07-17T15:31:12.370Z",
+        "system": false,
+        "resolvable": true,
+        "resolved": true,
+        "position": {
+          "new_path": "app/controllers/concerns/express_orders.rb",
+          "new_line": 881
+        }
+      },
+      {
+        "id": 1000272,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "redacted comment 21",
+        "created_at": "2026-07-16T03:18:56.989Z",
+        "updated_at": "2026-07-17T15:31:12.370Z",
+        "system": false,
+        "resolvable": true,
+        "resolved": true,
+        "position": {
+          "new_path": "app/controllers/concerns/express_orders.rb",
+          "new_line": 881
+        }
+      },
+      {
+        "id": 1000273,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "redacted comment 22",
+        "created_at": "2026-07-16T03:30:14.094Z",
+        "updated_at": "2026-07-17T15:31:12.370Z",
+        "system": false,
+        "resolvable": true,
+        "resolved": true,
+        "position": {
+          "new_path": "app/controllers/concerns/express_orders.rb",
+          "new_line": 881
+        }
+      },
+      {
+        "id": 1000275,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "redacted comment 23",
+        "created_at": "2026-07-17T15:22:17.133Z",
+        "updated_at": "2026-07-17T15:31:12.370Z",
+        "system": false,
+        "resolvable": true,
+        "resolved": true,
+        "position": {
+          "new_path": "app/controllers/concerns/express_orders.rb",
+          "new_line": 881
+        }
+      },
+      {
+        "id": 1000277,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "changed this line in [version 14 of the ",
+        "created_at": "2026-07-17T15:30:42.380Z",
+        "updated_at": "2026-07-17T15:30:42.380Z",
+        "system": true,
+        "resolvable": false,
+        "position": {
+          "new_path": "app/controllers/concerns/express_orders.rb",
+          "new_line": 881
+        }
+      }
+    ]
+  },
+  {
+    "id": "1f2b4338f29fd2c85f9e27840c6905abb8cb4c2a",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000269,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "added 353 commits\n\n<ul><li>937c1f62...e0",
+        "created_at": "2026-07-16T01:00:53.041Z",
+        "updated_at": "2026-07-16T01:00:53.043Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "bf785f944f2a1dda80ab92ef05e02ad77dd052ce",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000270,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-16T01:01:06.968Z",
+        "updated_at": "2026-07-16T01:01:06.970Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "4ad96f8242cf4a88f985e84c9e25d88644b92663",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000271,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-16T01:01:17.848Z",
+        "updated_at": "2026-07-16T01:01:17.849Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "187f3181e23acd67758fc51456737fb3b9a3f471",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000278,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "added 1 commit\n\n<ul><li>c0066fdb - ENG-1",
+        "created_at": "2026-07-17T15:30:42.673Z",
+        "updated_at": "2026-07-17T15:30:42.674Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "32187820090c4e0e1580064127bd01877c8e7651",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000279,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-17T15:31:16.139Z",
+        "updated_at": "2026-07-17T15:31:16.141Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "7ec1e6b2d93936ecdadad64c6aa3fa754e0ea8aa",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000280,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "resolved all threads",
+        "created_at": "2026-07-17T15:31:36.438Z",
+        "updated_at": "2026-07-17T15:31:36.442Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "f9f04c85d19589d14f82e5879556e01743ef1871",
+    "individual_note": false,
+    "notes": [
+      {
+        "id": 1000281,
+        "author": {
+          "id": 1000001,
+          "username": "alex.harper",
+          "name": "alex.harper"
+        },
+        "body": "redacted comment 24",
+        "created_at": "2026-07-17T15:43:39.024Z",
+        "updated_at": "2026-07-23T15:55:09.962Z",
+        "system": false,
+        "resolvable": true,
+        "resolved": true,
+        "position": {
+          "new_path": "app/controllers/concerns/express_orders.rb",
+          "new_line": 904
+        }
+      },
+      {
+        "id": 1000286,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "changed this line in [version 15 of the ",
+        "created_at": "2026-07-17T18:40:11.775Z",
+        "updated_at": "2026-07-17T18:40:11.775Z",
+        "system": true,
+        "resolvable": false,
+        "position": {
+          "new_path": "app/controllers/concerns/express_orders.rb",
+          "new_line": 904
+        }
+      }
+    ]
+  },
+  {
+    "id": "66547a85e6f58dd9d0789547bc533c01b74c8144",
+    "individual_note": false,
+    "notes": [
+      {
+        "id": 1000282,
+        "author": {
+          "id": 1000001,
+          "username": "alex.harper",
+          "name": "alex.harper"
+        },
+        "body": "redacted comment 25",
+        "created_at": "2026-07-17T15:49:42.614Z",
+        "updated_at": "2026-07-23T15:55:14.946Z",
+        "system": false,
+        "resolvable": true,
+        "resolved": true,
+        "position": {
+          "new_path": "app/helpers/portal/base_helper.rb",
+          "new_line": 373
+        }
+      },
+      {
+        "id": 1000285,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "redacted comment 26",
+        "created_at": "2026-07-17T18:02:02.129Z",
+        "updated_at": "2026-07-23T15:55:14.946Z",
+        "system": false,
+        "resolvable": true,
+        "resolved": true,
+        "position": {
+          "new_path": "app/helpers/portal/base_helper.rb",
+          "new_line": 373
+        }
+      }
+    ]
+  },
+  {
+    "id": "4895caa0b534c564f9d8ec55e4fcd8ce4bee55af",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000287,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "added 1 commit\n\n<ul><li>c1b1ddaf - ENG-1",
+        "created_at": "2026-07-17T18:40:12.183Z",
+        "updated_at": "2026-07-17T18:40:12.185Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "f9c7750b20b7cb3c854d12e87f2e634003f8607b",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000288,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-17T18:40:42.934Z",
+        "updated_at": "2026-07-17T18:40:42.936Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "9c2b244c58f93b9ca4bf287ace57ae4ff2a0d810",
+    "individual_note": false,
+    "notes": [
+      {
+        "id": 1000299,
+        "author": {
+          "id": 1000027,
+          "username": "sam.rios",
+          "name": "sam.rios"
+        },
+        "body": "redacted comment 27",
+        "created_at": "2026-07-23T15:12:05.213Z",
+        "updated_at": "2026-07-23T15:12:05.213Z",
+        "system": false,
+        "resolvable": true,
+        "resolved": false,
+        "position": {
+          "new_path": "app/services/vendors/payoff_quote_refresh.rb",
+          "new_line": 114
+        }
+      },
+      {
+        "id": 1000306,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "changed this line in [version 17 of the ",
+        "created_at": "2026-07-28T15:06:10.516Z",
+        "updated_at": "2026-07-28T15:06:10.516Z",
+        "system": true,
+        "resolvable": false,
+        "position": {
+          "new_path": "app/services/vendors/payoff_quote_refresh.rb",
+          "new_line": 114
+        }
+      }
+    ]
+  },
+  {
+    "id": "ff693a8a8369fa91823363d299745a27c4bb3b4a",
+    "individual_note": false,
+    "notes": [
+      {
+        "id": 1000300,
+        "author": {
+          "id": 1000027,
+          "username": "sam.rios",
+          "name": "sam.rios"
+        },
+        "body": "redacted comment 28",
+        "created_at": "2026-07-23T15:18:06.093Z",
+        "updated_at": "2026-07-23T15:18:06.093Z",
+        "system": false,
+        "resolvable": true,
+        "resolved": false,
+        "position": {
+          "new_path": "app/services/vendors/payoff_quote_refresh.rb",
+          "new_line": 256
+        }
+      },
+      {
+        "id": 1000307,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "changed this line in [version 17 of the ",
+        "created_at": "2026-07-28T15:06:10.658Z",
+        "updated_at": "2026-07-28T15:06:10.658Z",
+        "system": true,
+        "resolvable": false,
+        "position": {
+          "new_path": "app/services/vendors/payoff_quote_refresh.rb",
+          "new_line": 256
+        }
+      }
+    ]
+  },
+  {
+    "id": "d6038aea2ea6ec345b3711c402fcc2518dfa16fa",
+    "individual_note": false,
+    "notes": [
+      {
+        "id": 1000301,
+        "author": {
+          "id": 1000027,
+          "username": "sam.rios",
+          "name": "sam.rios"
+        },
+        "body": "redacted comment 29",
+        "created_at": "2026-07-23T15:22:40.921Z",
+        "updated_at": "2026-07-23T15:22:40.921Z",
+        "system": false,
+        "resolvable": true,
+        "resolved": false,
+        "position": {
+          "new_path": "app/services/vendors/payoff_quote_refresh.rb",
+          "new_line": 259
+        }
+      },
+      {
+        "id": 1000308,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "changed this line in [version 17 of the ",
+        "created_at": "2026-07-28T15:06:10.796Z",
+        "updated_at": "2026-07-28T15:06:10.796Z",
+        "system": true,
+        "resolvable": false,
+        "position": {
+          "new_path": "app/services/vendors/payoff_quote_refresh.rb",
+          "new_line": 259
+        }
+      }
+    ]
+  },
+  {
+    "id": "8af40ca1c1c6fd100a567cbedb0676f49b2fe802",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000302,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "added 295 commits\n\n<ul><li>c1b1ddaf...de",
+        "created_at": "2026-07-28T01:43:55.204Z",
+        "updated_at": "2026-07-28T01:43:55.206Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "4396ba44cc453e23af6b2f652a2eabecc6705a72",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000303,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-28T01:44:21.592Z",
+        "updated_at": "2026-07-28T01:44:21.593Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "0ae3198d94680f8ba0d159bb75530a1ba3265e98",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000304,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "redacted comment 30",
+        "created_at": "2026-07-28T01:48:51.139Z",
+        "updated_at": "2026-07-28T20:54:01.233Z",
+        "system": false,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "e5408957174a28669f03b5edc9b8c54a3ef0a220",
+    "individual_note": false,
+    "notes": [
+      {
+        "id": 1000305,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "redacted comment 31",
+        "created_at": "2026-07-28T01:48:52.145Z",
+        "updated_at": "2026-07-28T18:28:31.407Z",
+        "system": false,
+        "resolvable": true,
+        "resolved": true,
+        "position": {
+          "new_path": "app/controllers/concerns/vendor_payoff_quote.rb",
+          "new_line": 79
+        }
+      },
+      {
+        "id": 1000309,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "changed this line in [version 17 of the ",
+        "created_at": "2026-07-28T15:06:10.948Z",
+        "updated_at": "2026-07-28T15:06:10.948Z",
+        "system": true,
+        "resolvable": false,
+        "position": {
+          "new_path": "app/controllers/concerns/vendor_payoff_quote.rb",
+          "new_line": 79
+        }
+      }
+    ]
+  },
+  {
+    "id": "e0e6dd9d849498bfd9f42c8b09c581d2e104702a",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000310,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "added 3 commits\n\n<ul><li>23fa208b - ENG-",
+        "created_at": "2026-07-28T15:06:11.291Z",
+        "updated_at": "2026-07-28T15:06:11.293Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "47f26173023c6ee0e79960a13661bee77b8bfb64",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000311,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-28T15:06:40.937Z",
+        "updated_at": "2026-07-28T15:06:40.939Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "6b2c09e9d6c97968d377892e00cc12edf00770bb",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000312,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "redacted comment 32",
+        "created_at": "2026-07-28T15:27:47.029Z",
+        "updated_at": "2026-07-28T15:27:47.029Z",
+        "system": false,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "446961a996bc82381ad722d02078dc4960f84433",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000316,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "added 3 commits\n\n<ul><li>07fe7db2 - ENG-",
+        "created_at": "2026-07-28T18:27:50.575Z",
+        "updated_at": "2026-07-28T18:27:50.576Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "4eb120c9c53900931148a4a9a2582d72e105ab90",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000317,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-28T18:28:21.630Z",
+        "updated_at": "2026-07-28T18:28:21.632Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "b1ec5b83609272c1854864126429ec5892e3215b",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000318,
+        "author": {
+          "id": 1000027,
+          "username": "sam.rios",
+          "name": "sam.rios"
+        },
+        "body": "approved this merge request",
+        "created_at": "2026-07-28T18:37:17.259Z",
+        "updated_at": "2026-07-28T18:37:17.265Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "64b315ab4f3f9fc7e7d0134164b6d42fb627ac73",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000320,
+        "author": {
+          "id": 1000204,
+          "username": "mira.dev",
+          "name": "mira.dev"
+        },
+        "body": "added 214 commits\n\n<ul><li>98f705d4...83",
+        "created_at": "2026-07-28T20:47:56.036Z",
+        "updated_at": "2026-07-28T20:47:56.038Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "f1d96ac4166d1bf8919f41408b0030476b28af1e",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000321,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "changed the description",
+        "created_at": "2026-07-28T20:48:32.724Z",
+        "updated_at": "2026-07-28T20:48:32.726Z",
+        "system": true,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "e5e670769cf66e76bf8eb688475168b2eda510e2",
+    "individual_note": true,
+    "notes": [
+      {
+        "id": 1000324,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "redacted comment 33",
+        "created_at": "2026-07-28T20:53:59.947Z",
+        "updated_at": "2026-07-28T20:53:59.947Z",
+        "system": false,
+        "resolvable": false
+      }
+    ]
+  },
+  {
+    "id": "d16f92f952510990bd72d34fe639bc143cb75756",
+    "individual_note": false,
+    "notes": [
+      {
+        "id": 1000325,
+        "author": {
+          "id": 1000327,
+          "username": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "project_2222222_bot_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "body": "redacted comment 34",
+        "created_at": "2026-07-28T20:54:00.638Z",
+        "updated_at": "2026-07-28T20:54:00.638Z",
+        "system": false,
+        "resolvable": true,
+        "resolved": false,
+        "position": {
+          "new_path": "app/services/vendors/payoff_quote_refresh.rb",
+          "new_line": 192
+        }
+      }
+    ]
+  }
+]

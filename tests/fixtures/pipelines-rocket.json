@@ -1,0 +1,1002 @@
+[
+  {
+    "id": 1000203,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7617/head",
+    "sha": "dead3459194ab36c73da95943bc6960e5b8d4968",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000203",
+    "created_at": "2026-07-29T17:06:02.086Z",
+    "updated_at": "2026-07-29T17:09:12.933Z"
+  },
+  {
+    "id": 1000202,
+    "status": "success",
+    "source": "push",
+    "ref": "DATA-277",
+    "sha": "dead3459194ab36c73da95943bc6960e5b8d4968",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000202",
+    "created_at": "2026-07-29T17:06:01.493Z",
+    "updated_at": "2026-07-29T17:09:47.497Z"
+  },
+  {
+    "id": 1000201,
+    "status": "success",
+    "source": "push",
+    "ref": "OPS-194",
+    "sha": "33c83b2b4f4471532ebd0e37755e8c269f6fa98c",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000201",
+    "created_at": "2026-07-29T17:01:59.632Z",
+    "updated_at": "2026-07-29T17:05:24.598Z"
+  },
+  {
+    "id": 1000200,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7673/head",
+    "sha": "46abc52e7b0bac6297ea8804780f99b07c7ff2aa",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000200",
+    "created_at": "2026-07-29T16:39:42.087Z",
+    "updated_at": "2026-07-29T16:43:52.607Z"
+  },
+  {
+    "id": 1000199,
+    "status": "success",
+    "source": "push",
+    "ref": "OPS-186",
+    "sha": "46abc52e7b0bac6297ea8804780f99b07c7ff2aa",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000199",
+    "created_at": "2026-07-29T16:39:40.221Z",
+    "updated_at": "2026-07-29T16:43:14.314Z"
+  },
+  {
+    "id": 1000198,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7722/head",
+    "sha": "5e9c6f3b43e84a54bb317e0885f0d850e1864c26",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000198",
+    "created_at": "2026-07-29T16:23:27.795Z",
+    "updated_at": "2026-07-29T16:26:24.762Z"
+  },
+  {
+    "id": 1000197,
+    "status": "success",
+    "source": "push",
+    "ref": "CORE-545",
+    "sha": "5e9c6f3b43e84a54bb317e0885f0d850e1864c26",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000197",
+    "created_at": "2026-07-29T16:23:26.128Z",
+    "updated_at": "2026-07-29T16:26:36.223Z"
+  },
+  {
+    "id": 1000196,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7719/head",
+    "sha": "9de98080c17cc66319f25db3b01ebbacbe0a1e50",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000196",
+    "created_at": "2026-07-29T16:18:13.564Z",
+    "updated_at": "2026-07-29T16:21:23.956Z"
+  },
+  {
+    "id": 1000195,
+    "status": "success",
+    "source": "push",
+    "ref": "RELEASE-26-32",
+    "sha": "9de98080c17cc66319f25db3b01ebbacbe0a1e50",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000195",
+    "created_at": "2026-07-29T16:18:10.945Z",
+    "updated_at": "2026-07-29T16:21:24.290Z"
+  },
+  {
+    "id": 1000194,
+    "status": "success",
+    "source": "push",
+    "ref": "data-387-246",
+    "sha": "1b293d40a89e627efe34ef3c42f37eded40b43f5",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000194",
+    "created_at": "2026-07-29T16:10:56.383Z",
+    "updated_at": "2026-07-29T16:20:40.327Z"
+  },
+  {
+    "id": 1000193,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7722/head",
+    "sha": "ec2d77ecf7af05094c9d9c0329a7721a1b817553",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000193",
+    "created_at": "2026-07-29T15:57:03.518Z",
+    "updated_at": "2026-07-29T16:06:15.492Z"
+  },
+  {
+    "id": 1000192,
+    "status": "success",
+    "source": "push",
+    "ref": "CORE-545",
+    "sha": "ec2d77ecf7af05094c9d9c0329a7721a1b817553",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000192",
+    "created_at": "2026-07-29T15:56:20.582Z",
+    "updated_at": "2026-07-29T16:05:53.039Z"
+  },
+  {
+    "id": 1000191,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7577/head",
+    "sha": "b1646956c982a602b76898a7353ad2e191756c29",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000191",
+    "created_at": "2026-07-29T15:50:14.141Z",
+    "updated_at": "2026-07-29T15:53:51.891Z"
+  },
+  {
+    "id": 1000190,
+    "status": "success",
+    "source": "push",
+    "ref": "WEB-261",
+    "sha": "b1646956c982a602b76898a7353ad2e191756c29",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000190",
+    "created_at": "2026-07-29T15:50:11.125Z",
+    "updated_at": "2026-07-29T15:54:02.260Z"
+  },
+  {
+    "id": 1000189,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7717/head",
+    "sha": "769b4907eced59636c9a36e82330393cf0c1702e",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000189",
+    "created_at": "2026-07-29T15:45:23.837Z",
+    "updated_at": "2026-07-29T16:35:34.235Z"
+  },
+  {
+    "id": 1000188,
+    "status": "success",
+    "source": "push",
+    "ref": "PAY-664",
+    "sha": "769b4907eced59636c9a36e82330393cf0c1702e",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000188",
+    "created_at": "2026-07-29T15:45:22.034Z",
+    "updated_at": "2026-07-29T15:48:34.812Z"
+  },
+  {
+    "id": 1000187,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7658/head",
+    "sha": "39097f4f2a21a19a6057b2895db54255294ff434",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000187",
+    "created_at": "2026-07-29T15:20:58.651Z",
+    "updated_at": "2026-07-29T15:26:32.148Z"
+  },
+  {
+    "id": 1000186,
+    "status": "success",
+    "source": "push",
+    "ref": "APP-10390",
+    "sha": "39097f4f2a21a19a6057b2895db54255294ff434",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000186",
+    "created_at": "2026-07-29T15:20:55.582Z",
+    "updated_at": "2026-07-29T15:24:40.817Z"
+  },
+  {
+    "id": 1000185,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7721/head",
+    "sha": "dea76bcc56b3f17504ea68ae061054c01b019637",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000185",
+    "created_at": "2026-07-29T15:06:00.809Z",
+    "updated_at": "2026-07-29T15:09:20.754Z"
+  },
+  {
+    "id": 1000184,
+    "status": "success",
+    "source": "push",
+    "ref": "SUP-184",
+    "sha": "dea76bcc56b3f17504ea68ae061054c01b019637",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000184",
+    "created_at": "2026-07-29T15:04:58.053Z",
+    "updated_at": "2026-07-29T15:08:04.359Z"
+  },
+  {
+    "id": 1000183,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7720/head",
+    "sha": "71b7d6451742ee64c65ed85f108160320c5b67ce",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000183",
+    "created_at": "2026-07-29T14:51:56.789Z",
+    "updated_at": "2026-07-29T15:16:38.971Z"
+  },
+  {
+    "id": 1000182,
+    "status": "success",
+    "source": "push",
+    "ref": "OPS-240",
+    "sha": "71b7d6451742ee64c65ed85f108160320c5b67ce",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000182",
+    "created_at": "2026-07-29T14:49:30.518Z",
+    "updated_at": "2026-07-29T15:01:07.888Z"
+  },
+  {
+    "id": 1000181,
+    "status": "success",
+    "source": "external",
+    "ref": "SUP-198",
+    "sha": "170aa251879db7b9888e26c416a899a490fd803e",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000181",
+    "created_at": "2026-07-29T14:06:21.256Z",
+    "updated_at": "2026-07-29T14:09:46.163Z"
+  },
+  {
+    "id": 1000180,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7704/head",
+    "sha": "d6346325e50715dabaf95137dee1059dc26f4d2c",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000180",
+    "created_at": "2026-07-29T13:55:35.900Z",
+    "updated_at": "2026-07-29T13:58:28.358Z"
+  },
+  {
+    "id": 1000179,
+    "status": "success",
+    "source": "push",
+    "ref": "RISK-46",
+    "sha": "d6346325e50715dabaf95137dee1059dc26f4d2c",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000179",
+    "created_at": "2026-07-29T13:55:30.584Z",
+    "updated_at": "2026-07-29T13:58:26.006Z"
+  },
+  {
+    "id": 1000178,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7719/head",
+    "sha": "27abc272779465d84561244f42440ff55d4b2032",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000178",
+    "created_at": "2026-07-29T13:50:33.437Z",
+    "updated_at": "2026-07-29T13:53:52.881Z"
+  },
+  {
+    "id": 1000176,
+    "status": "success",
+    "source": "push",
+    "ref": "RELEASE-26-32",
+    "sha": "27abc272779465d84561244f42440ff55d4b2032",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000176",
+    "created_at": "2026-07-29T13:31:34.521Z",
+    "updated_at": "2026-07-29T13:43:04.246Z"
+  },
+  {
+    "id": 1000175,
+    "status": "success",
+    "source": "push",
+    "ref": "RELEASE-26-32",
+    "sha": "83a0edf976efaa6ca0576bfce03b3bfb127f1156",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000175",
+    "created_at": "2026-07-29T13:30:43.583Z",
+    "updated_at": "2026-07-29T13:41:42.578Z"
+  },
+  {
+    "id": 1000174,
+    "status": "success",
+    "source": "push",
+    "ref": "RELEASE-26-32",
+    "sha": "26508ce2e0d376e07c96e3319ca5d198b195035b",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000174",
+    "created_at": "2026-07-29T13:29:34.643Z",
+    "updated_at": "2026-07-29T13:41:34.368Z"
+  },
+  {
+    "id": 1000173,
+    "status": "success",
+    "source": "push",
+    "ref": "RELEASE-26-32",
+    "sha": "c3f44f676fe8b811fb4b6ad4e38c01c8314d6a9b",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000173",
+    "created_at": "2026-07-29T13:28:20.098Z",
+    "updated_at": "2026-07-29T13:39:56.057Z"
+  },
+  {
+    "id": 1000172,
+    "status": "success",
+    "source": "push",
+    "ref": "RELEASE-26-32",
+    "sha": "66d16f5223f29686082d4ce5fb0cb9f31423c1f9",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000172",
+    "created_at": "2026-07-29T13:27:26.113Z",
+    "updated_at": "2026-07-29T13:39:14.405Z"
+  },
+  {
+    "id": 1000171,
+    "status": "success",
+    "source": "push",
+    "ref": "RELEASE-26-32",
+    "sha": "426453e292284938d65942b8dcd78ec28aa6110d",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000171",
+    "created_at": "2026-07-29T13:26:30.722Z",
+    "updated_at": "2026-07-29T13:39:08.546Z"
+  },
+  {
+    "id": 1000170,
+    "status": "success",
+    "source": "push",
+    "ref": "RELEASE-26-32",
+    "sha": "afb041cc1a19a992edd58574528da43ff650fc1b",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000170",
+    "created_at": "2026-07-29T13:25:38.171Z",
+    "updated_at": "2026-07-29T13:38:29.775Z"
+  },
+  {
+    "id": 1000169,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7658/head",
+    "sha": "08c71a7687b6e2362558517b38c50f3cd2ae2e72",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000169",
+    "created_at": "2026-07-29T05:40:32.542Z",
+    "updated_at": "2026-07-29T05:49:44.438Z"
+  },
+  {
+    "id": 1000168,
+    "status": "success",
+    "source": "push",
+    "ref": "APP-10390",
+    "sha": "08c71a7687b6e2362558517b38c50f3cd2ae2e72",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000168",
+    "created_at": "2026-07-29T05:40:30.448Z",
+    "updated_at": "2026-07-29T05:43:55.947Z"
+  },
+  {
+    "id": 1000167,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7658/head",
+    "sha": "a4070e210025c5b6f373172cc330743e08120697",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000167",
+    "created_at": "2026-07-29T05:39:38.693Z",
+    "updated_at": "2026-07-29T05:43:13.239Z"
+  },
+  {
+    "id": 1000166,
+    "status": "success",
+    "source": "push",
+    "ref": "APP-10390",
+    "sha": "a4070e210025c5b6f373172cc330743e08120697",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000166",
+    "created_at": "2026-07-29T05:39:36.767Z",
+    "updated_at": "2026-07-29T05:43:12.828Z"
+  },
+  {
+    "id": 1000165,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7658/head",
+    "sha": "ec0edc00a05e5ff5484949193c1a6ac2e07ec2ef",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000165",
+    "created_at": "2026-07-29T02:41:21.919Z",
+    "updated_at": "2026-07-29T02:44:21.633Z"
+  },
+  {
+    "id": 1000164,
+    "status": "success",
+    "source": "push",
+    "ref": "APP-10390",
+    "sha": "ec0edc00a05e5ff5484949193c1a6ac2e07ec2ef",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000164",
+    "created_at": "2026-07-29T02:41:18.349Z",
+    "updated_at": "2026-07-29T02:44:20.222Z"
+  },
+  {
+    "id": 1000163,
+    "status": "success",
+    "source": "push",
+    "ref": "ENG-117",
+    "sha": "91417590f60c34b7dec8802bbbf96dee3862268b",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000163",
+    "created_at": "2026-07-29T01:51:57.175Z",
+    "updated_at": "2026-07-29T02:01:01.900Z"
+  },
+  {
+    "id": 1000162,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7607/head",
+    "sha": "91417590f60c34b7dec8802bbbf96dee3862268b",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000162",
+    "created_at": "2026-07-29T01:51:56.325Z",
+    "updated_at": "2026-07-29T02:00:44.954Z"
+  },
+  {
+    "id": 1000161,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7658/head",
+    "sha": "7dbfef80afdfaf4d7755e3922e38214b343d246e",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000161",
+    "created_at": "2026-07-29T01:17:37.903Z",
+    "updated_at": "2026-07-29T01:21:36.610Z"
+  },
+  {
+    "id": 1000160,
+    "status": "success",
+    "source": "push",
+    "ref": "APP-10390",
+    "sha": "7dbfef80afdfaf4d7755e3922e38214b343d246e",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000160",
+    "created_at": "2026-07-29T01:17:36.027Z",
+    "updated_at": "2026-07-29T01:21:34.601Z"
+  },
+  {
+    "id": 1000159,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7718/head",
+    "sha": "b6ff2011adc6d0e8f452c84f25f28e90753228e7",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000159",
+    "created_at": "2026-07-29T00:59:59.590Z",
+    "updated_at": "2026-07-29T13:34:37.278Z"
+  },
+  {
+    "id": 1000158,
+    "status": "success",
+    "source": "push",
+    "ref": "APP-19630",
+    "sha": "b6ff2011adc6d0e8f452c84f25f28e90753228e7",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000158",
+    "created_at": "2026-07-29T00:58:55.294Z",
+    "updated_at": "2026-07-29T01:02:14.670Z"
+  },
+  {
+    "id": 1000157,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7718/head",
+    "sha": "961e6a8d8552f5b943257130e7ec3693d149ddd5",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000157",
+    "created_at": "2026-07-29T00:45:00.327Z",
+    "updated_at": "2026-07-29T00:51:02.090Z"
+  },
+  {
+    "id": 1000156,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7717/head",
+    "sha": "250ccc06daf425ee995d773bbf142a3fc4a84739",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000156",
+    "created_at": "2026-07-28T23:41:10.122Z",
+    "updated_at": "2026-07-28T23:51:12.370Z"
+  },
+  {
+    "id": 1000155,
+    "status": "success",
+    "source": "push",
+    "ref": "PAY-664",
+    "sha": "250ccc06daf425ee995d773bbf142a3fc4a84739",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000155",
+    "created_at": "2026-07-28T23:40:46.598Z",
+    "updated_at": "2026-07-28T23:50:10.418Z"
+  },
+  {
+    "id": 1000154,
+    "status": "success",
+    "source": "push",
+    "ref": "APP-19630",
+    "sha": "961e6a8d8552f5b943257130e7ec3693d149ddd5",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000154",
+    "created_at": "2026-07-28T23:40:34.937Z",
+    "updated_at": "2026-07-28T23:49:59.478Z"
+  },
+  {
+    "id": 1000153,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7658/head",
+    "sha": "2dd0f76280a6147db76fd7db4862158de52a419f",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000153",
+    "created_at": "2026-07-28T22:28:45.328Z",
+    "updated_at": "2026-07-28T22:32:50.564Z"
+  },
+  {
+    "id": 1000152,
+    "status": "success",
+    "source": "push",
+    "ref": "APP-10390",
+    "sha": "2dd0f76280a6147db76fd7db4862158de52a419f",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000152",
+    "created_at": "2026-07-28T22:28:43.604Z",
+    "updated_at": "2026-07-28T22:31:42.765Z"
+  },
+  {
+    "id": 1000151,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7658/head",
+    "sha": "672edbc3d1a789cb5d63081ae9fee5e11ddcae14",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000151",
+    "created_at": "2026-07-28T22:11:56.564Z",
+    "updated_at": "2026-07-28T22:16:44.567Z"
+  },
+  {
+    "id": 1000150,
+    "status": "success",
+    "source": "push",
+    "ref": "APP-10390",
+    "sha": "672edbc3d1a789cb5d63081ae9fee5e11ddcae14",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000150",
+    "created_at": "2026-07-28T22:10:57.007Z",
+    "updated_at": "2026-07-28T22:14:29.009Z"
+  },
+  {
+    "id": 1000149,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7681/head",
+    "sha": "7caa6c80169fa0497c140dea8ff6ebe40f513e5a",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000149",
+    "created_at": "2026-07-28T21:45:30.606Z",
+    "updated_at": "2026-07-28T21:49:31.913Z"
+  },
+  {
+    "id": 1000148,
+    "status": "success",
+    "source": "push",
+    "ref": "CORE-10",
+    "sha": "7caa6c80169fa0497c140dea8ff6ebe40f513e5a",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000148",
+    "created_at": "2026-07-28T21:45:29.612Z",
+    "updated_at": "2026-07-28T21:48:42.325Z"
+  },
+  {
+    "id": 1000147,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7700/head",
+    "sha": "f70662c8b8e99e80fb7ee96c73e3199aedb7b0d6",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000147",
+    "created_at": "2026-07-28T21:42:24.068Z",
+    "updated_at": "2026-07-28T21:49:03.092Z"
+  },
+  {
+    "id": 1000146,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7702/head",
+    "sha": "25a517bd132fb944b46c06833f8956a929dda1da",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000146",
+    "created_at": "2026-07-28T21:42:20.774Z",
+    "updated_at": "2026-07-28T21:47:10.399Z"
+  },
+  {
+    "id": 1000145,
+    "status": "success",
+    "source": "push",
+    "ref": "CORE-31",
+    "sha": "f70662c8b8e99e80fb7ee96c73e3199aedb7b0d6",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000145",
+    "created_at": "2026-07-28T21:42:19.432Z",
+    "updated_at": "2026-07-28T21:47:46.163Z"
+  },
+  {
+    "id": 1000144,
+    "status": "success",
+    "source": "push",
+    "ref": "CORE-30",
+    "sha": "c09a19800c43b8d770b47fe61eb1b222ffeeadf3",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000144",
+    "created_at": "2026-07-28T21:42:19.163Z",
+    "updated_at": "2026-07-28T21:51:06.780Z"
+  },
+  {
+    "id": 1000143,
+    "status": "success",
+    "source": "push",
+    "ref": "CORE-13",
+    "sha": "25a517bd132fb944b46c06833f8956a929dda1da",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000143",
+    "created_at": "2026-07-28T21:42:18.553Z",
+    "updated_at": "2026-07-28T21:46:51.639Z"
+  },
+  {
+    "id": 1000142,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7716/head",
+    "sha": "9f37fac004cee363ed810f05734dc227bd0d714b",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000142",
+    "created_at": "2026-07-28T21:37:54.997Z",
+    "updated_at": "2026-07-28T21:49:34.498Z"
+  },
+  {
+    "id": 1000141,
+    "status": "success",
+    "source": "push",
+    "ref": "DATA-387",
+    "sha": "9f37fac004cee363ed810f05734dc227bd0d714b",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000141",
+    "created_at": "2026-07-28T21:34:30.390Z",
+    "updated_at": "2026-07-28T21:37:58.047Z"
+  },
+  {
+    "id": 1000140,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7715/head",
+    "sha": "c68d6ab49d1fdc226bd9dfbab0276c2e8f671e07",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000140",
+    "created_at": "2026-07-28T21:34:13.127Z",
+    "updated_at": "2026-07-28T21:49:34.772Z"
+  },
+  {
+    "id": 1000139,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7658/head",
+    "sha": "06be0a44d2fa3d0cafca955a05010e5a630b4a22",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000139",
+    "created_at": "2026-07-28T21:15:08.140Z",
+    "updated_at": "2026-07-28T21:47:25.641Z"
+  },
+  {
+    "id": 1000138,
+    "status": "success",
+    "source": "push",
+    "ref": "APP-10390",
+    "sha": "06be0a44d2fa3d0cafca955a05010e5a630b4a22",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000138",
+    "created_at": "2026-07-28T21:15:06.738Z",
+    "updated_at": "2026-07-28T21:18:09.968Z"
+  },
+  {
+    "id": 1000137,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7577/head",
+    "sha": "064b4013ee95bba7057d0aa2181c4b3b13a7d656",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000137",
+    "created_at": "2026-07-28T20:56:44.529Z",
+    "updated_at": "2026-07-28T21:44:39.679Z"
+  },
+  {
+    "id": 1000136,
+    "status": "success",
+    "source": "push",
+    "ref": "WEB-261",
+    "sha": "064b4013ee95bba7057d0aa2181c4b3b13a7d656",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000136",
+    "created_at": "2026-07-28T20:56:42.591Z",
+    "updated_at": "2026-07-28T21:00:42.155Z"
+  },
+  {
+    "id": 1000135,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7584/head",
+    "sha": "12609bd2d9f80d6ff218bf305635327946870348",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000135",
+    "created_at": "2026-07-28T20:51:04.950Z",
+    "updated_at": "2026-07-28T21:46:57.219Z"
+  },
+  {
+    "id": 1000134,
+    "status": "success",
+    "source": "push",
+    "ref": "ENG-125",
+    "sha": "12609bd2d9f80d6ff218bf305635327946870348",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000134",
+    "created_at": "2026-07-28T20:50:13.863Z",
+    "updated_at": "2026-07-28T20:55:29.121Z"
+  },
+  {
+    "id": 1000133,
+    "status": "success",
+    "source": "push",
+    "ref": "ENG-119",
+    "sha": "cdcbab33eabd45cd603800af7ec77ba0c3348ee2",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000133",
+    "created_at": "2026-07-28T20:49:55.363Z",
+    "updated_at": "2026-07-28T21:02:32.607Z"
+  },
+  {
+    "id": 1000132,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7610/head",
+    "sha": "cdcbab33eabd45cd603800af7ec77ba0c3348ee2",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000132",
+    "created_at": "2026-07-28T20:49:54.983Z",
+    "updated_at": "2026-07-28T21:39:00.381Z"
+  },
+  {
+    "id": 1000131,
+    "status": "failed",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7612/head",
+    "sha": "3a417ccd2ac32d99b683aaae0b0d55e345351caf",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000131",
+    "created_at": "2026-07-28T20:49:10.821Z",
+    "updated_at": "2026-07-28T20:49:10.821Z"
+  },
+  {
+    "id": 1000130,
+    "status": "failed",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7693/head",
+    "sha": "d238255d7276cd54abd68dd19b33967e30907fe6",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000130",
+    "created_at": "2026-07-28T20:49:10.755Z",
+    "updated_at": "2026-07-28T20:49:10.755Z"
+  },
+  {
+    "id": 1000129,
+    "status": "failed",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7611/head",
+    "sha": "9e2d20583d9bcdb90113c58831265c119bb5a1d7",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000129",
+    "created_at": "2026-07-28T20:49:10.495Z",
+    "updated_at": "2026-07-28T20:49:10.495Z"
+  },
+  {
+    "id": 1000128,
+    "status": "failed",
+    "source": "push",
+    "ref": "feature/WEB-428-vendor-dashboard",
+    "sha": "3a417ccd2ac32d99b683aaae0b0d55e345351caf",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000128",
+    "created_at": "2026-07-28T20:49:10.082Z",
+    "updated_at": "2026-07-28T20:49:10.082Z"
+  },
+  {
+    "id": 1000127,
+    "status": "failed",
+    "source": "push",
+    "ref": "WEB-472",
+    "sha": "d238255d7276cd54abd68dd19b33967e30907fe6",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000127",
+    "created_at": "2026-07-28T20:49:09.474Z",
+    "updated_at": "2026-07-28T20:49:09.474Z"
+  },
+  {
+    "id": 1000126,
+    "status": "failed",
+    "source": "push",
+    "ref": "WEB-436",
+    "sha": "3a417ccd2ac32d99b683aaae0b0d55e345351caf",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000126",
+    "created_at": "2026-07-28T20:49:08.717Z",
+    "updated_at": "2026-07-28T20:49:08.717Z"
+  },
+  {
+    "id": 1000125,
+    "status": "failed",
+    "source": "push",
+    "ref": "WEB-435",
+    "sha": "9e2d20583d9bcdb90113c58831265c119bb5a1d7",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000125",
+    "created_at": "2026-07-28T20:49:07.955Z",
+    "updated_at": "2026-07-28T20:49:07.955Z"
+  },
+  {
+    "id": 1000123,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7633/head",
+    "sha": "eec10e6f879d856e6bc26dfd869f4d629a1431b7",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000123",
+    "created_at": "2026-07-28T20:48:20.460Z",
+    "updated_at": "2026-07-28T21:38:53.761Z"
+  },
+  {
+    "id": 1000122,
+    "status": "success",
+    "source": "push",
+    "ref": "ENG-126",
+    "sha": "eec10e6f879d856e6bc26dfd869f4d629a1431b7",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000122",
+    "created_at": "2026-07-28T20:48:17.598Z",
+    "updated_at": "2026-07-28T20:54:43.930Z"
+  },
+  {
+    "id": 1000121,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7576/head",
+    "sha": "162a1785bc3c04f22d2bae1b90b0c8f3378f178d",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000121",
+    "created_at": "2026-07-28T20:47:57.980Z",
+    "updated_at": "2026-07-28T21:40:58.383Z"
+  },
+  {
+    "id": 1000120,
+    "status": "success",
+    "source": "push",
+    "ref": "ENG-118",
+    "sha": "162a1785bc3c04f22d2bae1b90b0c8f3378f178d",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000120",
+    "created_at": "2026-07-28T20:47:55.048Z",
+    "updated_at": "2026-07-28T20:54:25.030Z"
+  },
+  {
+    "id": 1000119,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7597/head",
+    "sha": "d9012aa345b2d71d89508c84f7e4fb69e9847e6a",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000119",
+    "created_at": "2026-07-28T20:42:53.289Z",
+    "updated_at": "2026-07-28T21:49:10.255Z"
+  },
+  {
+    "id": 1000118,
+    "status": "success",
+    "source": "push",
+    "ref": "PAY-9",
+    "sha": "d9012aa345b2d71d89508c84f7e4fb69e9847e6a",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000118",
+    "created_at": "2026-07-28T20:42:50.259Z",
+    "updated_at": "2026-07-28T20:45:54.236Z"
+  },
+  {
+    "id": 1000117,
+    "status": "success",
+    "source": "push",
+    "ref": "SUP-418",
+    "sha": "c68d6ab49d1fdc226bd9dfbab0276c2e8f671e07",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000117",
+    "created_at": "2026-07-28T20:40:25.160Z",
+    "updated_at": "2026-07-28T20:51:49.349Z"
+  },
+  {
+    "id": 1000115,
+    "status": "success",
+    "source": "external",
+    "ref": "WEB-434",
+    "sha": "eee5d16197093ff441f4e22507368af077ee0ef5",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000115",
+    "created_at": "2026-07-28T20:23:36.444Z",
+    "updated_at": "2026-07-28T20:24:16.550Z"
+  },
+  {
+    "id": 1000114,
+    "status": "failed",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7598/head",
+    "sha": "eee5d16197093ff441f4e22507368af077ee0ef5",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000114",
+    "created_at": "2026-07-28T20:23:36.181Z",
+    "updated_at": "2026-07-28T20:23:36.181Z"
+  },
+  {
+    "id": 1000113,
+    "status": "failed",
+    "source": "push",
+    "ref": "WEB-434",
+    "sha": "eee5d16197093ff441f4e22507368af077ee0ef5",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000113",
+    "created_at": "2026-07-28T20:23:34.518Z",
+    "updated_at": "2026-07-28T20:23:34.518Z"
+  },
+  {
+    "id": 1000112,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7714/head",
+    "sha": "cf47639473d465bf3532610996217f33f986e920",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000112",
+    "created_at": "2026-07-28T20:12:36.767Z",
+    "updated_at": "2026-07-28T20:16:57.207Z"
+  },
+  {
+    "id": 1000111,
+    "status": "success",
+    "source": "push",
+    "ref": "PAY-363",
+    "sha": "cf47639473d465bf3532610996217f33f986e920",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000111",
+    "created_at": "2026-07-28T20:12:34.809Z",
+    "updated_at": "2026-07-28T20:16:52.552Z"
+  },
+  {
+    "id": 1000110,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7714/head",
+    "sha": "b9785fe497db027b504bfae04e97cebce70dd4f6",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000110",
+    "created_at": "2026-07-28T20:11:15.377Z",
+    "updated_at": "2026-07-28T20:14:53.314Z"
+  },
+  {
+    "id": 1000109,
+    "status": "success",
+    "source": "push",
+    "ref": "PAY-363",
+    "sha": "b9785fe497db027b504bfae04e97cebce70dd4f6",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000109",
+    "created_at": "2026-07-28T20:11:14.369Z",
+    "updated_at": "2026-07-28T20:15:56.624Z"
+  },
+  {
+    "id": 1000108,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7714/head",
+    "sha": "d6bbd2059146732ac1c1abe66ea8564eccb43dab",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000108",
+    "created_at": "2026-07-28T20:11:02.023Z",
+    "updated_at": "2026-07-28T20:14:40.019Z"
+  },
+  {
+    "id": 1000107,
+    "status": "failed",
+    "source": "push",
+    "ref": "PAY-363",
+    "sha": "d6bbd2059146732ac1c1abe66ea8564eccb43dab",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000107",
+    "created_at": "2026-07-28T20:11:00.806Z",
+    "updated_at": "2026-07-28T20:15:30.897Z"
+  },
+  {
+    "id": 1000106,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/6649/head",
+    "sha": "8ef2f4504707a17d3fde8a9d90dd62b72ff80bfc",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000106",
+    "created_at": "2026-07-28T20:00:52.165Z",
+    "updated_at": "2026-07-28T21:38:20.570Z"
+  },
+  {
+    "id": 1000105,
+    "status": "success",
+    "source": "push",
+    "ref": "OPS-1",
+    "sha": "8ef2f4504707a17d3fde8a9d90dd62b72ff80bfc",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000105",
+    "created_at": "2026-07-28T20:00:48.771Z",
+    "updated_at": "2026-07-28T20:03:19.373Z"
+  },
+  {
+    "id": 1000104,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7704/head",
+    "sha": "63e5c73dc3c495439e31cb6b347e743da3010f91",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000104",
+    "created_at": "2026-07-28T19:55:23.046Z",
+    "updated_at": "2026-07-28T21:38:09.121Z"
+  },
+  {
+    "id": 1000103,
+    "status": "success",
+    "source": "push",
+    "ref": "RISK-46",
+    "sha": "63e5c73dc3c495439e31cb6b347e743da3010f91",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000103",
+    "created_at": "2026-07-28T19:55:22.619Z",
+    "updated_at": "2026-07-28T20:04:02.975Z"
+  },
+  {
+    "id": 1000102,
+    "status": "success",
+    "source": "merge_request_event",
+    "ref": "refs/merge-requests/7580/head",
+    "sha": "7f89a440f60aa0ce0d0719e2b89af93be00a4a97",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000102",
+    "created_at": "2026-07-28T19:45:04.783Z",
+    "updated_at": "2026-07-28T19:47:48.785Z"
+  },
+  {
+    "id": 1000101,
+    "status": "success",
+    "source": "push",
+    "ref": "PAY-363",
+    "sha": "3251812be8ac58afbb40321dd5c87527c9e3d09f",
+    "web_url": "https://gitlab.com/acme/rocket/-/pipelines/1000101",
+    "created_at": "2026-07-28T19:42:12.190Z",
+    "updated_at": "2026-07-28T19:51:07.417Z"
+  }
+]

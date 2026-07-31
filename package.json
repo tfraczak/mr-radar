@@ -1,0 +1,78 @@
+{
+  "name": "mr-radar",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local macOS menu bar notifier for GitLab MR comments, reviews, and CI (RWX or GitLab pipelines), scoped by active Jira tickets.",
+  "license": "MIT",
+  "main": "dist/main/index.js",
+  "packageManager": "yarn@4.13.0",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "build": "tsc && tsc -p src/renderer/tsconfig.json && node scripts/copy-assets.mjs",
+    "typecheck": "tsc --noEmit && tsc -p src/renderer/tsconfig.json --noEmit",
+    "dev": "yarn build && node scripts/kill-stale.mjs && electron dist/main/index.js",
+    "cli": "yarn build && node --no-warnings dist/cli.js",
+    "status": "yarn build && node --no-warnings dist/cli.js --dry-run",
+    "poller": "yarn build && node --no-warnings dist/poller.js",
+    "poller:install": "yarn build && node scripts/install-poller.mjs",
+    "poller:uninstall": "node scripts/install-poller.mjs --uninstall",
+    "poller:restart": "launchctl kickstart -k gui/$(id -u)/com.mr-radar.poller",
+    "poller:status": "launchctl print gui/$(id -u)/com.mr-radar.poller | head -25",
+    "poller:logs": "tail -n 50 -f ~/.local/state/mr-radar/poller.log",
+    "tray:install": "yarn build && node scripts/install-tray.mjs",
+    "tray:uninstall": "node scripts/install-tray.mjs --uninstall",
+    "tray:restart": "launchctl kickstart -k gui/$(id -u)/com.mr-radar.tray",
+    "tray:logs": "tail -n 50 -f ~/.local/state/mr-radar/tray.log",
+    "ui": "open http://127.0.0.1:8942",
+    "jira:token": "yarn build && node --no-warnings dist/set-jira-token.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify:fixtures": "./scripts/capture-fixtures.sh",
+    "db:stats": "yarn build && node --no-warnings dist/cli.js --stats",
+    "icons": "node scripts/make-icons.mjs && node scripts/make-app-icon.mjs",
+    "sanitize:fixtures": "node scripts/sanitize-fixtures.mjs",
+    "start": "node scripts/kill-stale.mjs && electron dist/main/index.js",
+    "package": "yarn build && node scripts/make-app-icon.mjs && electron-builder --mac dir",
+    "install:app": "yarn package && node scripts/install.mjs",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.0.0",
+    "electron": "^43.2.0",
+    "electron-builder": "26.15.3",
+    "eslint": "^10.8.0",
+    "globals": "^17.8.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.65.0",
+    "vitest": "^3.0.0"
+  },
+  "build": {
+    "appId": "com.mr-radar.app",
+    "productName": "MR Radar",
+    "copyright": "MR Radar contributors",
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
+    },
+    "files": [
+      "dist/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "target": [
+        "dir"
+      ],
+      "category": "public.app-category.developer-tools",
+      "icon": "assets/app-icon.png",
+      "extendInfo": {
+        "LSUIElement": true
+      },
+      "identity": null
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "//": "Renderer builds as a browser ES module, not CommonJS — a plain <script> has no `exports`/`require`, which is what left the popover stuck on 'Loading…'. Loaded via <script type=\"module\"> so it runs in module scope with no global leakage.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "rootDir": ".",
+    "outDir": "../../dist/renderer",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "declaration": false
+  },
+  "include": ["*.ts"]
+}

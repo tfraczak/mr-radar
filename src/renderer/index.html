@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:;"
+    />
+    <title>MR Radar</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header id="header">
+      <div class="title-row">
+        <h1>MR Radar</h1>
+        <div class="actions">
+          <button id="poll" type="button" title="Poll now">Poll now</button>
+          <button id="pause" type="button" title="Pause or resume polling">Pause</button>
+          <button id="settings-btn" type="button" title="Settings" aria-label="Settings">⚙</button>
+        </div>
+      </div>
+      <p id="status" class="status">Loading…</p>
+    </header>
+
+    <section id="connect" hidden></section>
+
+    <!-- Replaced at startup by the createTabBar component (renderer.ts). -->
+    <nav id="tabs" aria-label="MR buckets"></nav>
+
+    <div id="toolbar">
+      <label class="toolbar-sort">
+        <span>Sort</span>
+        <select id="sort">
+          <option value="attention">Attention</option>
+          <option value="oldest">Oldest first</option>
+          <option value="active">Recently active</option>
+          <option value="status">Jira status</option>
+          <option value="comments">Most comments</option>
+        </select>
+      </label>
+      <button id="filter-btn" type="button">Filter</button>
+      <div id="filter-menu" hidden></div>
+    </div>
+
+    <main id="list" aria-live="polite">
+      <p class="empty">Loading…</p>
+    </main>
+
+    <section id="settings" hidden></section>
+
+    <footer id="footer">
+      <div id="sources" class="sources"></div>
+      <button id="mark-read" type="button" class="link">Mark all read</button>
+    </footer>
+
+    <script type="module" src="renderer.js"></script>
+  </body>
+</html>
