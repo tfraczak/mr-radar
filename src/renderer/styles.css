@@ -407,17 +407,18 @@
   --hover: rgba(226, 146, 115, 0.10);
 }
 
-/* Cocoa — hot-chocolate browns with a white-chocolate accent (blonde
-   caramel in light mode, where true white-chocolate cream would vanish). */
+/* Cocoa — the two chocolates trade places by scheme: white-chocolate
+   surfaces with dark-chocolate accents in light; dark-chocolate surfaces
+   with a white-chocolate accent in dark. */
 :root[data-theme='cocoa'][data-scheme='light'] {
-  --bg: #f5efeb;
-  --sheet: #fcf8f5;
-  --fg: #2e241e;
-  --fg-dim: #63534a;
-  --fg-faint: #94827a;
-  --sep: rgba(46,36,30, 0.14);
-  --accent: #a48044;
-  --hover: rgba(164, 128, 68, 0.09);
+  --bg: #f8eed9;
+  --sheet: #fdf7ea;
+  --fg: #33241a;
+  --fg-dim: #6b543f;
+  --fg-faint: #9c866c;
+  --sep: rgba(51, 36, 26, 0.14);
+  --accent: #5c3a26;
+  --hover: rgba(92, 58, 38, 0.09);
 }
 
 :root[data-theme='cocoa'][data-scheme='dark'] {
