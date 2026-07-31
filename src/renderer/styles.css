@@ -193,24 +193,24 @@
 
 /* Pizza — golden crust surfaces (a wood-fired oven in dark), tomato accent. */
 :root[data-theme='pizza'][data-scheme='light'] {
-  --bg: #f9edda;
-  --sheet: #fffaf0;
-  --fg: #382517;
-  --fg-dim: #6f5641;
-  --fg-faint: #a3866a;
-  --sep: rgba(56, 37, 23, 0.14);
+  --bg: #f8e7c7;
+  --sheet: #fef4de;
+  --fg: #3b2712;
+  --fg-dim: #755a35;
+  --fg-faint: #a78a5c;
+  --sep: rgba(59, 39, 18, 0.15);
   --accent: #c23a22;
   --accent-fg: #ffffff;
   --hover: rgba(194, 58, 34, 0.09);
 }
 
 :root[data-theme='pizza'][data-scheme='dark'] {
-  --bg: #29190f;
-  --sheet: #332014;
-  --fg: #f7ecdd;
-  --fg-dim: #cfab88;
-  --fg-faint: #8a7052;
-  --sep: rgba(247, 236, 221, 0.14);
+  --bg: #2c1d0d;
+  --sheet: #372510;
+  --fg: #f9edd6;
+  --fg-dim: #dab983;
+  --fg-faint: #977a44;
+  --sep: rgba(249, 237, 214, 0.13);
   --accent: #ff7a5c;
   --accent-fg: #1c1510;
   --hover: rgba(255, 122, 92, 0.10);
