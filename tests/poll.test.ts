@@ -223,6 +223,38 @@ describe('CLI-run attribution (the ENG-132 case)', () => {
     expect(item.testGate.result).toBe('succeeded');
   });
 
+  it('an app-started run still in flight flips the gate to in_progress', async () => {
+    // The chip must say "RWX running" the moment Start run fires — the open
+    // watched run is hydrated by id each cycle and joins coverage, even when
+    // an older completed run would otherwise read as stale.
+    db.addWatchedRun({
+      run_id: 'app-run-2',
+      provider: 'rwx',
+      mr_key: 'acme/rocket!7723',
+      branch: 'ENG-132',
+      sha: '181d7763aaaaaaaa',
+      definition: '.rwx/ci.yml',
+      url: 'https://cloud.rwx.com/mint/acme/runs/app-run-2',
+      started_at: '2026-07-30T10:00:00Z',
+      terminal: 0,
+      result: null,
+    });
+    const rwx = fakeRwx({
+      // The API attributes nothing: the CLI run has no branch/sha, and the
+      // only attributed history is a FAILED run on an older commit (stale).
+      recentRuns: async () => [
+        bareRun({ ID: 'old-1', Branch: 'ENG-132', CommitSha: 'aaaa000011112222', Trigger: 'push', Status: { Execution: 'finished', Result: 'failed', WaitingSubStatus: 'not_applicable', AbortedSubStatus: 'not_applicable', FinishedSubStatus: 'not_applicable' } }),
+      ],
+      showRun: async () =>
+        bareRun({ ID: 'app-run-2', Trigger: 'cli', Status: { Execution: 'in_progress', Result: 'no_result', WaitingSubStatus: 'not_applicable', AbortedSubStatus: 'not_applicable', FinishedSubStatus: 'not_applicable' }, CompletedAt: null }),
+    });
+    const g = fakeGitlab({ authoredMrs: async () => [mr()] });
+    const cfg: Config = { ...config(), recentDaysFallback: 3650 };
+    const result = await pollOnce(deps({ db, gitlab: g as never, rwx: rwx as never, config: cfg }), {});
+    const item = result.snapshot.items.find((i) => i.key === 'acme/rocket!7723');
+    expect(item?.testGate?.kind).toBe('in_progress');
+  });
+
   it('counts a run started FROM THE APP as coverage, with no RWX list at all', async () => {
     // The app recorded branch/sha/url at trigger time; RWX never attributes
     // CLI runs — so the DB record is the only source, and it must be enough.

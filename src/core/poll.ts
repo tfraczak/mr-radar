@@ -228,7 +228,10 @@ export const pollOnce = async (deps: PollDeps, opts: { dryRun?: boolean } = {}):
 
   const watched = rwxOn
     ? await checkWatchedRuns(deps, nowIso, log)
-    : { events: [], commit: () => {} };
+    : { events: [], commit: () => {}, live: [] as RwxRun[] };
+  // Runs we started join the pool ahead of the API list, so their
+  // re-attributed Branch/CommitSha win the dedupe.
+  if (watched.live.length) rwxRuns = dedupeRuns([...watched.live, ...rwxRuns]);
 
   // 10. Diff, notify, persist. Results of runs we started (watched.events) join
   // the normal diff events; the shared `ci_result` dedup keeps any run from
@@ -781,13 +784,17 @@ const checkWatchedRuns = async (
   deps: PollDeps,
   nowIso: string,
   log: (m: string) => void,
-): Promise<{ events: AppEvent[]; commit: (db: Db) => void }> => {
+): Promise<{ events: AppEvent[]; commit: (db: Db) => void; live: RwxRun[] }> => {
   const { db, rwx } = deps;
   const open = db.openWatchedRuns();
-  if (open.length === 0) return { events: [], commit: () => {} };
+  if (open.length === 0) return { events: [], commit: () => {}, live: [] };
 
   const events: AppEvent[] = [];
   const mutations: ((db: Db) => void)[] = [];
+  // In-flight runs the app started, hydrated and re-attributed (CLI runs carry
+  // no Branch/CommitSha). Fed back into coverage so the CI chip flips to
+  // "RWX running" the moment Start run fires — not only after completion.
+  const live: RwxRun[] = [];
 
   for (const watched of open) {
     try {
@@ -798,6 +805,14 @@ const checkWatchedRuns = async (
         run = undefined; // transient failure or a deleted run — see expiry below
       }
 
+      if (run && !isTerminal(run)) {
+        live.push({
+          ...run,
+          Branch: run.Branch || watched.branch,
+          CommitSha: run.CommitSha || watched.sha,
+          RunUrl: run.RunUrl || watched.url,
+        });
+      }
       if (!run || !isTerminal(run)) {
         // Not resolved yet. If it's been unfindable for too long, write it off.
         const ageMs = new Date(nowIso).getTime() - new Date(watched.started_at).getTime();
@@ -838,7 +853,7 @@ const checkWatchedRuns = async (
       log(`watched run ${watched.run_id} check failed: ${msg(err)}`);
     }
   }
-  return { events, commit: (d) => mutations.forEach((m) => m(d)) };
+  return { events, commit: (d) => mutations.forEach((m) => m(d)), live };
 }
 
 const shouldReconcile = (db: Db, now: Date, config: Config): boolean => {
