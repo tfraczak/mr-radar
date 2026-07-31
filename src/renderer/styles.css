@@ -242,26 +242,26 @@
   --hover: rgba(94, 207, 174, 0.10);
 }
 
-/* Quarry — cut stone through and through: granite-gray affordances. */
+/* Quarry — warm earth-brown surfaces with granite-gray stone affordances. */
 :root[data-theme='quarry'][data-scheme='light'] {
-  --bg: #f0eeec;
-  --sheet: #faf9f7;
-  --fg: #262320;
-  --fg-dim: #5b554e;
-  --fg-faint: #8d857b;
-  --sep: rgba(38, 35, 32, 0.14);
+  --bg: #f1eadf;
+  --sheet: #faf6ee;
+  --fg: #2a241c;
+  --fg-dim: #615749;
+  --fg-faint: #928779;
+  --sep: rgba(42, 36, 28, 0.14);
   --accent: #6a655c;
   --accent-fg: #ffffff;
   --hover: rgba(106, 101, 92, 0.09);
 }
 
 :root[data-theme='quarry'][data-scheme='dark'] {
-  --bg: #1d1b18;
-  --sheet: #262320;
-  --fg: #efece8;
-  --fg-dim: #b1a89c;
-  --fg-faint: #736a5e;
-  --sep: rgba(239, 236, 232, 0.14);
+  --bg: #231d15;
+  --sheet: #2c261d;
+  --fg: #f1ece3;
+  --fg-dim: #b4a892;
+  --fg-faint: #756a58;
+  --sep: rgba(241, 236, 227, 0.13);
   --accent: #b3aca1;
   --accent-fg: #1c1510;
   --hover: rgba(179, 172, 161, 0.10);
