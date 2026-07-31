@@ -46,10 +46,12 @@ const showNative = (
   const { silent, sound: named } = nativeSoundOpts(sound);
   const banner = new Notification({ title: n.title, body: n.body, silent, ...(named ? { sound: named } : {}) });
   banner.on('click', () => {
-    // Straight to the item: open its page, and flash its row in the popover
-    // so the user has app-side context when they come back.
+    // Straight to the item IN THE APP: open the popover and flash the row so
+    // it's obvious what the banner was about. The row is one more click if
+    // the user wants the MR page — jumping straight to the browser would
+    // lose that context.
     if (n.mrKey) onHighlight?.(n.mrKey);
-    if (n.url) openExternalSafe(n.url);
+    else if (n.url) openExternalSafe(n.url);
     else onOpenPopover();
   });
   banner.show();
@@ -73,7 +75,10 @@ export const notify = (events: AppEvent[], opts: NotifyOptions): number => {
 
   const notifications = toNotifications(events);
   for (const n of notifications) {
-    const mrKey = n.events.length === 1 ? n.events[0]?.mrKey : undefined;
+    // Any banner about exactly one MR is click-to-item — including coalesced
+    // ones ("3 new comments"), which are the common case.
+    const keys = new Set(n.events.map((e) => e.mrKey).filter(Boolean));
+    const mrKey = keys.size === 1 ? [...keys][0] : undefined;
     deliver(
       method,
       { title: n.title, body: n.body, url: n.url, mrKey },
