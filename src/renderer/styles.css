@@ -293,24 +293,24 @@
 
 /* Sunflower — golden-yellow petals for the surfaces, leaf green for the accent. */
 :root[data-theme='sunflower'][data-scheme='light'] {
-  --bg: #fbf0c2;
-  --sheet: #fffce1;
-  --fg: #33290d;
-  --fg-dim: #6d5f26;
-  --fg-faint: #a2924f;
-  --sep: rgba(51, 41, 13, 0.15);
+  --bg: #fdeaa6;
+  --sheet: #fff8d9;
+  --fg: #3d2d0e;
+  --fg-dim: #7d6322;
+  --fg-faint: #b2924e;
+  --sep: rgba(61, 45, 14, 0.15);
   --accent: #4f7d22;
   --accent-fg: #ffffff;
   --hover: rgba(79, 125, 34, 0.09);
 }
 
 :root[data-theme='sunflower'][data-scheme='dark'] {
-  --bg: #262008;
-  --sheet: #312a10;
-  --fg: #f9f2cd;
-  --fg-dim: #d1c06e;
-  --fg-faint: #8d7f45;
-  --sep: rgba(249, 242, 205, 0.13);
+  --bg: #2b2106;
+  --sheet: #362b0d;
+  --fg: #fdefba;
+  --fg-dim: #e0c25f;
+  --fg-faint: #998043;
+  --sep: rgba(253, 239, 186, 0.13);
   --accent: #9ccf52;
   --accent-fg: #1c1510;
   --hover: rgba(156, 207, 82, 0.10);
