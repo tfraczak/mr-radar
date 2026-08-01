@@ -930,7 +930,12 @@ const openSettings = async (): Promise<void> => {
       r.repo ?? '',
     );
     const field = mkSelect(s.ruleFieldChoices, r.field);
-    const op = mkSelect(s.ruleOpChoices, r.op);
+    // 'always' is not an op you pick — it's the state of a rule whose whole
+    // when-clause has been removed (× on the when line brings it here).
+    let whenRemoved = r.op === 'always';
+    const condOpChoices = s.ruleOpChoices.filter((o) => o !== 'always');
+    const op = mkSelect(condOpChoices, r.op === 'always' ? 'empty' : r.op);
+    const effectiveOp = (): string => (whenRemoved ? 'always' : op.select.value);
     const value = el('input', 'field-input rule-value');
     value.type = 'text';
     value.value = r.value ?? '';
@@ -945,7 +950,6 @@ const openSettings = async (): Promise<void> => {
 
     // Chained extra conditions, data_set_filter style: each line carries its
     // own and/or connector and folds onto the when-check left to right.
-    const condOpChoices = s.ruleOpChoices.filter((o) => o !== 'always');
     const alsoWrap = el('div', 'rule-also');
     interface CondRow {
       root: HTMLElement;
@@ -994,11 +998,11 @@ const openSettings = async (): Promise<void> => {
     const syncValue = (): void => {
       value.hidden = op.select.value !== 'matches';
       for (const sel of [thenSel, elseSel]) {
-        if (op.select.value !== 'empty' && sel.select.value === 'needs-value') {
+        if (effectiveOp() !== 'empty' && sel.select.value === 'needs-value') {
           sel.select.value = 'next';
           sel.select.dispatchEvent(new Event('change'));
         }
-        sel.setOptions(targetChoices(op.select.value));
+        sel.setOptions(targetChoices(effectiveOp()));
       }
     };
     op.select.addEventListener('change', syncValue);
@@ -1006,11 +1010,11 @@ const openSettings = async (): Promise<void> => {
     const snapshotRule = (): EditableSettings['statusRules'][number] => ({
       status: status.select.value,
       repo: repo.select.value,
-      field: op.select.value === 'always' ? '' : field.select.value,
-      op: op.select.value,
+      field: whenRemoved ? '' : field.select.value,
+      op: effectiveOp(),
       value: value.value,
       also:
-        op.select.value === 'always'
+        whenRemoved
           ? []
           : condRows.map((c) => ({
               connector: c.connector.select.value,
@@ -1075,7 +1079,27 @@ const openSettings = async (): Promise<void> => {
     const controls = el('div', 'rule-controls');
     const whenWord = el('span', 'rule-word', 'when');
     const whenLine = el('div', 'rule-line');
-    whenLine.append(whenWord, field.root, op.root, value);
+    const removeWhen = createButton('×', {
+      variant: 'link',
+      title: 'Remove the condition — the rule then always applies',
+      onClick: () => {
+        whenRemoved = true;
+        syncStructure();
+        syncValue();
+      },
+    });
+    whenLine.append(whenWord, field.root, op.root, value, removeWhen);
+    const addWhen = createButton('+ when', {
+      variant: 'link',
+      title: 'Add a condition to this rule',
+      onClick: () => {
+        whenRemoved = false;
+        syncStructure();
+        syncValue();
+      },
+    });
+    const addWhenLine = el('div', 'rule-line');
+    addWhenLine.append(addWhen);
     const elseWordLine = line('', 'else');
     const elseLine = line('rule-branch', '→', elseSel.root);
     // No else is the default state — it means 'next' (fall through). "+ else"
@@ -1093,6 +1117,7 @@ const openSettings = async (): Promise<void> => {
     controls.append(
       line('', status.root, 'in', repo.root),
       whenLine,
+      addWhenLine,
       alsoWrap,
       addCondLine,
       line('rule-branch', '→', thenSel.root),
@@ -1104,17 +1129,15 @@ const openSettings = async (): Promise<void> => {
     // no field, no conditions, no else — only the op select stays as the way
     // back. For conditional rules, the else block only renders when one exists.
     const syncStructure = (): void => {
-      const isAlways = op.select.value === 'always';
       const hasElse = elseSel.select.value !== 'next';
-      whenWord.hidden = isAlways;
-      field.root.hidden = isAlways;
-      alsoWrap.hidden = isAlways;
-      addCondLine.hidden = isAlways;
-      elseWordLine.hidden = isAlways || !hasElse;
-      elseLine.hidden = isAlways || !hasElse;
-      addElseLine.hidden = isAlways || hasElse;
+      whenLine.hidden = whenRemoved;
+      addWhenLine.hidden = !whenRemoved;
+      alsoWrap.hidden = whenRemoved;
+      addCondLine.hidden = whenRemoved;
+      elseWordLine.hidden = whenRemoved || !hasElse;
+      elseLine.hidden = whenRemoved || !hasElse;
+      addElseLine.hidden = whenRemoved || hasElse;
     };
-    op.select.addEventListener('change', syncStructure);
     elseSel.select.addEventListener('change', syncStructure);
     syncStructure();
     root.append(grip, controls, clone, remove);
