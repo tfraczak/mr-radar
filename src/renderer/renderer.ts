@@ -916,7 +916,7 @@ const openSettings = async (): Promise<void> => {
   const mkSelect = (options: string[], value: string): ReturnType<typeof createSelect> =>
     createSelect(options, value);
 
-  const addRuleRow = (r: EditableSettings['statusRules'][number]): void => {
+  const addRuleRow = (r: EditableSettings['statusRules'][number], after?: HTMLElement): void => {
     learnStatus(r.status);
     const root = el('div', 'rule-row');
     const status = mkSelect([...knownStatusNames.values()].sort((a, b) => a.localeCompare(b)), r.status);
@@ -1026,8 +1026,8 @@ const openSettings = async (): Promise<void> => {
       else: elseSel.select.value,
     });
     const clone = createButton('⧉', {
-      title: 'Clone this rule',
-      onClick: () => addRuleRow(snapshotRule()),
+      title: 'Clone this rule (inserts right below)',
+      onClick: () => addRuleRow(snapshotRule(), root),
     });
     clone.classList.add('rule-clone');
     const remove = createButton('×', {
@@ -1149,7 +1149,8 @@ const openSettings = async (): Promise<void> => {
     elseSel.select.addEventListener('change', syncStructure);
     syncStructure();
     root.append(grip, controls, clone, remove);
-    ruleRowsWrap.append(root);
+    if (after) ruleRowsWrap.insertBefore(root, after.nextSibling);
+    else ruleRowsWrap.append(root);
     ruleRows.push({ root, get: snapshotRule });
     paintRulesHead();
   };
