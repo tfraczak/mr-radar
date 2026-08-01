@@ -1,8 +1,8 @@
 import { BrowserWindow, nativeTheme, screen } from 'electron';
 import { join } from 'node:path';
 
-const WIDTH = 460;
-const HEIGHT = 620;
+const WIDTH = 560;
+const HEIGHT = 660;
 
 /**
  * The dropdown panel.
