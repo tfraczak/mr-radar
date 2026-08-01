@@ -1376,7 +1376,10 @@ const openSettings = async (): Promise<void> => {
   // Title + tabs stay pinned while the panes scroll underneath.
   const sticky = el('div', 'settings-sticky');
   sticky.append(head, settingsTabs.root);
-  settingsEl.replaceChildren(sticky, form, save, shareRow, msg.root);
+  // ...and the action affordances pin to the bottom edge, mirroring it.
+  const footer = el('div', 'settings-footer');
+  footer.append(save, shareRow);
+  settingsEl.replaceChildren(sticky, form, footer, msg.root);
 }
 
 const shortProject = (path: string): string => path.split('/').pop() ?? path;
