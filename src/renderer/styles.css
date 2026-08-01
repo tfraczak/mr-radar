@@ -888,6 +888,163 @@ select option {
   --hover: rgba(163, 184, 150, 0.10);
 }
 
+
+/* Voltage — the inversion of charge: warning-yellow surfaces with insulated
+   black affordances in light; graphite black with electric yellow in dark. */
+:root[data-theme='voltage'][data-scheme='light'] {
+  --bg: #f7df3e;
+  --sheet: #fbec83;
+  --fg: #191813;
+  --fg-dim: #5a5433;
+  --fg-faint: #8c8455;
+  --sep: rgba(25, 24, 19, 0.14);
+  --accent: #1d1c18;
+  --accent-fg: #ffffff;
+  --hover: rgba(29, 28, 24, 0.09);
+}
+
+:root[data-theme='voltage'][data-scheme='dark'] {
+  --bg: #17181a;
+  --sheet: #212226;
+  --fg: #f2f3f0;
+  --fg-dim: #b0b2ac;
+  --fg-faint: #6f716b;
+  --sep: rgba(242, 243, 240, 0.14);
+  --accent: #f2e11e;
+  --accent-fg: #1c1510;
+  --hover: rgba(242, 225, 30, 0.10);
+}
+
+/* Verdigris — the copper roof both ways: pale patina with solid-copper
+   affordances in light; deep oxidized teal with glowing copper in dark. */
+:root[data-theme='verdigris'][data-scheme='light'] {
+  --bg: #e2efe9;
+  --sheet: #f2f9f5;
+  --fg: #1e2f29;
+  --fg-dim: #4c6359;
+  --fg-faint: #7e948a;
+  --sep: rgba(30, 47, 41, 0.14);
+  --accent: #a35c32;
+  --accent-fg: #ffffff;
+  --hover: rgba(163, 92, 50, 0.09);
+}
+
+:root[data-theme='verdigris'][data-scheme='dark'] {
+  --bg: #0f2620;
+  --sheet: #173029;
+  --fg: #e8f3ee;
+  --fg-dim: #9dbfb2;
+  --fg-faint: #628075;
+  --sep: rgba(232, 243, 238, 0.14);
+  --accent: #d98d5a;
+  --accent-fg: #1c1510;
+  --hover: rgba(217, 141, 90, 0.10);
+}
+
+/* Denim — washed indigo surfaces stitched with copper thread; raw dark
+   indigo with brighter thread in dark. */
+:root[data-theme='denim'][data-scheme='light'] {
+  --bg: #e3eaf2;
+  --sheet: #f1f5fa;
+  --fg: #1f2a3a;
+  --fg-dim: #4d5c72;
+  --fg-faint: #8090a6;
+  --sep: rgba(31, 42, 58, 0.14);
+  --accent: #b06428;
+  --accent-fg: #ffffff;
+  --hover: rgba(176, 100, 40, 0.09);
+}
+
+:root[data-theme='denim'][data-scheme='dark'] {
+  --bg: #161d31;
+  --sheet: #1f2940;
+  --fg: #ecf0f6;
+  --fg-dim: #a9b4c8;
+  --fg-faint: #6a7690;
+  --sep: rgba(236, 240, 246, 0.14);
+  --accent: #e8944e;
+  --accent-fg: #1c1510;
+  --hover: rgba(232, 148, 78, 0.10);
+}
+
+/* Adobe — sun-baked clay with turquoise-jewelry affordances; night adobe
+   with the turquoise luminous in dark. */
+:root[data-theme='adobe'][data-scheme='light'] {
+  --bg: #f6e3d0;
+  --sheet: #fcf1e6;
+  --fg: #38251a;
+  --fg-dim: #745442;
+  --fg-faint: #a8836c;
+  --sep: rgba(56, 37, 26, 0.14);
+  --accent: #0f8189;
+  --accent-fg: #ffffff;
+  --hover: rgba(15, 129, 137, 0.09);
+}
+
+:root[data-theme='adobe'][data-scheme='dark'] {
+  --bg: #331d12;
+  --sheet: #402517;
+  --fg: #f8ebdf;
+  --fg-dim: #d3a98c;
+  --fg-faint: #92715a;
+  --sep: rgba(248, 235, 223, 0.14);
+  --accent: #4ecbc4;
+  --accent-fg: #1c1510;
+  --hover: rgba(78, 203, 196, 0.10);
+}
+
+/* Fig — flesh and skin trade places: blushed flesh with aubergine-skin
+   affordances in light; skin-side-out with honeyed rose in dark. */
+:root[data-theme='fig'][data-scheme='light'] {
+  --bg: #f9e6dc;
+  --sheet: #fdf3ed;
+  --fg: #35202a;
+  --fg-dim: #6e5060;
+  --fg-faint: #a08292;
+  --sep: rgba(53, 32, 42, 0.14);
+  --accent: #5d2a4d;
+  --accent-fg: #ffffff;
+  --hover: rgba(93, 42, 77, 0.09);
+}
+
+:root[data-theme='fig'][data-scheme='dark'] {
+  --bg: #231218;
+  --sheet: #2e1a20;
+  --fg: #f7ecef;
+  --fg-dim: #d3a5ae;
+  --fg-faint: #8f6d75;
+  --sep: rgba(247, 236, 239, 0.14);
+  --accent: #ea8f96;
+  --accent-fg: #1c1510;
+  --hover: rgba(234, 143, 150, 0.10);
+}
+
+/* Domino — no hue at all: porcelain with black affordances, and the exact
+   inverse after dark. */
+:root[data-theme='domino'][data-scheme='light'] {
+  --bg: #f6f6f5;
+  --sheet: #ffffff;
+  --fg: #141414;
+  --fg-dim: #4d4d4d;
+  --fg-faint: #858585;
+  --sep: rgba(20, 20, 20, 0.14);
+  --accent: #1a1a1a;
+  --accent-fg: #ffffff;
+  --hover: rgba(26, 26, 26, 0.08);
+}
+
+:root[data-theme='domino'][data-scheme='dark'] {
+  --bg: #121212;
+  --sheet: #1c1c1c;
+  --fg: #f4f4f4;
+  --fg-dim: #b0b0b0;
+  --fg-faint: #6e6e6e;
+  --sep: rgba(244, 244, 244, 0.14);
+  --accent: #f2f2f2;
+  --accent-fg: #1c1510;
+  --hover: rgba(242, 242, 242, 0.10);
+}
+
 * {
   box-sizing: border-box;
 }
