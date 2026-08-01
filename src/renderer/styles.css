@@ -1726,6 +1726,7 @@ button.link {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding-top: 10px;
 }
 
 .field {
@@ -1913,7 +1914,10 @@ button.link {
 .settings-tabs {
   padding-left: 0;
   padding-right: 0;
-  margin-bottom: 10px;
+  /* No space below the underline: the sticky header ends exactly at the tab
+     border so scrolled content clips flush against it. The breathing room
+     lives inside the scrolled content instead (.settings-form padding-top). */
+  margin-bottom: 0;
 }
 
 /* Paired attention signals ("Checks passed" + "Target not main"). */
