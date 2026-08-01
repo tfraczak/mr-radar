@@ -808,6 +808,32 @@ select option {
   --hover: rgba(92, 191, 130, 0.10);
 }
 
+
+/* Mineral — cool stone-gray surfaces cut by a malachite vein. */
+:root[data-theme='mineral'][data-scheme='light'] {
+  --bg: #eef1ef;
+  --sheet: #f8faf9;
+  --fg: #212826;
+  --fg-dim: #52605b;
+  --fg-faint: #84928c;
+  --sep: rgba(33, 40, 38, 0.14);
+  --accent: #1f7a5c;
+  --accent-fg: #ffffff;
+  --hover: rgba(31, 122, 92, 0.09);
+}
+
+:root[data-theme='mineral'][data-scheme='dark'] {
+  --bg: #191d1c;
+  --sheet: #232827;
+  --fg: #edf1ef;
+  --fg-dim: #a8b5b0;
+  --fg-faint: #6a7772;
+  --sep: rgba(237, 241, 239, 0.13);
+  --accent: #4fc39a;
+  --accent-fg: #1c1510;
+  --hover: rgba(79, 195, 154, 0.10);
+}
+
 * {
   box-sizing: border-box;
 }

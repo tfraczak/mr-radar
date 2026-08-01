@@ -213,7 +213,7 @@ export const DEFAULT_CONFIG: Config = {
 export const NOTIFICATION_METHODS = ['auto', 'native', 'terminal-notifier', 'osascript'] as const;
 
 /** 'system' is the stock palette; the rest are alternate token sets. */
-export const THEMES = ['system', 'slate', 'bubblegum', 'pine', 'pizza', 'seafoam', 'quarry', 'lilac', 'sunflower', 'meringue', 'oatmeal', 'coral', 'glacier', 'moss', 'cocoa', 'peach', 'charcoal', 'parchment', 'storm', 'mist', 'lemonade', 'matcha', 'bubbles', 'juniper', 'harbor', 'rain', 'pumpkin', 'mulberry', 'watermelon'] as const;
+export const THEMES = ['system', 'slate', 'bubblegum', 'pine', 'pizza', 'seafoam', 'quarry', 'lilac', 'sunflower', 'meringue', 'oatmeal', 'coral', 'glacier', 'moss', 'cocoa', 'peach', 'charcoal', 'parchment', 'storm', 'mist', 'lemonade', 'matcha', 'bubbles', 'juniper', 'harbor', 'rain', 'pumpkin', 'mulberry', 'watermelon', 'mineral'] as const;
 export const APPEARANCES = ['system', 'light', 'dark'] as const;
 
 /** macOS system sounds offered in the sound picker, plus default/silent. */
