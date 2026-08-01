@@ -934,7 +934,8 @@ const openSettings = async (): Promise<void> => {
     const value = el('input', 'field-input rule-value');
     value.type = 'text';
     value.value = r.value ?? '';
-    value.placeholder = 'pattern';
+    value.placeholder = 'regex';
+    value.title = "Case-insensitive regular expression — e.g. 'data ?fix' matches DataFix and Data Fix";
     // 'needs-value' only means something for an empty-check; other ops hide
     // it, and a target holding it falls back to 'next'.
     const targetChoices = (opValue: string): string[] =>
@@ -961,7 +962,8 @@ const openSettings = async (): Promise<void> => {
       const cValue = el('input', 'field-input rule-value');
       cValue.type = 'text';
       cValue.value = c.value ?? '';
-      cValue.placeholder = 'pattern';
+      cValue.placeholder = 'regex';
+      cValue.title = "Case-insensitive regular expression — e.g. 'data ?fix' matches DataFix and Data Fix";
       const syncCValue = (): void => {
         cValue.hidden = cOp.select.value !== 'matches';
       };
