@@ -1101,7 +1101,15 @@ const openSettings = async (): Promise<void> => {
     const addWhenLine = el('div', 'rule-line');
     addWhenLine.append(addWhen);
     const elseWordLine = line('', 'else');
-    const elseLine = line('rule-branch', '→', elseSel.root);
+    const removeElse = createButton('×', {
+      variant: 'link',
+      title: 'Remove the else branch — the rule falls through instead',
+      onClick: () => {
+        elseSel.select.value = 'next';
+        elseSel.select.dispatchEvent(new Event('change'));
+      },
+    });
+    const elseLine = line('rule-branch', '→', elseSel.root, removeElse);
     // No else is the default state — it means 'next' (fall through). "+ else"
     // adds a branch; picking 'next' in its dropdown removes it again.
     const addElse = createButton('+ else', {
