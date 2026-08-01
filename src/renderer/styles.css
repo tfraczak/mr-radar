@@ -1966,12 +1966,15 @@ button.link {
   min-width: 0;
 }
 
-/* One line of the rule sentence; controls flow inline and wrap if cramped. */
+/* One line of the rule sentence stays one line — inline controls like the
+   regex input shrink instead of pushing trailing actions (the when ×) onto
+   a wrapped row. */
 .rule-line {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 /* The → target lines indent under their when/else keyword. */
