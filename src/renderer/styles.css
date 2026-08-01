@@ -2117,3 +2117,19 @@ button.select-trigger {
   flex-direction: column;
   gap: 6px;
 }
+
+/* Save feedback becomes a toast pinned to the settings panel's bottom edge:
+   position: sticky against the #settings scroller, so it stays visible no
+   matter where the user is scrolled when they hit Save. */
+.settings-msg.ok,
+.settings-msg.err {
+  position: sticky;
+  bottom: 4px;
+  z-index: 20;
+  align-self: center;
+  padding: 6px 16px;
+  background: var(--sheet);
+  border: 1px solid var(--sep);
+  border-radius: 999px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+}
