@@ -861,6 +861,33 @@ select option {
   --hover: rgba(184, 207, 63, 0.10);
 }
 
+
+/* Sage — silver-fog grays (a deliberately lighter dark half) with a dusty
+   dried-sage accent. */
+:root[data-theme='sage'][data-scheme='light'] {
+  --bg: #f1f2f0;
+  --sheet: #fafbf9;
+  --fg: #242723;
+  --fg-dim: #575d54;
+  --fg-faint: #8a9086;
+  --sep: rgba(36, 39, 35, 0.14);
+  --accent: #66805a;
+  --accent-fg: #ffffff;
+  --hover: rgba(102, 128, 90, 0.09);
+}
+
+:root[data-theme='sage'][data-scheme='dark'] {
+  --bg: #26292b;
+  --sheet: #313437;
+  --fg: #eff1ee;
+  --fg-dim: #b0b6ad;
+  --fg-faint: #767c73;
+  --sep: rgba(239, 241, 238, 0.13);
+  --accent: #a3b896;
+  --accent-fg: #1c1510;
+  --hover: rgba(163, 184, 150, 0.10);
+}
+
 * {
   box-sizing: border-box;
 }
