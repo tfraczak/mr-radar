@@ -1692,8 +1692,20 @@ button.link {
   -webkit-app-region: no-drag;
   display: flex;
   flex-direction: column;
-  padding: 10px 12px 12px;
+  padding: 0 12px 12px;
   overflow-y: auto;
+  background: var(--bg);
+}
+
+/* The Settings title + category tabs pin to the top of the scroller; the
+   negative side margins bleed the backdrop across the panel's padding so
+   scrolled content can't peek around the edges. */
+.settings-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  margin: 0 -12px;
+  padding: 10px 12px 0;
   background: var(--bg);
 }
 

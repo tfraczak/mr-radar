@@ -1372,8 +1372,11 @@ const openSettings = async (): Promise<void> => {
   });
   showPane(initialPane);
 
-  form.append(settingsTabs.root, ...Object.values(settingsPanes));
-  settingsEl.replaceChildren(head, form, save, shareRow, msg.root);
+  form.append(...Object.values(settingsPanes));
+  // Title + tabs stay pinned while the panes scroll underneath.
+  const sticky = el('div', 'settings-sticky');
+  sticky.append(head, settingsTabs.root);
+  settingsEl.replaceChildren(sticky, form, save, shareRow, msg.root);
 }
 
 const shortProject = (path: string): string => path.split('/').pop() ?? path;
