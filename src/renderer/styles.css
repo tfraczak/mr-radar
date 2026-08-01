@@ -2121,18 +2121,42 @@ button.select-trigger {
   gap: 6px;
 }
 
-/* Save feedback becomes a toast pinned to the settings panel's bottom edge:
-   position: sticky against the #settings scroller, so it stays visible no
-   matter where the user is scrolled when they hit Save. */
+/* Save feedback is a toast fixed to the window's bottom edge — visible no
+   matter where the settings panel is scrolled. It slides up from below the
+   edge on arrival and back down through it when dismissed (createStatusMessage
+   adds .msg-fade before clearing). */
 .settings-msg.ok,
 .settings-msg.err {
-  position: sticky;
-  bottom: 4px;
-  z-index: 20;
-  align-self: center;
+  position: fixed;
+  bottom: 14px;
+  left: 50%;
+  z-index: 40;
+  margin: 0;
   padding: 6px 16px;
+  white-space: nowrap;
   background: var(--sheet);
   border: 1px solid var(--sep);
   border-radius: 999px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+  transform: translate(-50%, 0);
+  animation: toast-in 0.3s ease-out;
+  transition: transform 0.45s ease-in, opacity 0.45s ease-in;
+}
+
+.settings-msg.ok.msg-fade,
+.settings-msg.err.msg-fade {
+  transform: translate(-50%, calc(100% + 20px));
+  opacity: 0;
+}
+
+@keyframes toast-in {
+  from {
+    transform: translate(-50%, calc(100% + 20px));
+    opacity: 0.4;
+  }
+
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
 }
