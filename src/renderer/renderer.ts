@@ -1378,8 +1378,10 @@ const openSettings = async (): Promise<void> => {
   sticky.append(head, settingsTabs.root);
   // ...and the action affordances pin to the bottom edge, mirroring it.
   const footer = el('div', 'settings-footer');
-  footer.append(save, shareRow);
-  settingsEl.replaceChildren(sticky, form, footer, msg.root);
+  const saveRow = el('div', 'settings-save-row');
+  saveRow.append(save, msg.root);
+  footer.append(saveRow, shareRow);
+  settingsEl.replaceChildren(sticky, form, footer);
 }
 
 const shortProject = (path: string): string => path.split('/').pop() ?? path;
