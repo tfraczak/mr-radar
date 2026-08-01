@@ -834,6 +834,33 @@ select option {
   --hover: rgba(79, 195, 154, 0.10);
 }
 
+
+/* Olivine — the peridot story: pale gem-light surfaces with deep olive
+   accents in light; near-black basalt with a luminous crystal accent in dark. */
+:root[data-theme='olivine'][data-scheme='light'] {
+  --bg: #eff4d4;
+  --sheet: #f9fbeb;
+  --fg: #2a2d14;
+  --fg-dim: #5f6534;
+  --fg-faint: #939867;
+  --sep: rgba(42, 45, 20, 0.14);
+  --accent: #6b7f16;
+  --accent-fg: #ffffff;
+  --hover: rgba(107, 127, 22, 0.09);
+}
+
+:root[data-theme='olivine'][data-scheme='dark'] {
+  --bg: #16180f;
+  --sheet: #202315;
+  --fg: #f0f2df;
+  --fg-dim: #c3c896;
+  --fg-faint: #7d815b;
+  --sep: rgba(240, 242, 223, 0.13);
+  --accent: #b8cf3f;
+  --accent-fg: #1c1510;
+  --hover: rgba(184, 207, 63, 0.10);
+}
+
 * {
   box-sizing: border-box;
 }
