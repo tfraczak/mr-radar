@@ -140,7 +140,10 @@ export interface EditableSettings {
     field: string;
     op: string;
     value?: string | undefined;
+    /** Extra chained conditions ('and'/'or' connector each). */
+    also: { connector: string; field: string; op: string; value: string }[];
     then: string;
+    /** 'next' = no else branch (fall through). */
     else: string;
   }[];
   ruleFieldChoices: string[];

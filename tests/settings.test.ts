@@ -147,10 +147,30 @@ describe('applyEditable', () => {
         ],
       }),
     );
+    // 'next' means "no else" and is not persisted — absent else IS next.
     expect(scoped.statusRules).toEqual([
-      { status: 'QA', repo: 'acme/gadget', field: 'dueDate', op: 'past', then: 'active', else: 'next' },
-      { status: 'QA', field: 'dueDate', op: 'past', then: 'active', else: 'next' },
+      { status: 'QA', repo: 'acme/gadget', field: 'dueDate', op: 'past', then: 'active' },
+      { status: 'QA', field: 'dueDate', op: 'past', then: 'active' },
     ]);
+  });
+
+  it('persists chained conditions and drops malformed ones', () => {
+    const next = applyEditable({}, editable({
+      statusRules: [{
+        status: 'QA', repo: '', field: 'fixVersions', op: 'empty', value: '',
+        also: [
+          { connector: 'and', field: 'issueType', op: 'matches', value: 'story' },
+          { connector: 'nope', field: 'issueType', op: 'matches', value: 'x' },
+          { connector: 'or', field: 'dueDate', op: 'always', value: '' },
+        ],
+        then: 'verification', else: 'next',
+      }],
+    }));
+    expect(next.statusRules).toEqual([{
+      status: 'QA', field: 'fixVersions', op: 'empty',
+      also: [{ connector: 'and', field: 'issueType', op: 'matches', value: 'story' }],
+      then: 'verification',
+    }]);
   });
 
   it('round-trips theme + appearance, rejecting junk values', () => {

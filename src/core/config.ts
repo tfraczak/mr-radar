@@ -30,6 +30,16 @@ export type RuleOp = 'always' | 'empty' | 'present' | 'matches' | 'past';
 export const RULE_FIELDS: readonly RuleField[] = ['fixVersions', 'issueType', 'dueDate'];
 export const RULE_OPS: readonly RuleOp[] = ['always', 'empty', 'present', 'matches', 'past'];
 
+export type RuleConnector = 'and' | 'or';
+
+/** One extra condition chained onto a rule's primary check, left to right. */
+export interface RuleCondition {
+  connector: RuleConnector;
+  field: RuleField;
+  op: Exclude<RuleOp, 'always'>;
+  value?: string;
+}
+
 /**
  * One conditional routing rule: "for tickets in `status`, when `field` `op`
  * (`value`), go to `then`, otherwise `else`."
@@ -47,8 +57,11 @@ export interface StatusRule {
   field?: RuleField;
   op: RuleOp;
   value?: string;
+  /** Extra chained conditions, folded left to right (a AND b OR c ...). */
+  also?: RuleCondition[];
   then: RuleTarget;
-  else: RuleTarget;
+  /** Absent = 'next': no else branch, fall through to later rules. */
+  else?: RuleTarget;
 }
 
 export interface RepoOverride {
@@ -290,8 +303,13 @@ const validate = (cfg: Config, path: string): void => {
       problems.push(`statusRules[${i}]: bad field "${rule.field}"`);
     }
     if (!RULE_OPS.includes(rule.op)) problems.push(`statusRules[${i}]: bad op "${rule.op}"`);
-    if (!RULE_TARGETS.includes(rule.then) || !RULE_TARGETS.includes(rule.else)) {
+    if (!RULE_TARGETS.includes(rule.then) || (rule.else !== undefined && !RULE_TARGETS.includes(rule.else))) {
       problems.push(`statusRules[${i}]: then/else must be one of ${RULE_TARGETS.join(', ')}`);
+    }
+    for (const [j, c] of (rule.also ?? []).entries()) {
+      if (c.connector !== 'and' && c.connector !== 'or') problems.push(`statusRules[${i}].also[${j}]: bad connector`);
+      if (!RULE_FIELDS.includes(c.field)) problems.push(`statusRules[${i}].also[${j}]: bad field "${c.field}"`);
+      if (!RULE_OPS.includes(c.op) || (c.op as RuleOp) === 'always') problems.push(`statusRules[${i}].also[${j}]: bad op "${c.op}"`);
     }
   }
   if (!cfg.poll.backoffSeconds.length) problems.push('poll.backoffSeconds must not be empty');

@@ -274,6 +274,45 @@ describe('conditional routing rules', () => {
     expect(snap2.needsGroups).toHaveLength(1); // fell through to rule 2
   });
 
+  it('chained conditions fold left to right (and/or)', () => {
+    // "fixVersions empty AND issueType matches story → verification"
+    const rules: StatusRule[] = [{
+      status: 'Dev Complete', field: 'fixVersions', op: 'empty',
+      also: [{ connector: 'and', field: 'issueType', op: 'matches', value: 'story' }],
+      then: 'verification', else: 'other',
+    }];
+    const args = ['rebase', DEFAULT_CONFIG.statusSections, rules] as const;
+    const hit = present(stateWith([item({ ticket: dcTicket({ issueType: 'Story' }) })]), ACTIVE, NOW, ...args);
+    expect(hit.verificationGroups).toHaveLength(1);
+    const miss = present(stateWith([item({ ticket: dcTicket({ issueType: 'Bug' }) })]), ACTIVE, NOW, ...args);
+    expect(miss.verificationGroups).toHaveLength(0); // AND failed → else
+    expect(miss.otherGroups).toHaveLength(1);
+    // OR rescues the miss.
+    const orRules: StatusRule[] = [{
+      status: 'Dev Complete', field: 'fixVersions', op: 'present',
+      also: [{ connector: 'or', field: 'issueType', op: 'matches', value: 'bug' }],
+      then: 'verification', else: 'other',
+    }];
+    const rescued = present(
+      stateWith([item({ ticket: dcTicket({ issueType: 'Bug' }) })]),
+      ACTIVE, NOW, 'rebase', DEFAULT_CONFIG.statusSections, orRules,
+    );
+    expect(rescued.verificationGroups).toHaveLength(1);
+  });
+
+  it('a rule without an else falls through like next', () => {
+    const rules: StatusRule[] = [
+      { status: 'Dev Complete', field: 'issueType', op: 'matches', value: 'story', then: 'done' },
+      { status: 'Dev Complete', op: 'always', then: 'verification' },
+    ];
+    const snap = present(
+      stateWith([item({ ticket: dcTicket({ issueType: 'Bug' }) })]),
+      ACTIVE, NOW, 'rebase', DEFAULT_CONFIG.statusSections, rules,
+    );
+    // Rule 1 missed and has no else → falls to rule 2.
+    expect(snap.verificationGroups).toHaveLength(1);
+  });
+
   it("an unconditional 'always' rule routes with no field at all", () => {
     // "Dev Complete in <repo> → Verification" — the simple form.
     const rules: StatusRule[] = [

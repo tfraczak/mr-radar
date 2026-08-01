@@ -113,29 +113,48 @@ const hiddenStaleClosed = (item: WatchItem, now: Date): boolean => {
  * present, so it always takes the `else` branch — stale data can never invent
  * an actionable state.
  */
-const rulePredicate = (rule: StatusRule, t: NonNullable<WatchItem['ticket']>, now: Date): boolean => {
-  if (rule.op === 'always') return true;
-  if (rule.field === 'fixVersions') {
+const testCondition = (
+  t: NonNullable<WatchItem['ticket']>,
+  now: Date,
+  field: StatusRule['field'],
+  op: StatusRule['op'],
+  value: string | undefined,
+): boolean => {
+  if (field === 'fixVersions') {
     const v = t.fixVersions;
-    if (rule.op === 'empty') return v !== undefined && v.length === 0;
-    if (rule.op === 'present') return (v ?? []).length > 0;
-    if (rule.op === 'matches') return safeMatch(rule.value, (v ?? []).map((x) => x.name).join(', '));
+    if (op === 'empty') return v !== undefined && v.length === 0;
+    if (op === 'present') return (v ?? []).length > 0;
+    if (op === 'matches') return safeMatch(value, (v ?? []).map((x) => x.name).join(', '));
     return false;
   }
-  const str = rule.field === 'issueType' ? t.issueType : t.dueDate;
-  switch (rule.op) {
+  const str = field === 'issueType' ? t.issueType : t.dueDate;
+  switch (op) {
     case 'empty':
       return str === '';
     case 'present':
       return Boolean(str);
     case 'matches':
-      return safeMatch(rule.value, str ?? '');
+      return safeMatch(value, str ?? '');
     case 'past': {
-      if (rule.field !== 'dueDate' || !t.dueDate) return false;
+      if (field !== 'dueDate' || !t.dueDate) return false;
       const due = new Date(`${t.dueDate}T23:59:59`);
       return Number.isFinite(due.getTime()) && due.getTime() < now.getTime();
     }
+    default:
+      return false;
   }
+}
+
+const rulePredicate = (rule: StatusRule, t: NonNullable<WatchItem['ticket']>, now: Date): boolean => {
+  if (rule.op === 'always') return true;
+  // The chain folds left to right, data_set_filter style: each extra
+  // condition combines with the running result via its own connector.
+  let acc = testCondition(t, now, rule.field, rule.op, rule.value);
+  for (const c of rule.also ?? []) {
+    const hit = testCondition(t, now, c.field, c.op, c.value);
+    acc = c.connector === 'or' ? acc || hit : acc && hit;
+  }
+  return acc;
 }
 
 /** Case-insensitive regex, treating an invalid pattern as no-match. */
@@ -176,7 +195,7 @@ export const resolveRules = (
     // A rule can be pinned to one repo; empty/absent means any.
     if (rule.repo && rule.repo !== projectPath) continue;
     const hit = rulePredicate(rule, t, now);
-    const target = hit ? rule.then : rule.else;
+    const target = hit ? rule.then : (rule.else ?? 'next');
     if (target === 'next') continue;
     return { target, ...(hit && rule.op === 'empty' && rule.field ? { needs: rule.field } : {}) };
   }

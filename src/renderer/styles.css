@@ -2110,3 +2110,10 @@ button.select-trigger {
 .rule-row.dragging {
   opacity: 0.45;
 }
+
+/* Chained rule conditions stack under the when line. */
+.rule-also {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

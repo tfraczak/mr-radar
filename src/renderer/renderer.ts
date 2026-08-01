@@ -940,7 +940,55 @@ const openSettings = async (): Promise<void> => {
     const targetChoices = (opValue: string): string[] =>
       opValue === 'empty' ? s.ruleTargetChoices : s.ruleTargetChoices.filter((c) => c !== 'needs-value');
     const thenSel = mkSelect(targetChoices(r.op), r.then);
-    const elseSel = mkSelect(targetChoices(r.op), r.else);
+    const elseSel = mkSelect(targetChoices(r.op), r.else || 'next');
+
+    // Chained extra conditions, data_set_filter style: each line carries its
+    // own and/or connector and folds onto the when-check left to right.
+    const condOpChoices = s.ruleOpChoices.filter((o) => o !== 'always');
+    const alsoWrap = el('div', 'rule-also');
+    interface CondRow {
+      root: HTMLElement;
+      connector: ReturnType<typeof createSelect>;
+      field: ReturnType<typeof createSelect>;
+      op: ReturnType<typeof createSelect>;
+      value: HTMLInputElement;
+    }
+    const condRows: CondRow[] = [];
+    const addCondRow = (c: { connector: string; field: string; op: string; value: string }): void => {
+      const connector = createSelect(['and', 'or'], c.connector || 'and');
+      const cField = mkSelect(s.ruleFieldChoices, c.field || 'issueType');
+      const cOp = mkSelect(condOpChoices, condOpChoices.includes(c.op) ? c.op : 'matches');
+      const cValue = el('input', 'field-input rule-value');
+      cValue.type = 'text';
+      cValue.value = c.value ?? '';
+      cValue.placeholder = 'pattern';
+      const syncCValue = (): void => {
+        cValue.hidden = cOp.select.value !== 'matches';
+      };
+      cOp.select.addEventListener('change', syncCValue);
+      syncCValue();
+      const condRoot = el('div', 'rule-line rule-branch');
+      const removeCond = createButton('×', {
+        variant: 'link',
+        title: 'Remove this condition',
+        onClick: () => {
+          condRoot.remove();
+          condRows.splice(condRows.findIndex((x) => x.root === condRoot), 1);
+        },
+      });
+      condRoot.append(connector.root, cField.root, cOp.root, cValue, removeCond);
+      condRows.push({ root: condRoot, connector, field: cField, op: cOp, value: cValue });
+      alsoWrap.append(condRoot);
+    };
+    for (const c of r.also ?? []) addCondRow(c);
+    const addCond = createButton('+ condition', {
+      variant: 'link',
+      title: 'Chain another check onto the when-clause (and/or)',
+      onClick: () => addCondRow({ connector: 'and', field: 'issueType', op: 'matches', value: '' }),
+    });
+    const addCondLine = el('div', 'rule-line rule-branch');
+    addCondLine.append(addCond);
+
     const syncValue = (): void => {
       value.hidden = op.select.value !== 'matches';
       for (const sel of [thenSel, elseSel]) {
@@ -959,6 +1007,15 @@ const openSettings = async (): Promise<void> => {
       field: op.select.value === 'always' ? '' : field.select.value,
       op: op.select.value,
       value: value.value,
+      also:
+        op.select.value === 'always'
+          ? []
+          : condRows.map((c) => ({
+              connector: c.connector.select.value,
+              field: c.field.select.value,
+              op: c.op.select.value,
+              value: c.value.value,
+            })),
       then: thenSel.select.value,
       else: elseSel.select.value,
     });
@@ -1019,24 +1076,45 @@ const openSettings = async (): Promise<void> => {
     whenLine.append(whenWord, field.root, op.root, value);
     const elseWordLine = line('', 'else');
     const elseLine = line('rule-branch', '→', elseSel.root);
+    // No else is the default state — it means 'next' (fall through). "+ else"
+    // adds a branch; picking 'next' in its dropdown removes it again.
+    const addElse = createButton('+ else', {
+      variant: 'link',
+      title: "Add an else branch — without one the rule falls through ('next')",
+      onClick: () => {
+        elseSel.select.value = 'other';
+        elseSel.select.dispatchEvent(new Event('change'));
+      },
+    });
+    const addElseLine = el('div', 'rule-line');
+    addElseLine.append(addElse);
     controls.append(
       line('', status.root, 'in', repo.root),
       whenLine,
+      alsoWrap,
+      addCondLine,
       line('rule-branch', '→', thenSel.root),
       elseWordLine,
       elseLine,
+      addElseLine,
     );
     // An unconditional rule reads as just "<status> in <repo> → <target>":
-    // no field, no else branch — only the op select stays as the way back.
-    const syncAlways = (): void => {
+    // no field, no conditions, no else — only the op select stays as the way
+    // back. For conditional rules, the else block only renders when one exists.
+    const syncStructure = (): void => {
       const isAlways = op.select.value === 'always';
+      const hasElse = elseSel.select.value !== 'next';
       whenWord.hidden = isAlways;
       field.root.hidden = isAlways;
-      elseWordLine.hidden = isAlways;
-      elseLine.hidden = isAlways;
+      alsoWrap.hidden = isAlways;
+      addCondLine.hidden = isAlways;
+      elseWordLine.hidden = isAlways || !hasElse;
+      elseLine.hidden = isAlways || !hasElse;
+      addElseLine.hidden = isAlways || hasElse;
     };
-    op.select.addEventListener('change', syncAlways);
-    syncAlways();
+    op.select.addEventListener('change', syncStructure);
+    elseSel.select.addEventListener('change', syncStructure);
+    syncStructure();
     root.append(grip, controls, clone, remove);
     ruleRowsWrap.append(root);
     ruleRows.push({ root, get: snapshotRule });
@@ -1051,8 +1129,10 @@ const openSettings = async (): Promise<void> => {
       status: [...knownStatusNames.values()][0] ?? '',
       field: 'fixVersions',
       op: 'empty',
+      value: '',
+      also: [],
       then: 'active',
-      else: 'verification',
+      else: 'next',
     });
   });
   rulesBody.append(ruleRowsWrap, addRuleBtn);

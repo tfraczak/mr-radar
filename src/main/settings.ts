@@ -1,4 +1,5 @@
 import {
+  type RuleCondition,
   type RuleField, APPEARANCES, NOTIFICATION_METHODS, NOTIFICATION_SOUNDS, RULE_FIELDS, RULE_OPS, RULE_TARGETS, THEMES, type Config, type StatusRule } from '../core/config';
 import type { Db } from '../core/db';
 import { isPinnedHttpsOrigin } from '../core/sources/jira';
@@ -59,7 +60,14 @@ export const toEditable = (config: Config, repoChoices: string[] = []): Editable
     activeStatuses: config.jira.activeStatuses,
     statusAssignments: toAssignments(config),
     sectionChoices: ['active', 'verification', 'done', 'ignore', 'other'],
-    statusRules: config.statusRules.map((r) => ({ ...r, field: r.field ?? '', repo: r.repo ?? '', value: r.value ?? '' })),
+    statusRules: config.statusRules.map((r) => ({
+      ...r,
+      field: r.field ?? '',
+      repo: r.repo ?? '',
+      value: r.value ?? '',
+      else: r.else ?? 'next',
+      also: (r.also ?? []).map((c) => ({ connector: c.connector, field: c.field, op: c.op, value: c.value ?? '' })),
+    })),
     ruleRepoChoices: repoChoices.length ? repoChoices : Object.keys(config.repos).sort(),
     ruleFieldChoices: [...RULE_FIELDS],
     ruleOpChoices: [...RULE_OPS],
@@ -167,16 +175,28 @@ export const applyEditable = (
       if (r.op !== 'always' && !(RULE_FIELDS as readonly string[]).includes(r.field)) return [];
       if (!(RULE_OPS as readonly string[]).includes(r.op)) return [];
       if (!(RULE_TARGETS as readonly string[]).includes(r.then)) return [];
-      if (!(RULE_TARGETS as readonly string[]).includes(r.else)) return [];
+      if (r.else && r.else !== 'next' && !(RULE_TARGETS as readonly string[]).includes(r.else)) return [];
       const rule: StatusRule = {
         status,
         ...(r.repo?.trim() ? { repo: r.repo.trim() } : {}),
         op: r.op as StatusRule['op'],
         ...(r.value?.trim() ? { value: r.value.trim() } : {}),
         then: r.then as StatusRule['then'],
-        else: r.else as StatusRule['else'],
       };
+      if (r.else && r.else !== 'next') rule.else = r.else as StatusRule['then'];
       if (r.op !== 'always') rule.field = r.field as RuleField;
+      const also = (r.also ?? []).flatMap((c): RuleCondition[] => {
+        if (c.connector !== 'and' && c.connector !== 'or') return [];
+        if (!(RULE_FIELDS as readonly string[]).includes(c.field)) return [];
+        if (!(RULE_OPS as readonly string[]).includes(c.op) || c.op === 'always') return [];
+        return [{
+          connector: c.connector,
+          field: c.field as RuleField,
+          op: c.op as RuleCondition['op'],
+          ...(c.value?.trim() ? { value: c.value.trim() } : {}),
+        }];
+      });
+      if (r.op !== 'always' && also.length) rule.also = also;
       return [rule];
     });
   }
