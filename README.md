@@ -262,7 +262,10 @@ yarn lint
 
 Everything in `src/core/` is Electron-free and unit-tested; `src/main/` is the menu bar
 shell and `src/renderer/` the popover (design system in `src/renderer/ui.ts`).
-GitHub Actions (`.github/workflows/ci.yml`) runs typecheck + lint + test + build on every push and PR, on Linux and macOS.
+GitHub Actions (`.github/workflows/ci.yml`) runs typecheck + lint + test +
+build on every push and PR, on Linux and macOS. A GitLab CI config
+(`.gitlab-ci.yml`) with the same gate is included too, so a mirror on a GitLab
+instance gets pipelines for free.
 
 Data lives in SQLite at `~/.local/state/mr-radar/mr-radar.db`. Delete it to reset; the next
 run reseeds silently.

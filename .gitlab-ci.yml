@@ -1,0 +1,48 @@
+# Verify pipeline: typecheck + lint + test, mirroring `yarn verify` locally.
+#
+# The project uses Yarn Berry (4.x) via corepack and Node 25 (.nvmrc). The
+# yarn cache is kept in-project (YARN_ENABLE_GLOBAL_CACHE=false) so GitLab's
+# cache: can persist it between pipelines, keyed on yarn.lock.
+
+workflow:
+  rules:
+    # One pipeline per change: MR pipelines for branches with an open MR,
+    # branch pipelines otherwise (and always for the default branch).
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+
+stages:
+  - verify
+
+.node:
+  image: node:25
+  stage: verify
+  variables:
+    YARN_ENABLE_GLOBAL_CACHE: 'false'
+  before_script:
+    - corepack enable
+    - yarn install --immutable
+  cache:
+    key:
+      files:
+        - yarn.lock
+    paths:
+      - .yarn/cache
+  interruptible: true
+
+typecheck:
+  extends: .node
+  script:
+    - yarn typecheck
+
+lint:
+  extends: .node
+  script:
+    - yarn lint
+
+test:
+  extends: .node
+  script:
+    - yarn test
