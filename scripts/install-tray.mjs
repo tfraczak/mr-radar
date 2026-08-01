@@ -23,6 +23,21 @@ import { homedir, userInfo } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
 const LABEL = 'com.mr-radar.tray';
+
+// `launchctl kickstart -k` can return success while the old process survives
+// (single-instance handoff); installs here always bootout + bootstrap and then
+// verify launchd is tracking a live pid.
+const verifyRunning = () => {
+  try {
+    const out = execFileSync('launchctl', ['print', `gui/${process.getuid()}/${LABEL}`], { encoding: 'utf8' });
+    const m = out.match(/pid = (\d+)/);
+    if (!m) throw new Error('no pid');
+    process.kill(Number(m[1]), 0); // liveness probe, no signal delivered
+    return Number(m[1]);
+  } catch {
+    return undefined;
+  }
+};
 const POLLER_LABEL = 'com.mr-radar.poller';
 const repo = resolve(join(import.meta.dirname, '..'));
 const plistPath = join(homedir(), 'Library', 'LaunchAgents', `${LABEL}.plist`);
@@ -137,5 +152,10 @@ writeFileSync(plistPath, plist);
 console.log(`  • wrote ${plistPath}`);
 bootstrap(plistPath);
 sh('launchctl', ['kickstart', `${domain}/${LABEL}`]);
-console.log(`  ✓ menu bar app running under launchd (label ${LABEL})`);
+const pid = verifyRunning();
+if (!pid) {
+  console.error('  ✗ agent registered but no live process — check the log below');
+  process.exit(1);
+}
+console.log(`  ✓ menu bar app running under launchd (label ${LABEL}, pid ${pid})`);
 console.log(`    look for the radar icon in your menu bar · logs: tail -f ${logPath}`);
