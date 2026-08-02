@@ -1343,10 +1343,13 @@ button.link {
   align-items: baseline;
   gap: 6px;
   padding: 4px 12px;
+}
+
+.ticket-key {
   cursor: pointer;
 }
 
-.group-head:hover .ticket-key {
+.ticket-key:hover {
   text-decoration: underline;
 }
 

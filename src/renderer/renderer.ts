@@ -524,11 +524,14 @@ const renderGroup = (group: UiGroup): HTMLElement => {
 
   if (group.ticket) {
     const head = el('div', 'group-head');
-    head.append(el('span', 'ticket-key', group.ticket.key));
-    head.append(el('span', 'ticket-status', group.ticket.status));
+    // Only the key is the link — a full-width click target made every stray
+    // click in the header row open Jira.
+    const key = el('span', 'ticket-key', group.ticket.key);
+    key.title = 'Open in Jira';
     const url = group.ticket.url;
-    head.title = 'Open in Jira';
-    head.addEventListener('click', () => void window.radar.openUrl(url));
+    key.addEventListener('click', () => void window.radar.openUrl(url));
+    head.append(key);
+    head.append(el('span', 'ticket-status', group.ticket.status));
     if (group.ticket.needsField === 'fixVersions') head.append(fixVersionControl(group.ticket.key));
     wrap.append(head);
   } else {
