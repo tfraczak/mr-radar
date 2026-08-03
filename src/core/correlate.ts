@@ -1,5 +1,5 @@
 import { mrKey } from './sources/gitlab';
-import { ticketKeyFromBranch } from './sources/jira';
+import { ticketKeyCandidates, titleKeyCandidate } from './sources/jira';
 import type {
   ForgeDiscussion,
   ForgeMr,
@@ -57,8 +57,15 @@ export const correlate = (input: CorrelateInput): WatchItem[] => {
     if (items.has(key) && reason !== 'authored') return;
 
     const branch = mr.source_branch;
-    const tKey = ticketKeyFromBranch(branch);
-    const ticket = tKey ? ticketByKey.get(tKey) : undefined;
+    // Bind-time layering: every key-shaped branch token (leftmost first),
+    // then the title's LEADING key — the first that matches an ACTIVE ticket
+    // wins. So `sprint-2-ENG-126` binds ENG-126, decorative tokens bind
+    // nothing, and branch always outranks title.
+    const candidates = [
+      ...ticketKeyCandidates(branch),
+      ...(titleKeyCandidate(mr.title) ? [titleKeyCandidate(mr.title)!] : []),
+    ];
+    const ticket = candidates.map((c) => ticketByKey.get(c.key)).find(Boolean);
 
     items.set(key, {
       key,

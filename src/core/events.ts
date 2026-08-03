@@ -1,6 +1,16 @@
 import { unresolvedCount } from './correlate';
+import { ticketKeyCandidates, titleKeyCandidate } from './sources/jira';
 import type { Db } from './db';
 import type { AppEvent, Check, ForgeTodo, WatchItem } from './types';
+
+/** Does this MR's branch or title still carry `key`? Guards stale pinning. */
+const stillClaims = (item: WatchItem, key: string | null | undefined): boolean => {
+  if (!key) return false;
+  return (
+    ticketKeyCandidates(item.branch).some((c) => c.key === key) ||
+    titleKeyCandidate(item.title)?.key === key
+  );
+};
 
 /**
  * Turn "what changed since last cycle" into notifications.
@@ -135,8 +145,13 @@ export const diff = (input: DiffInput): DiffResult => {
           has_conflicts: item.hasConflicts ? 1 : 0,
           in_scope: item.inScope ? 1 : 0,
           reason: item.reason,
-          ticket_key: item.ticket?.key ?? null,
-          ticket_status: item.ticket?.status ?? null,
+          // A harvest miss (Jira down, cadence skip) must not wipe the
+          // last-known ticket — but a key the MR no longer claims (retitled,
+          // rebased) must not be pinned forever either. Preserve prev only
+          // while the branch/title still carries that exact key.
+          ticket_key: item.ticket?.key ?? (stillClaims(item, prev?.ticket_key) ? prev!.ticket_key : null),
+          ticket_status:
+            item.ticket?.status ?? (stillClaims(item, prev?.ticket_key) ? (prev?.ticket_status ?? null) : null),
           unverified_count: item.unverifiedCache ? String(item.unverifiedCache.count) : null,
           unverified_sha: item.unverifiedCache?.sha ?? null,
         },

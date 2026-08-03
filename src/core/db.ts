@@ -463,6 +463,15 @@ export class Db {
     ).map((r) => r.project_path);
   }
 
+  /** Project prefixes of every ticket ever persisted on an MR row. */
+  knownTicketPrefixes(): Set<string> {
+    const rows = this.db
+      .prepare(`SELECT DISTINCT ticket_key FROM mrs WHERE ticket_key IS NOT NULL`)
+      .all() as { ticket_key: string }[];
+    return new Set(rows.map((r) => r.ticket_key.split('-')[0]!).filter(Boolean));
+  }
+
+
   setRepoRoles(projectPath: string, roles: RepoCiRoles): void {
     this.db
       .prepare(

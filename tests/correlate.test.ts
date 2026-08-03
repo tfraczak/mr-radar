@@ -24,6 +24,91 @@ const fullMr = (iid: number, over: Partial<ForgeMr> = {}): ForgeMr =>
     ...over,
   }) as ForgeMr;
 
+import { ticketKeyCandidates, ticketKeyFromBranch, ticketKeyFromTitle, titleKeyCandidate } from '../src/core/sources/jira';
+
+import { titleBranch } from '../src/core/sources/rwx';
+
+describe('rwx run title attribution', () => {
+  it('parses the branch VERBATIM from the trigger convention', () => {
+    expect(titleBranch('ENG-132 - mira.dev@acme.com')).toBe('ENG-132');
+    expect(titleBranch('tf-eng-126-fix - mira.dev@acme.com')).toBe('tf-eng-126-fix');
+    expect(titleBranch('feature/ENG-126 - mira.dev@acme.com')).toBe('feature/ENG-126');
+    expect(titleBranch('Nightly regression sweep')).toBeUndefined();
+    expect(titleBranch('fix things - not an email')).toBeUndefined();
+    // The app's own legacy no-jira-email tail must still attribute.
+    expect(titleBranch('ENG-132 - mr-radar')).toBe('ENG-132');
+    expect(titleBranch('tf-eng-126-fix - mr-radar@local')).toBe('tf-eng-126-fix');
+  });
+});
+
+describe('ticket key extraction', () => {
+  it('tolerates every real-world branch decoration', () => {
+    expect(ticketKeyFromBranch('ENG-126')).toBe('ENG-126');
+    expect(ticketKeyFromBranch('feature/ENG-126')).toBe('ENG-126');
+    expect(ticketKeyFromBranch('ENG-126-followup')).toBe('ENG-126');
+    expect(ticketKeyFromBranch('tf-eng-126-brief-descriptor')).toBe('ENG-126');
+    expect(ticketKeyFromBranch('eng_126_fix')).toBe('ENG-126');
+    expect(ticketKeyFromBranch('main')).toBeUndefined();
+    expect(ticketKeyFromBranch('release-26-32')).toBe('RELEASE-26'); // guess: gated before Jira
+  });
+
+  it('returns ALL candidates so decorative tokens cannot swallow the real key', () => {
+    expect(ticketKeyCandidates('sprint-2-ENG-126').map((c) => c.key)).toEqual(['SPRINT-2', 'ENG-126']);
+    expect(ticketKeyCandidates('issue-123-ENG-126-fix').map((c) => c.key)).toEqual(['ISSUE-123', 'ENG-126']);
+    // Confidence marks the uppercase (strong) form for harvest gating.
+    expect(ticketKeyCandidates('sprint-2-ENG-126').map((c) => c.confident)).toEqual([false, true]);
+    // A later uppercase occurrence upgrades an earlier lowercase duplicate.
+    expect(ticketKeyCandidates('eng-126-backport-of-ENG-126')).toEqual([
+      { key: 'ENG-126', confident: true },
+    ]);
+  });
+
+  it('title keys must LEAD the title — mid-sentence mentions never link', () => {
+    expect(ticketKeyFromTitle('ENG-129: Extend the flow')).toBe('ENG-129');
+    expect(ticketKeyFromTitle('[ENG-129] Extend the flow')).toBe('ENG-129');
+    expect(ticketKeyFromTitle('  eng_129 - fix')).toBe('ENG-129');
+    expect(ticketKeyFromTitle('Extend the flow extracted from ENG-126')).toBeUndefined();
+    expect(ticketKeyFromTitle('Fix the widget')).toBeUndefined();
+  });
+
+  it('draft prefixes and bare-key titles still lead', () => {
+    expect(ticketKeyFromTitle('Draft: ENG-129: fix login')).toBe('ENG-129');
+    expect(ticketKeyFromTitle('WIP: eng_129 fix')).toBe('ENG-129');
+    expect(ticketKeyFromTitle('ENG-129')).toBe('ENG-129');
+    expect(ticketKeyFromTitle('[ENG-129]')).toBe('ENG-129');
+    expect(ticketKeyFromTitle('Draft: fix login for ENG-129')).toBeUndefined();
+    expect(titleKeyCandidate('eng-129: x')?.confident).toBe(false);
+  });
+});
+
+describe('candidate binding', () => {
+  const eng126 = { key: 'ENG-126', summary: '', status: 'In Development', updated: '', url: '#' };
+
+  it('a decorative token ahead of the real key still binds the active ticket', () => {
+    const mr = fullMr(7, { source_branch: 'sprint-2-ENG-126' });
+    const items = correlate({
+      authored: [mr],
+      reviewer: [],
+      activeTickets: [eng126],
+      recentDaysFallback: 0,
+      now: new Date('2026-08-01T12:00:00Z'),
+    });
+    expect(items[0]?.ticket?.key).toBe('ENG-126');
+  });
+
+  it('title leading key binds when the branch has no bindable key', () => {
+    const mr = fullMr(8, { source_branch: 'quick-fix', title: 'ENG-126: patch the widget' });
+    const items = correlate({
+      authored: [mr],
+      reviewer: [],
+      activeTickets: [eng126],
+      recentDaysFallback: 0,
+      now: new Date('2026-08-01T12:00:00Z'),
+    });
+    expect(items[0]?.ticket?.key).toBe('ENG-126');
+  });
+});
+
 describe('correlate reason precedence', () => {
   const args = { activeTickets: [], recentDaysFallback: 0, now: new Date('2026-07-29T12:00:00Z') };
 

@@ -96,6 +96,26 @@ describe('silent seeding', () => {
   });
 });
 
+describe('persisted ticket claims', () => {
+  it('preserves the last-known ticket through a harvest miss while still claimed', () => {
+    // The default item branch is ENG-118 — the persisted key it claims.
+    const withTicket = item({ ticket: { key: 'ENG-118', status: 'In Development' } });
+    cycle([withTicket]);
+    // Next cycle: Jira couldn't resolve it (item.ticket unset) but the branch
+    // still carries ENG-118, so the association survives the miss.
+    cycle([item({})]);
+    expect(db.getMr(item({}).key)?.ticket_key).toBe('ENG-118');
+  });
+
+  it('drops a persisted ticket the MR no longer claims (retitle self-heals)', () => {
+    const withTicket = item({ ticket: { key: 'ENG-126', status: 'In Development' } });
+    cycle([withTicket]);
+    // The MR moves to a keyless branch and title: the old key must not pin.
+    cycle([item({ branch: 'quick-fix', title: 'Patch the widget' })]);
+    expect(db.getMr(item({}).key)?.ticket_key).toBeNull();
+  });
+});
+
 describe('comments', () => {
   it('notifies a new comment from someone else', () => {
     cycle([item({ threads: [thread('t1', [note(1, ME)])] })]);

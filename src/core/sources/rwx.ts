@@ -243,7 +243,13 @@ interface RwxShowResponse {
  * specs just passed still reads "never run".
  */
 export const titleBranch = (title: string): string | undefined => {
-  return /^([A-Z][A-Z0-9]+-\d+)\s+-\s/.exec(title.trim())?.[1];
+  // The trigger convention is "<branch> - <email>". Capture the branch
+  // VERBATIM — branches are no longer assumed to be bare uppercase ticket
+  // keys (tf-eng-126-fix must attribute too). Requiring the email tail keeps
+  // arbitrary run titles from being misread as branches; misattribution is
+  // otherwise impossible since callers compare exact branch equality.
+  // `mr-radar` is the legacy no-jira-email tail this app used to write.
+  return /^(\S+)\s+-\s+(?:\S+@\S+|mr-radar\b)/.exec(title.trim())?.[1];
 }
 
 export const branchOfRun = (run: RwxRun): string | undefined => {

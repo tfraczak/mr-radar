@@ -14,7 +14,7 @@ import { correlate, detailsChanged, summarizeThreads, unresolvedCount } from './
 import type { Db } from './db';
 import { coalesce, diff } from './events';
 import type { ForgeSource } from './sources/forge';
-import { JiraSource, ticketKeyFromBranch } from './sources/jira';
+import { JiraSource, ticketKeyCandidates, titleKeyCandidate, type TicketKeyCandidate } from './sources/jira';
 import { RwxSource, isTerminal } from './sources/rwx';
 import type {
   ForgeCheckRun,
@@ -151,17 +151,44 @@ export const pollOnce = async (deps: PollDeps, opts: { dryRun?: boolean } = {}):
   // Tied to the Jira refresh cadence (only on a live refresh, like the active
   // set) rather than every cycle; between refreshes we reconstruct the ticket
   // from the persisted MR row so grouping is preserved without a Jira call.
-  const needStatus = inScope.filter((i) => !i.ticket && ticketKeyFromBranch(i.branch));
+  // Same bind-time layering as correlate: every branch candidate, then the
+  // title's leading key. Unlike correlate there is no active-set gate here —
+  // these keys go to Jira itself — so lowercase-derived GUESSES only qualify
+  // when their project prefix is already known (active tickets or previously
+  // persisted ones). That keeps dependabot/release branch tokens (`ESLINT-9`,
+  // `RELEASE-26`) out of the JQL, where one nonexistent key would 400 the
+  // whole batch and a coincidentally-real one would bind a stranger's ticket.
+  const knownPrefixes = new Set([
+    ...activeTickets.map((t) => t.key.split('-')[0]),
+    ...db.knownTicketPrefixes(),
+  ]);
+  const candidatesOf = (i: WatchItem): TicketKeyCandidate[] => {
+    const title = titleKeyCandidate(i.title);
+    return [...ticketKeyCandidates(i.branch), ...(title ? [title] : [])];
+  };
+  const harvestable = (i: WatchItem): TicketKeyCandidate[] =>
+    candidatesOf(i).filter((c) => c.confident || knownPrefixes.has(c.key.split('-')[0]!));
+  const harvestableOf = (i: WatchItem): string[] => harvestable(i).map((c) => c.key);
+  // Bind order: confident (uppercase-in-source) keys before guesses, leftmost
+  // within each group — a decorative `sprint-2` that happens to exist in Jira
+  // must not outrank the ENG-126 the developer explicitly wrote.
+  const bindOrderOf = (i: WatchItem): string[] => {
+    const cs = harvestable(i);
+    return [...cs.filter((c) => c.confident), ...cs.filter((c) => !c.confident)].map((c) => c.key);
+  };
+  const needStatus = inScope.filter((i) => !i.ticket && harvestableOf(i).length > 0);
   if (deps.jira?.configured && jiraRefreshed) {
-    const keys = [...new Set(needStatus.map((i) => ticketKeyFromBranch(i.branch)).filter(Boolean))] as string[];
+    const keys = [...new Set(needStatus.flatMap(harvestableOf))];
     if (keys.length) {
       try {
-        const extra = await deps.jira.searchByKeys(keys);
-        stats.apiCalls += 1;
+        const extra = await deps.jira.searchByKeys(keys, () => {
+          stats.apiCalls += 1;
+        });
         const byKey = new Map(extra.map((t) => [t.key, t]));
         for (const item of needStatus) {
-          const key = ticketKeyFromBranch(item.branch);
-          const ticket = key ? byKey.get(key) : undefined;
+          const ticket = bindOrderOf(item)
+            .map((k) => byKey.get(k))
+            .find(Boolean);
           if (ticket) item.ticket = ticket;
         }
       } catch (err) {
@@ -169,10 +196,13 @@ export const pollOnce = async (deps: PollDeps, opts: { dryRun?: boolean } = {}):
       }
     }
   } else {
-    // Cadence miss — reuse the last-known status persisted on the MR row.
+    // Cadence miss — reuse the last-known status persisted on the MR row,
+    // but only while the MR still CLAIMS that key (branch/title candidate).
+    // Otherwise a retitled MR would resurrect its old ticket every miss cycle.
     for (const item of needStatus) {
       const prev = db.getMr(item.key);
-      if (prev?.ticket_key && prev.ticket_status) {
+      const claimed = prev?.ticket_key && candidatesOf(item).some((c) => c.key === prev.ticket_key);
+      if (claimed && prev?.ticket_key && prev.ticket_status) {
         item.ticket = {
           key: prev.ticket_key,
           summary: '',

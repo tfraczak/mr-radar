@@ -70,7 +70,8 @@ export const executeTrigger = async (
 ): Promise<TriggerResult> => {
   const { db, config, rwx, log } = deps;
   const short = item.headSha.slice(0, 8);
-  const email = config.jira.email || 'mr-radar';
+  // The tail must stay email-shaped: rwx.ts titleBranch parses it back out.
+  const email = config.jira.email || 'mr-radar@local';
   try {
     const { runId, url } = await rwx.startRun({
       checkout: plan.checkout,

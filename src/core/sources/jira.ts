@@ -1,4 +1,4 @@
-import { fetchJsonWithRetries } from '../retry';
+import { fetchJsonWithRetries, HttpError } from '../retry';
 import type { JiraTicket } from '../types';
 
 /**
@@ -90,11 +90,52 @@ export class JiraSource {
    * status of a non-active ticket behind an in-scope MR. `key IN (...)` needs no
    * assignee/watcher clause, so it works for tickets that aren't "yours".
    */
-  async searchByKeys(keys: string[]): Promise<JiraTicket[]> {
-    const unique = [...new Set(keys)].filter(Boolean);
+  /** Keys that recently resolved to nothing — don't re-ask Jira for a day. */
+  private missingKeys = new Map<string, number>();
+  private static readonly MISS_TTL_MS = 24 * 60 * 60 * 1000;
+
+  async searchByKeys(keys: string[], countCall?: () => void): Promise<JiraTicket[]> {
+    const now = Date.now();
+    const unique = [...new Set(keys)].filter(Boolean).filter((k) => {
+      const missedAt = this.missingKeys.get(k);
+      return !missedAt || now - missedAt > JiraSource.MISS_TTL_MS;
+    });
     if (unique.length === 0) return [];
-    const jql = `key IN (${unique.join(', ')})`;
-    return this.search(jql, 100);
+    try {
+      countCall?.();
+      const found = await this.search(`key IN (${unique.join(', ')})`, 100);
+      // A key the (successful) batch didn't return doesn't exist for us —
+      // remember, so it can't poison future batches either.
+      const returned = new Set(found.map((t) => t.key));
+      for (const k of unique) if (!returned.has(k)) this.missingKeys.set(k, now);
+      return found;
+    } catch (err) {
+      // Jira 400s the WHOLE `key IN (...)` when ANY key doesn't exist, and
+      // extracted keys are guesses — one bogus guess must not lose the
+      // harvest for every legitimate key. Retry per-key IN SMALL CHUNKS,
+      // remembering misses. Anything but a 400 (outage, auth) surfaces to
+      // the caller so source health reports it.
+      if (!(err instanceof HttpError) || err.status !== 400 || unique.length === 1) throw err;
+      const found: JiraTicket[] = [];
+      for (let i = 0; i < unique.length; i += 5) {
+        const chunk = unique.slice(i, i + 5);
+        const results = await Promise.all(
+          chunk.map(async (k) => {
+            countCall?.();
+            try {
+              const r = await this.search(`key = ${k}`, 1);
+              if (r.length === 0) this.missingKeys.set(k, now);
+              return r;
+            } catch {
+              this.missingKeys.set(k, now); // nonexistent → 400 here too
+              return [] as JiraTicket[];
+            }
+          }),
+        );
+        found.push(...results.flat());
+      }
+      return found;
+    }
   }
 
   private toTicket(issue: JiraIssue): JiraTicket {
@@ -191,14 +232,60 @@ export const isPinnedHttpsOrigin = (value: string): boolean => {
   );
 };
 
-/** Branch names are exactly the ticket key, e.g. `ENG-126`, `APP-19615`. */
-const TICKET_KEY = /^([A-Z][A-Z0-9]+)-(\d+)$/;
-
-export const ticketKeyFromBranch = (branch: string): string | undefined => {
-  const direct = TICKET_KEY.exec(branch.trim());
-  if (direct) return direct[0];
-  // Tolerate decorated branches (`ENG-126-followup`, `feature/ENG-126`) even
-  // though the convention here is a bare key.
-  const embedded = /\b([A-Z][A-Z0-9]+-\d+)\b/.exec(branch);
-  return embedded?.[1];
+/** A ticket key guessed out of free text, with how trustworthy it looks. */
+export interface TicketKeyCandidate {
+  key: string;
+  /** True when the key appeared UPPERCASE in the source — the strong form. */
+  confident: boolean;
 }
+
+const KEY_TOKEN = /(?<![A-Za-z0-9])([A-Za-z][A-Za-z0-9]+)[-_](\d+)(?![A-Za-z0-9])/g;
+
+/**
+ * Every ticket-key-shaped token in a branch name, leftmost first. The simple
+ * convention is the bare key (`ENG-126`), but real branches decorate it every
+ * way imaginable — `feature/ENG-126`, `ENG-126-followup`,
+ * `tf-eng-126-brief-descriptor`, `eng_126_fix`, `sprint-2-ENG-126` — so
+ * matching is case-insensitive, treats `_` as `-`, and returns ALL candidates
+ * (a decorative `sprint-2` ahead of the real key must not swallow it).
+ * Explicit lookarounds instead of \b: underscore is a word character, so \b
+ * can never fire next to it and `eng_126_fix` would silently miss.
+ *
+ * Callers bind candidates in order against a known ticket set; a wrong guess
+ * binds nothing. Only the status-harvest path sends guesses to Jira itself —
+ * see poll.ts, which filters on `confident` and known project prefixes there.
+ */
+export const ticketKeyCandidates = (branch: string): TicketKeyCandidate[] => {
+  const byKey = new Map<string, TicketKeyCandidate>();
+  for (const m of branch.matchAll(KEY_TOKEN)) {
+    const key = `${m[1]!.toUpperCase()}-${m[2]}`;
+    const confident = m[1] === m[1]!.toUpperCase();
+    const existing = byKey.get(key);
+    // A later uppercase occurrence upgrades an earlier lowercase one.
+    if (existing) existing.confident ||= confident;
+    else byKey.set(key, { key, confident }); // Map preserves leftmost order
+  }
+  return [...byKey.values()];
+}
+
+/** The leftmost branch candidate — display/simple-convention convenience. */
+export const ticketKeyFromBranch = (branch: string): string | undefined =>
+  ticketKeyCandidates(branch)[0]?.key;
+
+/**
+ * Fallback when the branch carries no bindable key: a key LEADING the MR
+ * title ("ENG-129: Extend the flow", "[ENG-129] fix", "Draft: ENG-129: …",
+ * or a bare "ENG-129"). Leading-position only, on purpose — a mid-sentence
+ * mention ("extracted from ENG-126") must never cross-link the way Jira's
+ * development panel does. GitLab literally prefixes draft titles with
+ * "Draft: ", so that (and WIP:) is allowed before the key.
+ */
+export const titleKeyCandidate = (title: string): TicketKeyCandidate | undefined => {
+  const m =
+    /^\s*(?:(?:draft|wip)[:\s]\s*)?\[?([A-Za-z][A-Za-z0-9]+)[-_](\d+)\]?(?:\s*[:\-–—\s]|\s*$)/i.exec(title);
+  if (!m) return undefined;
+  return { key: `${m[1]!.toUpperCase()}-${m[2]}`, confident: m[1] === m[1]!.toUpperCase() };
+}
+
+export const ticketKeyFromTitle = (title: string): string | undefined =>
+  titleKeyCandidate(title)?.key;
