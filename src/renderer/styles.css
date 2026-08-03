@@ -2169,3 +2169,14 @@ button.select-trigger {
 .settings-save-row .settings-msg {
   margin-top: 0;
 }
+
+/* The beat between clicking Start run and the rwx CLI resolving: fill with
+   the accent so the click visibly took, even though the button is disabled. */
+.start-run.starting,
+.start-run.starting:disabled {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+  opacity: 1;
+  cursor: progress;
+}

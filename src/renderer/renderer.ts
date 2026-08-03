@@ -759,9 +759,14 @@ const startButton = (item: UiItem): HTMLElement => {
       void window.radar.openUrl(runUrl);
       return;
     }
+    // Click → instantly "Starting…" in the accent fill; the rwx CLI takes a
+    // couple of seconds to create the run. On resolve the button becomes
+    // "Current run" and main pushes the snapshot whose gate reads running.
     btn.disabled = true;
     btn.textContent = 'Starting…';
+    btn.classList.add('starting');
     void window.radar.startRun(item.key).then((result) => {
+      btn.classList.remove('starting');
       if (result.started && result.url) {
         runUrl = result.url;
         btn.textContent = 'Current run';
