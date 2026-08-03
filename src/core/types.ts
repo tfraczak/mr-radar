@@ -10,7 +10,18 @@
  * tests passed — the role can.
  */
 
-export type CiProvider = 'rwx' | 'gitlab';
+export type CiProvider = 'rwx' | 'gitlab' | 'github';
+
+/** Normalized GitHub check run — the neutral "job with a verdict" shape. */
+export interface ForgeCheckRun {
+  id: string;
+  /** Check-suite id: the per-push dedup key (≈ a GitLab pipeline id). */
+  suiteId: string;
+  name: string;
+  state: 'succeeded' | 'failed' | 'in_progress' | 'waiting';
+  url: string;
+  createdAt: string;
+}
 
 /** What a check actually verifies. Only `tests` feeds the test gate. */
 export type CheckRole = 'tests' | 'lint';
@@ -77,14 +88,14 @@ export interface RepoCiRoles {
 // GitLab
 // ---------------------------------------------------------------------------
 
-export interface GitlabUser {
+export interface ForgeUser {
   id: number;
   username: string;
   name: string;
 }
 
 /** Trimmed from the MR list response — only the fields we actually use. */
-export interface GitlabMr {
+export interface ForgeMr {
   id: number;
   iid: number;
   project_id: number;
@@ -99,16 +110,16 @@ export interface GitlabMr {
   user_notes_count: number;
   draft: boolean;
   has_conflicts: boolean;
-  author: GitlabUser;
+  author: ForgeUser;
   references: { full: string };
   /** Present on single-MR fetches; used to add (not clobber) a reviewer. */
-  reviewers?: GitlabUser[];
+  reviewers?: ForgeUser[];
 }
 
-export interface GitlabNote {
+export interface ForgeNote {
   id: number;
   body: string;
-  author: GitlabUser;
+  author: ForgeUser;
   created_at: string;
   updated_at: string;
   system: boolean;
@@ -117,20 +128,21 @@ export interface GitlabNote {
   position?: { new_path?: string; new_line?: number | null };
 }
 
-export interface GitlabDiscussion {
+export interface ForgeDiscussion {
   id: string;
   individual_note: boolean;
-  notes: GitlabNote[];
+  notes: ForgeNote[];
 }
 
-export interface GitlabApprovals {
+export interface ForgeApprovals {
   approved: boolean;
-  approvals_required: number;
-  approvals_left: number;
-  approved_by: { user: GitlabUser; approved_at?: string }[];
+  /** Absent when the forge cannot report a requirement (GitHub often can't). */
+  approvals_required?: number;
+  approvals_left?: number;
+  approved_by: { user: ForgeUser; approved_at?: string }[];
 }
 
-export interface GitlabPipeline {
+export interface ForgePipeline {
   id: number;
   iid?: number;
   status: string;
@@ -142,7 +154,7 @@ export interface GitlabPipeline {
   updated_at: string;
 }
 
-export interface GitlabJob {
+export interface ForgeJob {
   id: number;
   name: string;
   stage: string;
@@ -150,14 +162,14 @@ export interface GitlabJob {
   web_url: string;
 }
 
-export interface GitlabCommit {
+export interface ForgeCommit {
   id: string;
   title: string;
   committed_date: string;
 }
 
 /** One row from `GET /events?action=commented` — a note I authored somewhere. */
-export interface GitlabCommentEvent {
+export interface ForgeCommentEvent {
   project_id: number;
   target_title?: string;
   created_at: string;
@@ -167,11 +179,11 @@ export interface GitlabCommentEvent {
   };
 }
 
-export interface GitlabTodo {
+export interface ForgeTodo {
   id: number;
   action_name: string;
   target_type: string;
-  author: GitlabUser;
+  author: ForgeUser;
   created_at: string;
   target?: {
     iid?: number;
@@ -272,7 +284,7 @@ export interface WatchItem {
 
   // Populated only for in-scope MRs whose details were fetched this cycle.
   threads?: ThreadSummary[];
-  approvals?: { required: number; left: number; by: string[] };
+  approvals?: { required?: number; left?: number; by: string[] };
   /** Last-known unresolved count, used when a cycle skips the discussions fetch. */
   unresolvedFallback?: number;
   checks?: Check[];
@@ -295,10 +307,10 @@ export interface Snapshot {
   items: WatchItem[];
   activeTickets: JiraTicket[];
   /** Per-source health for the footer; a degraded source is not a fatal cycle. */
-  sources: Record<SourceName, SourceHealth>;
+  sources: Partial<Record<SourceName, SourceHealth>>;
 }
 
-export type SourceName = 'jira' | 'gitlab' | 'rwx';
+export type SourceName = 'jira' | 'gitlab' | 'github' | 'rwx';
 
 export interface SourceHealth {
   ok: boolean;
@@ -330,7 +342,7 @@ export type AppEvent =
       preview: string;
       noteIds: number[];
     })
-  | (EventBase & { type: 'approval'; by: string; left: number; required: number })
+  | (EventBase & { type: 'approval'; by: string; left?: number; required?: number })
   | (EventBase & { type: 'review_submitted'; by: string })
   | (EventBase & { type: 'thread_resolved'; by: string; count: number })
   | (EventBase & { type: 'unmergeable' })

@@ -13,7 +13,7 @@ import { Db } from './core/db';
 import { DB_PATH, ensureConfig } from './core/config';
 import { toNotifications } from './core/events';
 import { pollOnce } from './core/poll';
-import { GitlabSource } from './core/sources/gitlab';
+import { createForge, resolveForgeName } from './core/sources/forge';
 import { JiraSource } from './core/sources/jira';
 import { RwxSource, isCompleted } from './core/sources/rwx';
 import { readJiraToken } from './core/secrets';
@@ -43,6 +43,7 @@ const main = async (): Promise<void> => {
 
   const config = ensureConfig();
   const db = new Db(process.env.MR_RADAR_DB ?? DB_PATH);
+  const forge = createForge(await resolveForgeName(config, db));
 
   if (args.has('--stats')) {
     printStats(db);
@@ -71,7 +72,7 @@ const main = async (): Promise<void> => {
     {
       db,
       config,
-      gitlab: new GitlabSource(),
+      forge,
       rwx: new RwxSource(),
       ...(jira ? { jira } : {}),
       log: (m) => console.log(dim(`  ${m}`)),
@@ -114,7 +115,7 @@ const printItems = (snapshot: {
     title: string;
     ticket?: { key: string; status: string };
     threads?: unknown[];
-    approvals?: { left: number; required: number };
+    approvals?: { left?: number; required?: number; by?: string[] };
     testGate?: { kind: string; provider?: string; result?: string; unverifiedCommits?: number | string; startable?: boolean };
     reason: string;
   }[];
@@ -127,7 +128,11 @@ const printItems = (snapshot: {
   }
   for (const i of inScope) {
     const ticket = i.ticket ? `${i.ticket.key} [${i.ticket.status}]` : dim('no active ticket');
-    const appr = i.approvals ? ` appr ${i.approvals.required - i.approvals.left}/${i.approvals.required}` : '';
+    const appr = i.approvals
+      ? i.approvals.required !== undefined && i.approvals.left !== undefined
+        ? ` appr ${i.approvals.required - i.approvals.left}/${i.approvals.required}`
+        : ` appr ${i.approvals.by?.length ?? 0} approved`
+      : '';
     console.log(`  ${bold(i.key.padEnd(30))} ${ticket}${appr}`);
     console.log(`    ${dim(i.title.slice(0, 88))}`);
     console.log(`    tests: ${gateLabel(i.testGate)}`);

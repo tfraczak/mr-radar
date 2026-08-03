@@ -1,15 +1,16 @@
 import { runJson, run } from '../exec';
+import type { ForgeCi, ForgeSource } from './forge';
 import { withRetries } from '../retry';
 import type {
-  GitlabApprovals,
-  GitlabCommentEvent,
-  GitlabCommit,
-  GitlabDiscussion,
-  GitlabJob,
-  GitlabMr,
-  GitlabPipeline,
-  GitlabTodo,
-  GitlabUser,
+  ForgeApprovals,
+  ForgeCommentEvent,
+  ForgeCommit,
+  ForgeDiscussion,
+  ForgeJob,
+  ForgeMr,
+  ForgePipeline,
+  ForgeTodo,
+  ForgeUser,
 } from '../types';
 
 const GLAB = process.env.MR_RADAR_GLAB ?? 'glab';
@@ -22,7 +23,16 @@ const PER_PAGE = 100;
  * token (~2h expiry). Shelling out means this app never holds, stores, or
  * refreshes a GitLab credential.
  */
-export class GitlabSource {
+export class GitlabSource implements ForgeSource {
+  readonly name = 'gitlab' as const;
+
+  /** GitLab's CI capability: project-wide pipeline lists + a jobs lookup. */
+  readonly ci: ForgeCi = {
+    model: 'pipelines',
+    pipelines: (projectPath) => this.pipelines(projectPath),
+    pipelineJobs: (projectPath, pipelineId) => this.pipelineJobs(projectPath, pipelineId),
+  };
+
   constructor(private readonly glab: string = GLAB) {}
 
   private queue: Promise<unknown> = Promise.resolve();
@@ -69,8 +79,8 @@ export class GitlabSource {
     return out;
   }
 
-  async currentUser(): Promise<GitlabUser> {
-    return this.api<GitlabUser>('user');
+  async currentUser(): Promise<ForgeUser> {
+    return this.api<ForgeUser>('user');
   }
 
   /**
@@ -78,13 +88,13 @@ export class GitlabSource {
    * open MRs today, a single 100-cap page silently truncating at 100 would be
    * an invisible failure mode — three pages covers 300.
    */
-  authoredMrs(userId: number): Promise<GitlabMr[]> {
-    return this.apiPaged<GitlabMr>(`merge_requests?scope=all&author_id=${userId}&state=opened`, 3);
+  authoredMrs(userId: number): Promise<ForgeMr[]> {
+    return this.apiPaged<ForgeMr>(`merge_requests?scope=all&author_id=${userId}&state=opened`, 3);
   }
 
   /** Open MRs where `userId` is a requested reviewer. */
-  reviewerMrs(userId: number): Promise<GitlabMr[]> {
-    return this.apiPaged<GitlabMr>(
+  reviewerMrs(userId: number): Promise<ForgeMr[]> {
+    return this.apiPaged<ForgeMr>(
       `merge_requests?scope=all&reviewer_id=${userId}&state=opened`,
       3,
     );
@@ -94,8 +104,8 @@ export class GitlabSource {
    * Open MRs `userId` has approved. Union with `reviewerMrs` for the definitive
    * "I am reviewing this" signal: a requested review OR an approval given.
    */
-  approvedMrs(userId: number): Promise<GitlabMr[]> {
-    return this.apiPaged<GitlabMr>(
+  approvedMrs(userId: number): Promise<ForgeMr[]> {
+    return this.apiPaged<ForgeMr>(
       `merge_requests?scope=all&approved_by_ids[]=${userId}&state=opened`,
       3,
     );
@@ -107,15 +117,15 @@ export class GitlabSource {
    * reviewer (drive-by reviews like rocket!7591). Callers filter to
    * `note.noteable_type === 'MergeRequest'`.
    */
-  commentEvents(after: string): Promise<GitlabCommentEvent[]> {
-    return this.api<GitlabCommentEvent[]>(
+  commentEvents(after: string): Promise<ForgeCommentEvent[]> {
+    return this.api<ForgeCommentEvent[]>(
       `events?action=commented&after=${after}&per_page=${PER_PAGE}`,
     );
   }
 
   /** One MR by numeric project id — used to hydrate comment-event refs. */
-  mrByProjectId(projectId: number, iid: number): Promise<GitlabMr> {
-    return this.api<GitlabMr>(`projects/${projectId}/merge_requests/${iid}`);
+  mrByProjectId(projectId: number, iid: number): Promise<ForgeMr> {
+    return this.api<ForgeMr>(`projects/${projectId}/merge_requests/${iid}`);
   }
 
   /**
@@ -138,18 +148,18 @@ export class GitlabSource {
     );
   }
 
-  todos(): Promise<GitlabTodo[]> {
-    return this.api<GitlabTodo[]>(`todos?per_page=${PER_PAGE}`);
+  todos(): Promise<ForgeTodo[]> {
+    return this.api<ForgeTodo[]>(`todos?per_page=${PER_PAGE}`);
   }
 
-  discussions(projectPath: string, iid: number): Promise<GitlabDiscussion[]> {
-    return this.apiPaged<GitlabDiscussion>(
+  discussions(projectPath: string, iid: number): Promise<ForgeDiscussion[]> {
+    return this.apiPaged<ForgeDiscussion>(
       `projects/${enc(projectPath)}/merge_requests/${iid}/discussions`,
     );
   }
 
-  approvals(projectPath: string, iid: number): Promise<GitlabApprovals> {
-    return this.api<GitlabApprovals>(`projects/${enc(projectPath)}/merge_requests/${iid}/approvals`);
+  approvals(projectPath: string, iid: number): Promise<ForgeApprovals> {
+    return this.api<ForgeApprovals>(`projects/${enc(projectPath)}/merge_requests/${iid}/approvals`);
   }
 
   /**
@@ -159,22 +169,22 @@ export class GitlabSource {
    * identical `committed_date` values (three ENG-118 commits all read
    * 2026-07-28T11:28:17). Use the position in this list, not the dates.
    */
-  commits(projectPath: string, iid: number): Promise<GitlabCommit[]> {
-    return this.api<GitlabCommit[]>(
+  commits(projectPath: string, iid: number): Promise<ForgeCommit[]> {
+    return this.api<ForgeCommit[]>(
       `projects/${enc(projectPath)}/merge_requests/${iid}/commits?per_page=${PER_PAGE}`,
     );
   }
 
   /** Recent pipelines for a whole project — covers every branch in one call. */
-  pipelines(projectPath: string): Promise<GitlabPipeline[]> {
-    return this.api<GitlabPipeline[]>(
+  pipelines(projectPath: string): Promise<ForgePipeline[]> {
+    return this.api<ForgePipeline[]>(
       `projects/${enc(projectPath)}/pipelines?per_page=${PER_PAGE}`,
     );
   }
 
   /** Only called for pipelines that failed, to name the failing job. */
-  pipelineJobs(projectPath: string, pipelineId: number): Promise<GitlabJob[]> {
-    return this.api<GitlabJob[]>(
+  pipelineJobs(projectPath: string, pipelineId: number): Promise<ForgeJob[]> {
+    return this.api<ForgeJob[]>(
       `projects/${enc(projectPath)}/pipelines/${pipelineId}/jobs?per_page=${PER_PAGE}`,
     );
   }
@@ -191,7 +201,7 @@ export const enc = (projectPath: string): string => {
 }
 
 /** Existing reviewer ids plus mine, deduped — never clobber the current set. */
-export const reviewerIdsAfterAdding = (mr: GitlabMr, userId: number): number[] => {
+export const reviewerIdsAfterAdding = (mr: ForgeMr, userId: number): number[] => {
   return [...new Set([...(mr.reviewers ?? []).map((r) => r.id), userId])];
 }
 

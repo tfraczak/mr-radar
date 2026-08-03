@@ -1,4 +1,5 @@
 import {
+  FORGES,
   type RuleCondition,
   type RuleField, APPEARANCES, NOTIFICATION_METHODS, NOTIFICATION_SOUNDS, RULE_FIELDS, RULE_OPS, RULE_TARGETS, THEMES, type Config, type StatusRule } from '../core/config';
 import type { Db } from '../core/db';
@@ -52,7 +53,7 @@ export const knownRepos = (db: Db, config: Config): string[] => {
   return [...out].sort((a, b) => a.localeCompare(b));
 }
 
-export const toEditable = (config: Config, repoChoices: string[] = []): EditableSettings => {
+export const toEditable = (config: Config, repoChoices: string[] = [], activeForge: 'gitlab' | 'github' = 'gitlab'): EditableSettings => {
   const h = config.poll.activeHours;
   return {
     jiraEmail: config.jira.email,
@@ -80,6 +81,9 @@ export const toEditable = (config: Config, repoChoices: string[] = []): Editable
     methodChoices: [...NOTIFICATION_METHODS],
     updateStyle: config.git.updateStyle,
     rwxEnabled: config.rwx.enabled,
+    forge: config.forge,
+    forgeChoices: [...FORGES],
+    activeForge,
     updateStyleChoices: ['rebase', 'merge'],
     theme: config.ui.theme,
     themeChoices: [...THEMES],
@@ -101,7 +105,7 @@ export const toEditable = (config: Config, repoChoices: string[] = []): Editable
       rwxDefinition: config.repos[projectPath]?.rwxDefinition ?? '',
       testGate: config.repos[projectPath]?.testGate ?? 'auto',
     })),
-    repoGateChoices: ['auto', 'rwx', 'gitlab', 'none'],
+    repoGateChoices: ['auto', 'rwx', activeForge, 'none'],
   };
 }
 
@@ -228,6 +232,8 @@ export const applyEditable = (
   rwx.enabled = s.rwxEnabled !== false;
   next.rwx = rwx;
 
+  if ((FORGES as readonly string[]).includes(s.forge)) next.forge = s.forge;
+
   const poll = { ...(asObject(next.poll) ?? {}) };
   poll.baseSeconds = s.pollBaseSeconds;
   if (s.activeHours.enabled) {
@@ -246,7 +252,7 @@ export const applyEditable = (
     else delete entry.checkout;
     if (r.rwxDefinition.trim()) entry.rwxDefinition = r.rwxDefinition.trim();
     else delete entry.rwxDefinition;
-    if (r.testGate === 'rwx' || r.testGate === 'gitlab' || r.testGate === 'none') entry.testGate = r.testGate;
+    if (r.testGate === 'rwx' || r.testGate === 'gitlab' || r.testGate === 'github' || r.testGate === 'none') entry.testGate = r.testGate;
     else delete entry.testGate;
     if (Object.keys(entry).length) repos[r.projectPath] = entry;
     else delete repos[r.projectPath];
@@ -314,5 +320,7 @@ export const mergeSharedSettings = (
   const sharedJira = asObject(incoming.jira) ?? {};
   next.jira = { ...localJira, ...sharedJira, ...(localJira.email !== undefined ? { email: localJira.email } : {}) };
   if (local.gitlab !== undefined) next.gitlab = local.gitlab;
+  if (local.github !== undefined) next.github = local.github;
+  if (local.forge !== undefined) next.forge = local.forge; // machine-specific
   return next;
 }

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { correlate, detailsChanged, inScope, projectPathOf, summarizeThreads } from '../src/core/correlate';
 import { ticketKeyFromBranch } from '../src/core/sources/jira';
-import type { GitlabDiscussion, GitlabMr, JiraTicket } from '../src/core/types';
+import type { ForgeDiscussion, ForgeMr, JiraTicket } from '../src/core/types';
 
-const fullMr = (iid: number, over: Partial<GitlabMr> = {}): GitlabMr =>
+const fullMr = (iid: number, over: Partial<ForgeMr> = {}): ForgeMr =>
   ({
     id: iid,
     iid,
@@ -22,7 +22,7 @@ const fullMr = (iid: number, over: Partial<GitlabMr> = {}): GitlabMr =>
     author: { id: 9, username: 'other', name: 'Other' },
     references: { full: `acme/rocket!${iid}` },
     ...over,
-  }) as GitlabMr;
+  }) as ForgeMr;
 
 describe('correlate reason precedence', () => {
   const args = { activeTickets: [], recentDaysFallback: 0, now: new Date('2026-07-29T12:00:00Z') };
@@ -93,14 +93,14 @@ describe('inScope', () => {
 
 describe('projectPathOf', () => {
   it('takes the path from references.full', () => {
-    const mr = { references: { full: 'acme/rocket!7576' }, web_url: '' } as GitlabMr;
+    const mr = { references: { full: 'acme/rocket!7576' }, web_url: '' } as ForgeMr;
     expect(projectPathOf(mr)).toBe('acme/rocket');
   });
   it('falls back to parsing the web_url', () => {
     const mr = {
       references: { full: '' },
       web_url: 'https://gitlab.com/acme/gadget/-/merge_requests/320',
-    } as unknown as GitlabMr;
+    } as unknown as ForgeMr;
     expect(projectPathOf(mr)).toBe('acme/gadget');
   });
 });
@@ -118,7 +118,7 @@ describe('summarizeThreads', () => {
   });
 
   it('drops threads that are only system notes', () => {
-    const discussions: GitlabDiscussion[] = [
+    const discussions: ForgeDiscussion[] = [
       { id: 'd1', individual_note: true, notes: [note(1, true)] },
       { id: 'd2', individual_note: false, notes: [note(2, false)] },
     ];
@@ -128,7 +128,7 @@ describe('summarizeThreads', () => {
   });
 
   it('carries resolution state and diff position', () => {
-    const discussions: GitlabDiscussion[] = [
+    const discussions: ForgeDiscussion[] = [
       {
         id: 'd1',
         individual_note: false,

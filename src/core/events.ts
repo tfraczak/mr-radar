@@ -1,6 +1,6 @@
 import { unresolvedCount } from './correlate';
 import type { Db } from './db';
-import type { AppEvent, Check, GitlabTodo, WatchItem } from './types';
+import type { AppEvent, Check, ForgeTodo, WatchItem } from './types';
 
 /**
  * Turn "what changed since last cycle" into notifications.
@@ -15,7 +15,7 @@ import type { AppEvent, Check, GitlabTodo, WatchItem } from './types';
 export interface DiffInput {
   db: Db;
   items: WatchItem[];
-  todos: GitlabTodo[];
+  todos: ForgeTodo[];
   /** Our own username; we don't notify ourselves for comments. */
   me: string;
   now: string;
@@ -99,8 +99,8 @@ export const diff = (input: DiffInput): DiffResult => {
             type: 'approval',
             ...base(item),
             by,
-            left: item.approvals.left,
-            required: item.approvals.required,
+            ...(item.approvals.left !== undefined ? { left: item.approvals.left } : {}),
+            ...(item.approvals.required !== undefined ? { required: item.approvals.required } : {}),
           });
         }
       }
@@ -248,7 +248,7 @@ export const suggestRunKey = (
 const todoEvents = (args: {
   db: Db;
   items: WatchItem[];
-  todos: GitlabTodo[];
+  todos: ForgeTodo[];
   me: string;
   now: string;
   pending: ((db: Db) => void)[];
@@ -349,7 +349,7 @@ export const describe = (e: AppEvent): { title: string; body: string } => {
     case 'approval':
       return {
         title: `${e.mrKey} — approved by ${e.by}`,
-        body: e.left > 0 ? `${e.left} more approval(s) needed · ${e.mrTitle}` : e.mrTitle,
+        body: e.left !== undefined && e.left > 0 ? `${e.left} more approval(s) needed · ${e.mrTitle}` : e.mrTitle,
       };
     case 'review_submitted':
       return { title: `${e.mrKey} — review from ${e.by}`, body: e.mrTitle };

@@ -38,7 +38,7 @@ import { afterCycle, nextIntervalSeconds, pausedBecause } from './core/schedule'
 import { readJiraToken, writeJiraToken } from './core/secrets';
 import { executeTrigger, inFlightRun, planTrigger } from './core/trigger';
 import type { AppEvent } from './core/types';
-import { GitlabSource } from './core/sources/gitlab';
+import { createForge, resolveForgeName } from './core/sources/forge';
 import { JiraSource } from './core/sources/jira';
 import { RwxSource } from './core/sources/rwx';
 import { fixPath } from './main/fix-path';
@@ -100,7 +100,7 @@ let timer: NodeJS.Timeout | undefined;
 let stopping = false;
 let web: Server | undefined;
 
-const gitlab = new GitlabSource();
+let forge = createForge('gitlab'); // re-resolved in main() and on saves
 const rwx = new RwxSource();
 let jira: JiraSource | undefined;
 let warnedNoJira = false;
@@ -171,7 +171,7 @@ const cycle = async (config: Config): Promise<void> => {
     const result = await pollOnce({
       db,
       config,
-      gitlab,
+      forge,
       rwx,
       ...(jira ? { jira } : {}),
       log,
@@ -266,7 +266,7 @@ const webHandlers = () => ({
     if (result.started) requestCycle();
     return result;
   },
-  getSettings: () => toEditable(config, knownRepos(db, config)),
+  getSettings: () => toEditable(config, knownRepos(db, config), forge.name),
   saveSettings: async (s: EditableSettings) => {
     const invalid = validateEditable(s);
     if (invalid) return { ok: false, message: invalid };
@@ -274,6 +274,8 @@ const webHandlers = () => ({
       const raw = applyEditable(readRawConfig(CONFIG_PATH), s);
       writeRawConfig(raw, CONFIG_PATH); // validates the merged result too
       config = loadConfig(CONFIG_PATH);
+      const forgeName = await resolveForgeName(config, db);
+      if (forgeName !== forge.name) forge = createForge(forgeName);
       jira = undefined; // email may have changed; reconnect on the next cycle
       await refreshJira(config);
       requestCycle();
@@ -318,8 +320,8 @@ const webHandlers = () => ({
     const item = state.snapshot?.items.find((i) => i.key === mrKey);
     if (!item) return { ok: false, message: 'That MR is no longer in scope.' };
     try {
-      const userId = config.gitlab.userId ?? (await gitlab.currentUser()).id;
-      await gitlab.addReviewer(item.projectId, item.iid, userId);
+      const userId = config.gitlab.userId ?? (await forge.currentUser()).id;
+      await forge.addReviewer(item.projectId, item.iid, userId);
       requestCycle(); // the row migrates to My reviews next cycle
       return { ok: true, message: `You are now a reviewer on ${mrKey}.` };
     } catch (err) {
@@ -380,7 +382,8 @@ const main = async (): Promise<void> => {
   fixPath();
   config = ensureConfig();
   db = new Db(process.env.MR_RADAR_DB ?? DB_PATH);
-  log(`poller started (pid ${process.pid}, icon ${existsSync(ICON_PATH) ? 'found' : 'missing'})`);
+  forge = createForge(await resolveForgeName(config, db));
+  log(`poller started (pid ${process.pid}, forge ${forge.name}, icon ${existsSync(ICON_PATH) ? 'found' : 'missing'})`);
 
   if (config.web.enabled) {
     web = startWebServer({

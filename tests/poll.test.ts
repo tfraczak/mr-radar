@@ -2,17 +2,23 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { Db } from '../src/core/db';
 import { DEFAULT_CONFIG, type Config } from '../src/core/config';
 import { pollOnce, type PollDeps } from '../src/core/poll';
-import type { GitlabMr, JiraTicket, RwxRun } from '../src/core/types';
+import type { ForgeMr, JiraTicket, RwxRun } from '../src/core/types';
 
 // Lightweight in-memory fakes. Only the methods pollOnce actually calls are
 // implemented; each is cast to its source type at the call site.
-const fakeGitlab = (over: Partial<Record<string, unknown>> = {}) => ({
+const fakeForge = (over: Partial<Record<string, unknown>> = {}) => ({
+  name: 'gitlab' as const,
+  ci: {
+    model: 'pipelines' as const,
+    pipelines: (over.pipelines as () => Promise<unknown[]>) ?? (async () => []),
+    pipelineJobs: (over.pipelineJobs as () => Promise<unknown[]>) ?? (async () => []),
+  },
   currentUser: async () => ({ id: 1, username: 'me', name: 'Me' }),
-  authoredMrs: async (): Promise<GitlabMr[]> => [],
-  reviewerMrs: async (): Promise<GitlabMr[]> => [],
-  approvedMrs: async (): Promise<GitlabMr[]> => [],
+  authoredMrs: async (): Promise<ForgeMr[]> => [],
+  reviewerMrs: async (): Promise<ForgeMr[]> => [],
+  approvedMrs: async (): Promise<ForgeMr[]> => [],
   commentEvents: async () => [],
-  mrByProjectId: async (): Promise<GitlabMr> => {
+  mrByProjectId: async (): Promise<ForgeMr> => {
     throw new Error('no such MR');
   },
   todos: async () => [],
@@ -54,7 +60,7 @@ const deps = (over: Partial<PollDeps>): PollDeps =>
   ({
     db: over.db as Db,
     config: over.config ?? config(),
-    gitlab: (over.gitlab ?? fakeGitlab()) as never,
+    forge: (over.forge ?? fakeForge()) as never,
     rwx: (over.rwx ?? fakeRwx()) as never,
     ...(over.jira ? { jira: over.jira } : {}),
     now: over.now ?? (() => new Date('2026-07-30T12:00:00Z')),
@@ -85,12 +91,12 @@ describe('Jira scope gating', () => {
   });
 
   it('completes the cycle when the GitLab list source fails', async () => {
-    const gitlab = fakeGitlab({
+    const gitlab = fakeForge({
       authoredMrs: async () => {
         throw new Error('glab boom');
       },
     });
-    const result = await pollOnce(deps({ db, gitlab: gitlab as never }), { dryRun: true });
+    const result = await pollOnce(deps({ db, forge: gitlab as never }), { dryRun: true });
     expect(result.snapshot.sources.gitlab.ok).toBe(false);
     expect(result.snapshot.sources.rwx.ok).toBe(true); // other sources still ran
     expect(result.events).toEqual([]);
@@ -154,7 +160,7 @@ describe('watched runs', () => {
 describe('CLI-run attribution (the ENG-132 case)', () => {
   // The MR whose branch has only waiting push-runs — plus a finished CLI run
   // that RWX recorded with NO branch and NO sha, only the title convention.
-  const mr = (): GitlabMr =>
+  const mr = (): ForgeMr =>
     ({
       id: 2,
       iid: 7723,
@@ -172,7 +178,7 @@ describe('CLI-run attribution (the ENG-132 case)', () => {
       has_conflicts: false,
       author: { id: 1, username: 'me', name: 'Me' },
       references: { full: 'acme/rocket!7723' },
-    }) as GitlabMr;
+    }) as ForgeMr;
 
   const bareRun = (over: Partial<RwxRun>): RwxRun => ({
     ID: 'x',
@@ -213,10 +219,10 @@ describe('CLI-run attribution (the ENG-132 case)', () => {
           ? bareRun({ ID: 'cli-1', CommitSha: '181d7763aaaaaaaa', RunUrl: 'https://cloud.rwx.com/mint/acme/runs/cli-1' })
           : Promise.reject(new Error('unknown run')),
     });
-    const g = fakeGitlab({ authoredMrs: async () => [mr()] });
+    const g = fakeForge({ authoredMrs: async () => [mr()] });
     const cfg: Config = { ...config(), recentDaysFallback: 3650 };
 
-    const result = await pollOnce(deps({ db, gitlab: g as never, rwx: rwx as never, config: cfg }), {});
+    const result = await pollOnce(deps({ db, forge: g as never, rwx: rwx as never, config: cfg }), {});
     const item = result.snapshot.items.find((i) => i.key === 'acme/rocket!7723');
     expect(item?.testGate?.kind).toBe('verified');
     if (item?.testGate?.kind !== 'verified') throw new Error('unreachable');
@@ -248,9 +254,9 @@ describe('CLI-run attribution (the ENG-132 case)', () => {
       showRun: async () =>
         bareRun({ ID: 'app-run-2', Trigger: 'cli', Status: { Execution: 'in_progress', Result: 'no_result', WaitingSubStatus: 'not_applicable', AbortedSubStatus: 'not_applicable', FinishedSubStatus: 'not_applicable' }, CompletedAt: null }),
     });
-    const g = fakeGitlab({ authoredMrs: async () => [mr()] });
+    const g = fakeForge({ authoredMrs: async () => [mr()] });
     const cfg: Config = { ...config(), recentDaysFallback: 3650 };
-    const result = await pollOnce(deps({ db, gitlab: g as never, rwx: rwx as never, config: cfg }), {});
+    const result = await pollOnce(deps({ db, forge: g as never, rwx: rwx as never, config: cfg }), {});
     const item = result.snapshot.items.find((i) => i.key === 'acme/rocket!7723');
     expect(item?.testGate?.kind).toBe('in_progress');
   });
@@ -277,9 +283,9 @@ describe('CLI-run attribution (the ENG-132 case)', () => {
         bareRun({ ID: 'push-1', Branch: 'ENG-132', CommitSha: '181d7763aaaaaaaa', Trigger: 'push', Status: { Execution: 'waiting', Result: 'no_result' } }),
       ],
     });
-    const g = fakeGitlab({ authoredMrs: async () => [mr()] });
+    const g = fakeForge({ authoredMrs: async () => [mr()] });
     const cfg: Config = { ...config(), recentDaysFallback: 3650 };
-    const result = await pollOnce(deps({ db, gitlab: g as never, rwx: rwx as never, config: cfg }), {});
+    const result = await pollOnce(deps({ db, forge: g as never, rwx: rwx as never, config: cfg }), {});
     const item = result.snapshot.items.find((i) => i.key === 'acme/rocket!7723');
     expect(item?.testGate?.kind).toBe('verified');
   });
@@ -291,20 +297,20 @@ describe('CLI-run attribution (the ENG-132 case)', () => {
       myRuns: async () => ({ runs: [cliRun], fetched: true }),
       showRun: async () => bareRun({ ID: 'cli-1', CommitSha: '181d7763aaaaaaaa' }),
     });
-    const g = fakeGitlab({ authoredMrs: async () => [mr()] });
+    const g = fakeForge({ authoredMrs: async () => [mr()] });
     const cfg: Config = { ...config(), recentDaysFallback: 3650 };
-    await pollOnce(deps({ db, gitlab: g as never, rwx: rwxFirst as never, config: cfg }), {});
+    await pollOnce(deps({ db, forge: g as never, rwx: rwxFirst as never, config: cfg }), {});
 
     // Next cycle: every RWX window is empty — the run scrolled out entirely.
     const rwxEmpty = fakeRwx();
-    const result = await pollOnce(deps({ db, gitlab: g as never, rwx: rwxEmpty as never, config: cfg }), {});
+    const result = await pollOnce(deps({ db, forge: g as never, rwx: rwxEmpty as never, config: cfg }), {});
     const item = result.snapshot.items.find((i) => i.key === 'acme/rocket!7723');
     expect(item?.testGate?.kind).toBe('verified'); // remembered, not "never run"
   });
 });
 
 describe('participating MRs (commented, not reviewer)', () => {
-  const otherMr = (state: string): GitlabMr =>
+  const otherMr = (state: string): ForgeMr =>
     ({
       id: 7591,
       iid: 7591,
@@ -322,7 +328,7 @@ describe('participating MRs (commented, not reviewer)', () => {
       has_conflicts: false,
       author: { id: 9, username: 'colleague', name: 'C' },
       references: { full: 'acme/rocket!7591' },
-    }) as GitlabMr;
+    }) as ForgeMr;
 
   const commented = [
     { project_id: 42, created_at: '2026-07-30', note: { noteable_type: 'MergeRequest', noteable_iid: 7591 } },
@@ -331,11 +337,11 @@ describe('participating MRs (commented, not reviewer)', () => {
   ];
 
   it('hydrates commented refs into participating items', async () => {
-    const g = fakeGitlab({
+    const g = fakeForge({
       commentEvents: async () => commented,
       mrByProjectId: async () => otherMr('opened'),
     });
-    const result = await pollOnce(deps({ db, gitlab: g as never }), { dryRun: true });
+    const result = await pollOnce(deps({ db, forge: g as never }), { dryRun: true });
     const item = result.snapshot.items.find((i) => i.key === 'acme/rocket!7591');
     expect(item?.reason).toBe('participating');
     expect(item?.inScope).toBe(true);
@@ -343,28 +349,28 @@ describe('participating MRs (commented, not reviewer)', () => {
 
   it('drops closed MRs and caches the ref so it is not refetched next cycle', async () => {
     let fetches = 0;
-    const g = fakeGitlab({
+    const g = fakeForge({
       commentEvents: async () => commented,
       mrByProjectId: async () => {
         fetches += 1;
         return otherMr('merged');
       },
     });
-    const first = await pollOnce(deps({ db, gitlab: g as never }), { dryRun: true });
+    const first = await pollOnce(deps({ db, forge: g as never }), { dryRun: true });
     expect(first.snapshot.items.find((i) => i.key === 'acme/rocket!7591')).toBeUndefined();
     expect(fetches).toBe(1);
-    await pollOnce(deps({ db, gitlab: g as never }), { dryRun: true });
+    await pollOnce(deps({ db, forge: g as never }), { dryRun: true });
     expect(fetches).toBe(1); // closed-ref cache held
   });
 
   it('unions approved MRs into the reviewer set', async () => {
-    const g = fakeGitlab({ approvedMrs: async () => [otherMr('opened')] });
-    const result = await pollOnce(deps({ db, gitlab: g as never }), { dryRun: true });
+    const g = fakeForge({ approvedMrs: async () => [otherMr('opened')] });
+    const result = await pollOnce(deps({ db, forge: g as never }), { dryRun: true });
     expect(result.snapshot.items.find((i) => i.key === 'acme/rocket!7591')?.reason).toBe('reviewer');
   });
 
   it('hydrates pending mention todos into participating/mentioned items', async () => {
-    const g = fakeGitlab({
+    const g = fakeForge({
       todos: async () => [
         {
           id: 1,
@@ -388,7 +394,7 @@ describe('participating MRs (commented, not reviewer)', () => {
       ],
       mrByProjectId: async () => otherMr('opened'),
     });
-    const result = await pollOnce(deps({ db, gitlab: g as never }), { dryRun: true });
+    const result = await pollOnce(deps({ db, forge: g as never }), { dryRun: true });
     const item = result.snapshot.items.find((i) => i.key === 'acme/rocket!7591');
     expect(item?.reason).toBe('participating');
     expect(item?.participation).toBe('mentioned');
@@ -397,7 +403,7 @@ describe('participating MRs (commented, not reviewer)', () => {
 });
 
 describe('quiet-cycle carry-forward (C2)', () => {
-  const mr = (): GitlabMr =>
+  const mr = (): ForgeMr =>
     ({
       id: 1,
       iid: 9,
@@ -415,10 +421,10 @@ describe('quiet-cycle carry-forward (C2)', () => {
       has_conflicts: false,
       author: { id: 1, username: 'me', name: 'Me' },
       references: { full: 'acme/rocket!9' },
-    }) as GitlabMr;
+    }) as ForgeMr;
 
   const gitlab = () =>
-    fakeGitlab({
+    fakeForge({
       authoredMrs: async () => [mr()],
       discussions: async () => [
         {
@@ -448,8 +454,8 @@ describe('quiet-cycle carry-forward (C2)', () => {
     const g = gitlab();
     const now = () => new Date('2026-07-30T12:00:00Z');
     // Cycle 1 fetches details (new MR); cycle 2 sees unchanged updated_at → skip.
-    await pollOnce(deps({ db, gitlab: g as never, config: cfg(), now }), {});
-    const second = await pollOnce(deps({ db, gitlab: g as never, config: cfg(), now }), {});
+    await pollOnce(deps({ db, forge: g as never, config: cfg(), now }), {});
+    const second = await pollOnce(deps({ db, forge: g as never, config: cfg(), now }), {});
     const item = second.snapshot.items.find((i) => i.key === 'acme/rocket!9');
     expect(item).toBeDefined();
     expect(item?.threads).toBeUndefined(); // detail fetch was skipped

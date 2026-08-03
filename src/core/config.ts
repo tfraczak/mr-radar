@@ -74,8 +74,19 @@ export interface RepoOverride {
 }
 
 export interface Config {
+  /**
+   * Which forge this install watches. 'auto' detects from which CLI
+   * (glab/gh) is authenticated, preferring one with a stored identity;
+   * pin it in Settings → General when detection guesses wrong.
+   */
+  forge: 'auto' | 'gitlab' | 'github';
   gitlab: {
     /** Numeric user id. Resolved from `glab api user` on first run if absent. */
+    userId?: number;
+    username?: string;
+  };
+  github: {
+    /** Numeric user id. Resolved from `gh api user` on first run if absent. */
     userId?: number;
     username?: string;
   };
@@ -183,8 +194,12 @@ export const CONFIG_PATH = process.env.MR_RADAR_CONFIG ?? join(CONFIG_DIR, 'conf
 export const STATE_DIR = join(homedir(), '.local', 'state', 'mr-radar');
 export const DB_PATH = process.env.MR_RADAR_DB ?? join(STATE_DIR, 'mr-radar.db');
 
+export const FORGES = ['auto', 'gitlab', 'github'] as const;
+
 export const DEFAULT_CONFIG: Config = {
+  forge: 'auto',
   gitlab: {},
+  github: {},
   jira: {
     baseUrl: '',
     email: '',
@@ -291,6 +306,9 @@ const validate = (cfg: Config, path: string): void => {
     problems.push('jira.baseUrl must be a bare https origin (no path, query, or userinfo)');
   }
   if (cfg.poll.baseSeconds < 15) problems.push('poll.baseSeconds must be >= 15');
+  if (!(FORGES as readonly string[]).includes(cfg.forge)) {
+    problems.push(`forge must be one of ${FORGES.join(', ')}`);
+  }
   if (!Number.isInteger(cfg.web.port) || cfg.web.port < 1024 || cfg.web.port > 65535) {
     problems.push('web.port must be an integer in 1024–65535');
   }

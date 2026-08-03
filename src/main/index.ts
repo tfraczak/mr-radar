@@ -15,7 +15,7 @@ import type { EditableSettings } from '../renderer/contract';
 import { pollOnce } from '../core/poll';
 import { afterCycle, nextIntervalSeconds, pausedBecause } from '../core/schedule';
 import { readJiraToken, writeJiraToken } from '../core/secrets';
-import { GitlabSource } from '../core/sources/gitlab';
+import { createForge, resolveForgeName, type ForgeSource } from '../core/sources/forge';
 import { JiraSource } from '../core/sources/jira';
 import { RwxSource } from '../core/sources/rwx';
 import { notify, sendTestNotification } from './notify';
@@ -37,7 +37,7 @@ import { startRunFor } from './trigger';
 const state: UiState = initialUiState();
 let config: Config = ensureConfig();
 let db: Db;
-let gitlab: GitlabSource;
+let forge: ForgeSource;
 let rwx: RwxSource;
 let jira: JiraSource | undefined;
 let tray: TrayController;
@@ -53,7 +53,7 @@ const main = async (): Promise<void> => {
   // find them on its bare PATH.
   fixPath();
   db = new Db(DB_PATH);
-  gitlab = new GitlabSource();
+  forge = createForge(await resolveForgeName(config, db));
   rwx = new RwxSource();
   await refreshJira();
 
@@ -168,7 +168,7 @@ const runCycle = async (reason: 'startup' | 'manual' | 'timer'): Promise<void> =
     const result = await pollOnce({
       db,
       config,
-      gitlab,
+      forge,
       rwx,
       ...(jira ? { jira } : {}),
       log: (m) => log(m),
@@ -399,8 +399,8 @@ const registerIpc = (): void => {
     const item = state.snapshot?.items.find((i) => i.key === mrKey);
     if (!item) return { ok: false, message: 'That MR is no longer in scope.' };
     try {
-      const userId = config.gitlab.userId ?? (await gitlab.currentUser()).id;
-      await gitlab.addReviewer(item.projectId, item.iid, userId);
+      const userId = config.gitlab.userId ?? (await forge.currentUser()).id;
+      await forge.addReviewer(item.projectId, item.iid, userId);
       state.schedule = { ...state.schedule, quietCycles: 0 };
       void runCycle('manual'); // the row migrates to My reviews next cycle
       return { ok: true, message: `You are now a reviewer on ${mrKey}.` };
@@ -432,7 +432,7 @@ const registerIpc = (): void => {
     }
   });
 
-  ipcMain.handle('ui:get-settings', () => toEditable(config, knownRepos(db, config)));
+  ipcMain.handle('ui:get-settings', () => toEditable(config, knownRepos(db, config), forge.name));
 
   ipcMain.handle('ui:get-login-item', () => app.getLoginItemSettings().openAtLogin);
   ipcMain.handle('ui:set-login-item', (_e, enabled: unknown) => {
@@ -453,6 +453,12 @@ const registerIpc = (): void => {
       const raw = applyEditable(readRawConfig(CONFIG_PATH), s);
       writeRawConfig(raw, CONFIG_PATH); // validates the merged result too
       config = loadConfig(CONFIG_PATH);
+      // The forge choice may have changed; swap the source before polling.
+      const forgeName = await resolveForgeName(config, db);
+      if (forgeName !== forge.name) {
+        forge = createForge(forgeName);
+        log(`forge switched to ${forgeName}`);
+      }
       await refreshJira(); // email may have changed
       state.schedule = { ...state.schedule, quietCycles: 0 };
       scheduleNext();

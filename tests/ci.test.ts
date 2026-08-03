@@ -11,26 +11,26 @@ import {
   rwxRunsFor,
 } from '../src/core/ci';
 import { isCompleted } from '../src/core/sources/rwx';
-import type { GitlabCommit, GitlabJob, GitlabPipeline, RepoCiRoles, RwxRun } from '../src/core/types';
+import type { ForgeCommit, ForgeJob, ForgePipeline, RepoCiRoles, RwxRun } from '../src/core/types';
 import rwxEng118 from './fixtures/rwx-eng118.json';
 import commitsEng118 from './fixtures/commits-eng118.json';
 import pipelinesGadget from './fixtures/pipelines-gadget.json';
 import pipelinesRocket from './fixtures/pipelines-rocket.json';
 
 const RWX_RUNS = rwxEng118 as unknown as RwxRun[];
-const COMMITS = commitsEng118 as unknown as GitlabCommit[];
-const GADGET_PIPELINES = pipelinesGadget as unknown as GitlabPipeline[];
-const ROCKET_PIPELINES = pipelinesRocket as unknown as GitlabPipeline[];
+const COMMITS = commitsEng118 as unknown as ForgeCommit[];
+const GADGET_PIPELINES = pipelinesGadget as unknown as ForgePipeline[];
+const ROCKET_PIPELINES = pipelinesRocket as unknown as ForgePipeline[];
 
 const NOW = '2026-07-29T00:00:00.000Z';
 const CI_YML = '.rwx/ci.yml';
 
 /** Real job names, kept literal so the classification contract is readable. */
-const ROCKET_JOBS: GitlabJob[] = [
+const ROCKET_JOBS: ForgeJob[] = [
   { id: 1, name: 'ruby::lint::report', stage: 'lint', status: 'success', web_url: '' },
   { id: 2, name: 'ruby::lint', stage: 'lint', status: 'success', web_url: '' },
 ];
-const GADGET_JOBS: GitlabJob[] = [
+const GADGET_JOBS: ForgeJob[] = [
   { id: 1, name: 'ruby::lint::report', stage: 'test', status: 'success', web_url: '' },
   { id: 2, name: 'ruby::lint::rubocop', stage: 'test', status: 'success', web_url: '' },
   { id: 3, name: 'ruby::rspec::3.3.7', stage: 'test', status: 'success', web_url: '' },
@@ -61,7 +61,7 @@ describe('pipelineRunsTests', () => {
   });
 
   it('does not mistake type-check or lint for tests', () => {
-    const jobs: GitlabJob[] = [
+    const jobs: ForgeJob[] = [
       { id: 1, name: 'type-check', stage: 'x', status: 'success', web_url: '' },
       { id: 2, name: 'lint', stage: 'x', status: 'success', web_url: '' },
       { id: 3, name: 'audit', stage: 'x', status: 'success', web_url: '' },
@@ -196,7 +196,7 @@ describe('RWX coverage on ENG-118', () => {
   it('distinguishes a stale run: completed on an older commit, counted by sha', () => {
     // A run that finished on the 3rd-newest commit. Identity is CommitSha, not
     // timestamps — rebases make ENG-118's commit dates collide.
-    const older = (COMMITS[2] as GitlabCommit).id;
+    const older = (COMMITS[2] as ForgeCommit).id;
     const staleRun: RwxRun = {
       ...(RWX_RUNS[0] as RwxRun),
       ID: 'stale-run',
@@ -229,7 +229,7 @@ describe('RWX coverage on ENG-118', () => {
   });
 
   it('carries a stale FAILED verdict so it can be surfaced as urgent', () => {
-    const older = (COMMITS[1] as GitlabCommit).id;
+    const older = (COMMITS[1] as ForgeCommit).id;
     const failedRun: RwxRun = {
       ...(RWX_RUNS[0] as RwxRun),
       ID: 'stale-failed',
@@ -417,7 +417,7 @@ describe('GitLab pipeline coverage', () => {
   });
 
   it('maps a running head pipeline to in_progress and notifies nothing', () => {
-    const running: GitlabPipeline = {
+    const running: ForgePipeline = {
       id: 999,
       status: 'running',
       source: 'push',
@@ -439,7 +439,7 @@ describe('GitLab pipeline coverage', () => {
   });
 
   it('names the failing jobs on a failure', () => {
-    const failed: GitlabPipeline = {
+    const failed: ForgePipeline = {
       id: 1000,
       status: 'failed',
       source: 'push',
@@ -481,7 +481,7 @@ describe('GitLab pipeline coverage', () => {
 
   it('does not treat canceled or skipped as a verdict', () => {
     for (const status of ['canceled', 'skipped']) {
-      const p: GitlabPipeline = {
+      const p: ForgePipeline = {
         id: 1,
         status,
         source: 'push',

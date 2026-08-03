@@ -2,6 +2,7 @@ import {
   DEFAULT_RWX_TEST_DEFINITION,
   detectRepoRoles,
   failedJobNames,
+  checksCheckFor,
   gitlabCheckFor,
   newestCompletedRun,
   resolveTestGate,
@@ -12,16 +13,17 @@ import { buildJql, type Config } from './config';
 import { correlate, detailsChanged, summarizeThreads, unresolvedCount } from './correlate';
 import type { Db } from './db';
 import { coalesce, diff } from './events';
-import { GitlabSource } from './sources/gitlab';
+import type { ForgeSource } from './sources/forge';
 import { JiraSource, ticketKeyFromBranch } from './sources/jira';
 import { RwxSource, isTerminal } from './sources/rwx';
 import type {
+  ForgeCheckRun,
   AppEvent,
   Check,
-  GitlabCommentEvent,
-  GitlabMr,
-  GitlabPipeline,
-  GitlabTodo,
+  ForgeCommentEvent,
+  ForgeMr,
+  ForgePipeline,
+  ForgeTodo,
   JiraTicket,
   RepoCiRoles,
   RwxRun,
@@ -43,7 +45,7 @@ const CLOSED_REF_TTL_MS = 24 * 3_600_000;
 export interface PollDeps {
   db: Db;
   config: Config;
-  gitlab: GitlabSource;
+  forge: ForgeSource;
   rwx: RwxSource;
   jira?: JiraSource;
   now?: () => Date;
@@ -67,7 +69,7 @@ export interface PollResult {
  * scope to empty would silently stop all notifications, the worst outcome here.
  */
 export const pollOnce = async (deps: PollDeps, opts: { dryRun?: boolean } = {}): Promise<PollResult> => {
-  const { db, config, gitlab, rwx } = deps;
+  const { db, config, forge, rwx } = deps;
   // Optional-called so test fakes without the probe default to available.
   const rwxAvailable = (await rwx.available?.()) ?? true;
   const rwxOn = config.rwx.enabled && rwxAvailable;
@@ -75,9 +77,10 @@ export const pollOnce = async (deps: PollDeps, opts: { dryRun?: boolean } = {}):
   const nowIso = now.toISOString();
   const log = deps.log ?? (() => {});
   const stats = { detailFetches: 0, commitFetches: 0, apiCalls: 0 };
-  const sources: Record<SourceName, SourceHealth> = {
+  // Keyed by the ACTIVE forge — the footer shows gitlab OR github, never both.
+  const sources: Partial<Record<SourceName, SourceHealth>> = {
     jira: { ok: false, at: nowIso },
-    gitlab: { ok: false, at: nowIso },
+    [forge.name]: { ok: false, at: nowIso },
     rwx: { ok: false, at: nowIso },
   };
 
@@ -90,22 +93,22 @@ export const pollOnce = async (deps: PollDeps, opts: { dryRun?: boolean } = {}):
   sources.jira = jiraHealth;
 
   // 2-4. GitLab lists.
-  let authored: GitlabMr[] = [];
-  let reviewer: GitlabMr[] = [];
-  let commented: GitlabMr[] = [];
-  let mentioned: GitlabMr[] = [];
-  let todos: GitlabTodo[] = [];
+  let authored: ForgeMr[] = [];
+  let reviewer: ForgeMr[] = [];
+  let commented: ForgeMr[] = [];
+  let mentioned: ForgeMr[] = [];
+  let todos: ForgeTodo[] = [];
   try {
     const userId = await resolveUserId(deps);
     const after = new Date(now.getTime() - PARTICIPATING_DAYS * 86_400_000)
       .toISOString()
       .slice(0, 10);
     const [authoredRes, reviewerRes, approvedRes, todosRes, commentEvents] = await Promise.all([
-      gitlab.authoredMrs(userId),
-      gitlab.reviewerMrs(userId),
-      gitlab.approvedMrs(userId),
-      gitlab.todos(),
-      gitlab.commentEvents(after),
+      forge.authoredMrs(userId),
+      forge.reviewerMrs(userId),
+      forge.approvedMrs(userId),
+      forge.todos(),
+      forge.commentEvents(after),
     ]);
     stats.apiCalls += 5;
     authored = authoredRes;
@@ -125,9 +128,9 @@ export const pollOnce = async (deps: PollDeps, opts: { dryRun?: boolean } = {}):
       stats,
       log,
     );
-    sources.gitlab = { ok: true, at: nowIso };
+    sources[forge.name] = { ok: true, at: nowIso };
   } catch (err) {
-    sources.gitlab = { ok: false, at: nowIso, error: msg(err) };
+    sources[forge.name] = { ok: false, at: nowIso, error: msg(err) };
     log(`gitlab list failed: ${msg(err)}`);
   }
 
@@ -200,22 +203,41 @@ export const pollOnce = async (deps: PollDeps, opts: { dryRun?: boolean } = {}):
     log('rwx CLI not found on PATH — RWX coverage skipped this cycle');
   }
 
-  // 6. Pipelines — one call per distinct in-scope project.
+  // 6. Forge CI — on the pipelines model, one call per distinct in-scope
+  // project. The checks model (GitHub) fetches per head sha (cached for the
+  // cycle in checksBySha, shared by role detection and enrich).
   const projects = [...new Set(inScope.map((i) => i.projectPath))];
-  const pipelinesByProject = new Map<string, GitlabPipeline[]>();
-  for (const project of projects) {
-    try {
-      pipelinesByProject.set(project, await gitlab.pipelines(project));
+  const pipelinesByProject = new Map<string, ForgePipeline[]>();
+  const checksBySha = new Map<string, Promise<ForgeCheckRun[]>>();
+  const checksFor = (projectPath: string, sha: string): Promise<ForgeCheckRun[]> => {
+    if (forge.ci.model !== 'checks') return Promise.resolve([]);
+    const ci = forge.ci;
+    let hit = checksBySha.get(sha);
+    if (!hit) {
       stats.apiCalls += 1;
-    } catch (err) {
-      // A project with CI disabled 403s here; that's a `none` test gate, not an
-      // error worth failing the cycle over.
-      pipelinesByProject.set(project, []);
-      log(`pipelines for ${project} unavailable: ${msg(err)}`);
+      hit = ci.checksForSha(projectPath, sha).catch((err) => {
+        log(`check runs for ${projectPath}@${sha.slice(0, 8)} unavailable: ${msg(err)}`);
+        return [];
+      });
+      checksBySha.set(sha, hit);
+    }
+    return hit;
+  };
+  if (forge.ci.model === 'pipelines') {
+    for (const project of projects) {
+      try {
+        pipelinesByProject.set(project, await forge.ci.pipelines(project));
+        stats.apiCalls += 1;
+      } catch (err) {
+        // A project with CI disabled 403s here; that's a `none` test gate, not
+        // an error worth failing the cycle over.
+        pipelinesByProject.set(project, []);
+        log(`pipelines for ${project} unavailable: ${msg(err)}`);
+      }
     }
   }
 
-  const roles = await resolveRoles({ deps, projects, rwxRuns, pipelinesByProject, nowIso, stats, log });
+  const roles = await resolveRoles({ deps, projects, inScope, checksFor, rwxRuns, pipelinesByProject, nowIso, stats, log });
 
   // 7-9. Per-MR detail work, each item isolated.
   const forceReconcile = shouldReconcile(db, now, config);
@@ -231,7 +253,7 @@ export const pollOnce = async (deps: PollDeps, opts: { dryRun?: boolean } = {}):
 
   for (const item of inScope) {
     try {
-      await enrich({ deps, item, rwxRuns, pipelinesByProject, roles, forceReconcile, stats });
+      await enrich({ deps, item, rwxRuns, pipelinesByProject, checksFor, roles, forceReconcile, stats });
     } catch (err) {
       // One bad MR must not abort the cycle — per-item rescue, cycle continues.
       log(`enrich ${item.key} failed: ${msg(err)}`);
@@ -242,7 +264,7 @@ export const pollOnce = async (deps: PollDeps, opts: { dryRun?: boolean } = {}):
   // the normal diff events; the shared `ci_result` dedup keeps any run from
   // notifying twice across the two paths. Watched-run resolution commits in the
   // same transaction as the events, so the two can't diverge on a crash.
-  const me = config.gitlab.username ?? '';
+  const me = config[forge.name].username ?? '';
   const { events, commit } = diff({ db, items, todos, me, now: nowIso });
   const allEvents = [...watched.events, ...events];
   const finalEvents = config.notifications.coalesce ? coalesce(allEvents) : allEvents;
@@ -252,7 +274,7 @@ export const pollOnce = async (deps: PollDeps, opts: { dryRun?: boolean } = {}):
       commit(db);
       watched.commit(db);
       db.recordEvents(finalEvents, nowIso, true);
-      if (sources.gitlab.ok) db.pruneMrsNotIn(items.map((i) => i.key));
+      if (sources[forge.name]?.ok) db.pruneMrsNotIn(items.map((i) => i.key));
       // Statuses accumulate forever (they rarely change) — this is what feeds
       // the status→section picker even for statuses nothing currently holds.
       db.rememberStatuses(
@@ -392,9 +414,9 @@ const rememberedRuns = (db: Db, projectPath: string, branch: string): RwxRun[] =
   ];
 }
 
-const dedupeMrs = (mrs: GitlabMr[]): GitlabMr[] => {
+const dedupeMrs = (mrs: ForgeMr[]): ForgeMr[] => {
   const seen = new Set<number>();
-  const out: GitlabMr[] = [];
+  const out: ForgeMr[] = [];
   for (const mr of mrs) {
     if (seen.has(mr.id)) continue;
     seen.add(mr.id);
@@ -417,7 +439,7 @@ interface MrRef {
 }
 
 /** MR refs from my own comment events (the "commented" participating signal). */
-const commentRefs = (events: GitlabCommentEvent[]): MrRef[] => {
+const commentRefs = (events: ForgeCommentEvent[]): MrRef[] => {
   const out: MrRef[] = [];
   for (const e of events) {
     if (e.note?.noteable_type !== 'MergeRequest') continue;
@@ -427,7 +449,7 @@ const commentRefs = (events: GitlabCommentEvent[]): MrRef[] => {
 }
 
 /** MR refs from pending mention todos (the "mentioned" participating signal). */
-const mentionRefs = (todos: GitlabTodo[]): MrRef[] => {
+const mentionRefs = (todos: ForgeTodo[]): MrRef[] => {
   const out: MrRef[] = [];
   for (const t of todos) {
     if (t.target_type !== 'MergeRequest') continue;
@@ -451,14 +473,14 @@ const mentionRefs = (todos: GitlabTodo[]): MrRef[] => {
 const hydrateRefs = async (
   deps: PollDeps,
   candidates: MrRef[],
-  known: GitlabMr[],
+  known: ForgeMr[],
   stats: PollResult['stats'],
   log: (m: string) => void,
-): Promise<GitlabMr[]> => {
+): Promise<ForgeMr[]> => {
   const nowMs = (deps.now?.() ?? new Date()).getTime();
   const knownRefs = new Set(known.map((m) => `${m.project_id}!${m.iid}`));
-  const cache = closedRefCaches.get(deps.gitlab) ?? new Map<string, number>();
-  closedRefCaches.set(deps.gitlab, cache);
+  const cache = closedRefCaches.get(deps.forge) ?? new Map<string, number>();
+  closedRefCaches.set(deps.forge, cache);
 
   const refs = new Map<string, MrRef>();
   for (const r of candidates) {
@@ -469,10 +491,10 @@ const hydrateRefs = async (
     refs.set(ref, r);
   }
 
-  const out: GitlabMr[] = [];
+  const out: ForgeMr[] = [];
   for (const [ref, r] of [...refs].slice(0, PARTICIPATING_HYDRATE_MAX)) {
     try {
-      const mr = await deps.gitlab.mrByProjectId(r.projectId, r.iid);
+      const mr = await deps.forge.mrByProjectId(r.projectId, r.iid);
       stats.apiCalls += 1;
       if (mr.state === 'opened') {
         cache.delete(ref);
@@ -488,23 +510,25 @@ const hydrateRefs = async (
 }
 
 const resolveUserId = async (deps: PollDeps): Promise<number> => {
-  const { db, config, gitlab } = deps;
-  const id = config.gitlab.userId ?? numberOrUndefined(db.getMeta('gitlab_user_id'));
-  const username = config.gitlab.username ?? db.getMeta('gitlab_username');
+  const { db, config, forge } = deps;
+  // Identity is cached per forge — meta keys gitlab_user_id / github_user_id.
+  const identity = config[forge.name];
+  const id = identity.userId ?? numberOrUndefined(db.getMeta(`${forge.name}_user_id`));
+  const username = identity.username ?? db.getMeta(`${forge.name}_username`);
 
   if (id !== undefined && username !== undefined) {
-    config.gitlab.userId = id;
-    config.gitlab.username = username;
+    identity.userId = id;
+    identity.username = username;
     return id;
   }
 
-  const me = await gitlab.currentUser();
+  const me = await forge.currentUser();
   db.transaction(() => {
-    db.setMeta('gitlab_user_id', String(me.id));
-    db.setMeta('gitlab_username', me.username);
+    db.setMeta(`${forge.name}_user_id`, String(me.id));
+    db.setMeta(`${forge.name}_username`, me.username);
   });
-  config.gitlab.userId = me.id;
-  config.gitlab.username = me.username;
+  identity.userId = me.id;
+  identity.username = me.username;
   return me.id;
 }
 
@@ -517,14 +541,16 @@ const numberOrUndefined = (v: string | undefined): number | undefined => {
 const resolveRoles = async (args: {
   deps: PollDeps;
   projects: string[];
+  inScope: WatchItem[];
+  checksFor: (projectPath: string, sha: string) => Promise<ForgeCheckRun[]>;
   rwxRuns: RwxRun[];
-  pipelinesByProject: Map<string, GitlabPipeline[]>;
+  pipelinesByProject: Map<string, ForgePipeline[]>;
   nowIso: string;
   stats: { apiCalls: number };
   log: (m: string) => void;
 }): Promise<Map<string, RepoCiRoles>> => {
-  const { deps, projects, rwxRuns, pipelinesByProject, nowIso, stats, log } = args;
-  const { db, config, gitlab } = deps;
+  const { deps, projects, inScope, checksFor, rwxRuns, pipelinesByProject, nowIso, stats, log } = args;
+  const { db, config, forge } = deps;
   const out = new Map<string, RepoCiRoles>();
 
   for (const project of projects) {
@@ -544,20 +570,40 @@ const resolveRoles = async (args: {
     // Classify by the newest pipeline's job names. This is what separates rocket
     // (ruby::lint only) from gadget (ruby::rspec::*) — both have pipelines.
     let latestPipelineJobs;
-    const newest = [...pipelines].sort((a, b) => b.id - a.id)[0];
-    if (newest && !override) {
-      try {
-        latestPipelineJobs = await gitlab.pipelineJobs(project, newest.id);
-        stats.apiCalls += 1;
-      } catch (err) {
-        log(`job detection for ${project} failed: ${msg(err)}`);
+    let hasCi = pipelines.length > 0;
+    if (forge.ci.model === 'pipelines') {
+      const newest = [...pipelines].sort((a, b) => b.id - a.id)[0];
+      if (newest && !override) {
+        try {
+          latestPipelineJobs = await forge.ci.pipelineJobs(project, newest.id);
+          stats.apiCalls += 1;
+        } catch (err) {
+          log(`job detection for ${project} failed: ${msg(err)}`);
+        }
+      }
+    } else if (!override) {
+      // Checks model: the head sha of any in-scope MR is the newest signal.
+      const rep = inScope.find((i) => i.projectPath === project);
+      if (rep) {
+        const runs = await checksFor(project, rep.headSha);
+        hasCi = runs.length > 0;
+        if (runs.length > 0) {
+          latestPipelineJobs = runs.map((r) => ({
+            id: 0,
+            name: r.name,
+            status: r.state,
+            stage: '',
+            web_url: r.url,
+          }));
+        }
       }
     }
 
     const roles = detectRepoRoles({
       projectPath: project,
       hasRwxRuns,
-      hasPipelines: pipelines.length > 0,
+      hasPipelines: hasCi,
+      forgeName: forge.name,
       now: nowIso,
       ...(latestPipelineJobs ? { latestPipelineJobs } : {}),
       ...(override ? { override } : {}),
@@ -573,29 +619,30 @@ const enrich = async (args: {
   deps: PollDeps;
   item: WatchItem;
   rwxRuns: RwxRun[];
-  pipelinesByProject: Map<string, GitlabPipeline[]>;
+  pipelinesByProject: Map<string, ForgePipeline[]>;
+  checksFor: (projectPath: string, sha: string) => Promise<ForgeCheckRun[]>;
   roles: Map<string, RepoCiRoles>;
   forceReconcile: boolean;
   stats: { detailFetches: number; commitFetches: number; apiCalls: number };
 }): Promise<void> => {
-  const { deps, item, rwxRuns, pipelinesByProject, roles, forceReconcile, stats } = args;
-  const { db, config, gitlab } = deps;
+  const { deps, item, rwxRuns, pipelinesByProject, checksFor, roles, forceReconcile, stats } = args;
+  const { db, config, forge } = deps;
 
   const prev = db.getMr(item.key);
   const changed = detailsChanged(prev, item);
 
   if (changed || forceReconcile) {
     const [discussions, approvals] = await Promise.all([
-      gitlab.discussions(item.projectPath, item.iid),
-      gitlab.approvals(item.projectPath, item.iid).catch(() => undefined),
+      forge.discussions(item.projectPath, item.iid),
+      forge.approvals(item.projectPath, item.iid).catch(() => undefined),
     ]);
     stats.detailFetches += 1;
     stats.apiCalls += 2;
     item.threads = summarizeThreads(discussions);
     if (approvals) {
       item.approvals = {
-        required: approvals.approvals_required,
-        left: approvals.approvals_left,
+        ...(approvals.approvals_required !== undefined ? { required: approvals.approvals_required } : {}),
+        ...(approvals.approvals_left !== undefined ? { left: approvals.approvals_left } : {}),
         by: (approvals.approved_by ?? []).map((a) => a.user.username),
       };
     }
@@ -677,21 +724,31 @@ const enrich = async (args: {
 
   // Build the check list from both providers. A repo can legitimately have both.
   const checks: Check[] = [];
-  const gitlabRole = repoRoles.testGate === 'gitlab' ? 'tests' : 'lint';
+  const forgeRole = repoRoles.testGate === forge.name ? 'tests' : 'lint';
   let failing: string[] | undefined;
-  const gitlabCheck = gitlabCheckFor(pipelines, item.headSha, gitlabRole);
-  if (gitlabCheck) {
-    if (gitlabCheck.state === 'failed') {
-      try {
-        const jobs = await gitlab.pipelineJobs(item.projectPath, Number(gitlabCheck.id));
-        stats.apiCalls += 1;
-        failing = failedJobNames(jobs);
-        if (failing.length) gitlabCheck.name = failing.join(', ');
-      } catch {
-        /* the name is a nicety; a failed pipeline still reports without it */
+  let headChecks: ForgeCheckRun[] | undefined;
+  if (forge.ci.model === 'pipelines') {
+    const gitlabCheck = gitlabCheckFor(pipelines, item.headSha, forgeRole);
+    if (gitlabCheck) {
+      if (gitlabCheck.state === 'failed') {
+        try {
+          const jobs = await forge.ci.pipelineJobs(item.projectPath, Number(gitlabCheck.id));
+          stats.apiCalls += 1;
+          failing = failedJobNames(jobs);
+          if (failing.length) gitlabCheck.name = failing.join(', ');
+        } catch {
+          /* the name is a nicety; a failed pipeline still reports without it */
+        }
       }
+      checks.push(gitlabCheck);
     }
-    checks.push(gitlabCheck);
+  } else {
+    headChecks = await checksFor(item.projectPath, item.headSha);
+    const check = checksCheckFor(headChecks, item.headSha, forgeRole);
+    if (check) {
+      failing = headChecks.filter((r) => r.state === 'failed').map((r) => r.name);
+      checks.push(check);
+    }
   }
   checks.push(...rwxChecksFor(effectiveRwxRuns, item.branch, item.headSha));
   item.checks = checks;
@@ -703,6 +760,7 @@ const enrich = async (args: {
     rwxRuns: effectiveRwxRuns,
     rwxTestDefinition: rwxDefinition,
     pipelines,
+    ...(headChecks ? { headChecks } : {}),
     ...(failing ? { failingJobNames: failing } : {}),
   });
 
@@ -737,7 +795,7 @@ const enrich = async (args: {
       gate = { ...gate, unverifiedCommits: cached };
     } else {
       try {
-        const commits = await gitlab.commits(item.projectPath, item.iid);
+        const commits = await forge.commits(item.projectPath, item.iid);
         stats.commitFetches += 1;
         stats.apiCalls += 1;
         gate = resolveTestGate({
@@ -747,6 +805,7 @@ const enrich = async (args: {
           rwxRuns: effectiveRwxRuns,
           rwxTestDefinition: rwxDefinition,
           pipelines,
+          ...(headChecks ? { headChecks } : {}),
           commits,
           ...(failing ? { failingJobNames: failing } : {}),
         });

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { Db } from '../src/core/db';
 import { coalesce, diff, toNotifications } from '../src/core/events';
 import { summarizeThreads, unresolvedCount } from '../src/core/correlate';
-import type { AppEvent, Check, GitlabDiscussion, GitlabTodo, TestGate, WatchItem } from '../src/core/types';
+import type { AppEvent, Check, ForgeDiscussion, ForgeTodo, TestGate, WatchItem } from '../src/core/types';
 import discussionsGadget from './fixtures/discussions-gadget320.json';
 
 const ME = 'mira.dev';
@@ -49,7 +49,7 @@ const thread = (id: string, notes: ReturnType<typeof note>[], resolved = false) 
 });
 
 /** Run a cycle and persist, the way pollOnce does. */
-const cycle = (items: WatchItem[], todos: GitlabTodo[] = [], now = NOW): AppEvent[] => {
+const cycle = (items: WatchItem[], todos: ForgeTodo[] = [], now = NOW): AppEvent[] => {
   const { events, commit } = diff({ db, items, todos, me: ME, now });
   db.transaction(() => {
     commit(db);
@@ -345,7 +345,7 @@ describe('out-of-scope MRs', () => {
 });
 
 describe('todos', () => {
-  const todo = (over: Partial<GitlabTodo> = {}): GitlabTodo => ({
+  const todo = (over: Partial<ForgeTodo> = {}): ForgeTodo => ({
     id: 500,
     action_name: 'review_submitted',
     target_type: 'MergeRequest',
@@ -434,7 +434,7 @@ describe('toNotifications', () => {
 });
 
 describe('summarizeThreads on real discussion data', () => {
-  const discussions = discussionsGadget as unknown as GitlabDiscussion[];
+  const discussions = discussionsGadget as unknown as ForgeDiscussion[];
 
   it('drops system notes, which are the bulk of the volume', () => {
     const threads = summarizeThreads(discussions);

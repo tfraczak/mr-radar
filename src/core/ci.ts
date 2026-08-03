@@ -1,12 +1,13 @@
 import { branchOfRun, isCompleted } from './sources/rwx';
 import type {
+  ForgeCheckRun,
   Check,
   CheckRole,
   CheckState,
   CiProvider,
-  GitlabCommit,
-  GitlabJob,
-  GitlabPipeline,
+  ForgeCommit,
+  ForgeJob,
+  ForgePipeline,
   RepoCiRoles,
   RwxRun,
   TestGate,
@@ -41,16 +42,22 @@ export const DEFAULT_RWX_TEST_DEFINITION = '.rwx/ci.yml';
  * and nothing matches on a feature branch). A green pipeline that ran nothing is
  * not verification, and must not be reported as passing tests.
  */
-export const pipelineRunsTests = (jobs: GitlabJob[]): boolean => {
+export const pipelineRunsTests = (jobs: ForgeJob[]): boolean => {
   return jobs.some((j) => TEST_JOB.test(j.name));
 }
 
 export interface DetectRolesInput {
   projectPath: string;
   hasRwxRuns: boolean;
-  /** Jobs from the project's most recent pipeline. Absent = not inspected. */
-  latestPipelineJobs?: GitlabJob[];
+  /**
+   * Jobs from the project's most recent pipeline — or, on the checks model,
+   * the head sha's check runs adapted into the same {name, status} shape.
+   * Absent = not inspected.
+   */
+  latestPipelineJobs?: ForgeJob[];
   hasPipelines: boolean;
+  /** Which forge a detected CI gate belongs to. Defaults to gitlab. */
+  forgeName?: 'gitlab' | 'github';
   /** An explicit config override pins the test gate but not the lint flag. */
   override?: CiProvider | 'none';
   now: string;
@@ -58,14 +65,15 @@ export interface DetectRolesInput {
 
 export const detectRepoRoles = (input: DetectRolesInput): RepoCiRoles => {
   const { hasRwxRuns, latestPipelineJobs, override, now } = input;
+  const forgeName = input.forgeName ?? 'gitlab';
   const inspected = latestPipelineJobs !== undefined;
-  const gitlabRunsTests = inspected && pipelineRunsTests(latestPipelineJobs);
+  const ciRunsTests = inspected && pipelineRunsTests(latestPipelineJobs);
 
   const testGate: RepoCiRoles['testGate'] =
     override ??
     // RWX presence wins: a repo that runs RWX does so because its specs live
-    // there, and its GitLab pipeline is doing something else (lint, build).
-    (hasRwxRuns ? 'rwx' : gitlabRunsTests ? 'gitlab' : 'none');
+    // there, and its forge CI is doing something else (lint, build).
+    (hasRwxRuns ? 'rwx' : ciRunsTests ? forgeName : 'none');
 
   // "Lint-only" means the pipeline runs non-test jobs (rocket's ruby::lint) — not
   // that it runs nothing. A zero-job pipeline (ops-scripts) is empty, not
@@ -73,7 +81,7 @@ export const detectRepoRoles = (input: DetectRolesInput): RepoCiRoles => {
   // also avoids the earlier contradiction where gadget reported
   // "test gate = gitlab (pipeline is lint-only)".
   const hasJobs = inspected && latestPipelineJobs.length > 0;
-  const gitlabIsLintOnly = testGate !== 'gitlab' && hasJobs && !gitlabRunsTests;
+  const gitlabIsLintOnly = testGate !== forgeName && hasJobs && !ciRunsTests;
 
   return { testGate, gitlabIsLintOnly, detectedAt: now };
 }
@@ -102,8 +110,8 @@ export const gitlabStateOf = (status: string): CheckState | undefined => {
  * `ref: refs/merge-requests/<iid>/head`. Grouping by ref would split them and
  * never match a branch name against the MR pipeline.
  */
-export const newestPipelinePerSha = (pipelines: GitlabPipeline[]): Map<string, GitlabPipeline> => {
-  const bySha = new Map<string, GitlabPipeline>();
+export const newestPipelinePerSha = (pipelines: ForgePipeline[]): Map<string, ForgePipeline> => {
+  const bySha = new Map<string, ForgePipeline>();
   for (const p of pipelines) {
     const prev = bySha.get(p.sha);
     if (!prev || p.id > prev.id) bySha.set(p.sha, p);
@@ -112,7 +120,7 @@ export const newestPipelinePerSha = (pipelines: GitlabPipeline[]): Map<string, G
 }
 
 export const gitlabCheckFor = (
-  pipelines: GitlabPipeline[],
+  pipelines: ForgePipeline[],
   headSha: string,
   role: CheckRole,
   failingJobName?: string,
@@ -134,7 +142,7 @@ export const gitlabCheckFor = (
 }
 
 /** Names of the jobs that failed, for a far more useful notification. */
-export const failedJobNames = (jobs: GitlabJob[]): string[] => {
+export const failedJobNames = (jobs: ForgeJob[]): string[] => {
   return jobs.filter((j) => j.status === 'failed').map((j) => j.name);
 }
 
@@ -213,7 +221,7 @@ export const rwxChecksFor = (runs: RwxRun[], branch: string, headSha: string): C
  * extra value.
  */
 export const countUnverifiedCommits = (
-  commits: GitlabCommit[],
+  commits: ForgeCommit[],
   coveredShas: Set<string>,
 ): number | 'many' => {
   if (coveredShas.size === 0) return 'many';
@@ -236,17 +244,77 @@ export interface ResolveGateInput {
   rwxRuns: RwxRun[];
   rwxTestDefinition: string;
   /** Pipelines for this MR's project. */
-  pipelines: GitlabPipeline[];
+  pipelines: ForgePipeline[];
   /** Fetched lazily, only when the gate is unverified and startable. */
-  commits?: GitlabCommit[];
+  commits?: ForgeCommit[];
   failingJobNames?: string[];
+  /** Head-sha check runs (checks-model forges only). */
+  headChecks?: ForgeCheckRun[];
 }
 
 export const resolveTestGate = (input: ResolveGateInput): TestGate => {
   const { roles } = input;
   if (roles.testGate === 'none') return { kind: 'none' };
   if (roles.testGate === 'rwx') return resolveRwxGate(input);
+  if (roles.testGate === 'github') return resolveChecksGate(input);
   return resolveGitlabGate(input);
+}
+
+/** Aggregate verdict across a sha's check runs. */
+export const aggregateCheckState = (
+  runs: ForgeCheckRun[],
+): 'succeeded' | 'failed' | 'in_progress' | 'waiting' => {
+  if (runs.some((r) => r.state === 'failed')) return 'failed';
+  if (runs.some((r) => r.state === 'in_progress')) return 'in_progress';
+  if (runs.length > 0 && runs.every((r) => r.state === 'succeeded')) return 'succeeded';
+  return 'waiting';
+}
+
+/** The checks-model twin of gitlabCheckFor: one aggregate Check per head sha. */
+export const checksCheckFor = (
+  runs: ForgeCheckRun[],
+  headSha: string,
+  role: CheckRole,
+): Check | undefined => {
+  if (runs.length === 0) return undefined;
+  const state = aggregateCheckState(runs);
+  if (state === 'waiting') return undefined; // no verdict yet, nothing to show
+  const failing = runs.filter((r) => r.state === 'failed').map((r) => r.name);
+  const newest = [...runs].sort((a, b) => b.suiteId.localeCompare(a.suiteId))[0];
+  return {
+    provider: 'github',
+    role,
+    name: failing.length ? failing.join(', ') : role === 'lint' ? 'checks (lint)' : 'checks',
+    sha: headSha,
+    state,
+    url: runs.find((r) => r.state === 'failed')?.url ?? newest?.url ?? '',
+    // Suite id ≈ pipeline id: a push creates a new suite (re-notifies), a
+    // re-run within one keeps it (silent) — matching GitLab semantics.
+    id: newest?.suiteId ?? '',
+    createdAt: newest?.createdAt ?? '',
+  };
+}
+
+const resolveChecksGate = (input: ResolveGateInput): TestGate => {
+  const runs = input.headChecks ?? [];
+  if (runs.length === 0) {
+    // No check runs yet: on GitHub they are about to be created by the push —
+    // transient, and **not startable** (never a suggest-run nudge).
+    return { kind: 'unverified', provider: 'github', unverifiedCommits: 'many', startable: false };
+  }
+  const state = aggregateCheckState(runs);
+  const failing = runs.filter((r) => r.state === 'failed');
+  const url = failing[0]?.url ?? runs[0]?.url ?? '';
+  if (state === 'in_progress') return { kind: 'in_progress', provider: 'github', url };
+  if (state === 'succeeded') {
+    return { kind: 'verified', provider: 'github', result: 'succeeded', url, name: 'checks' };
+  }
+  if (state === 'failed') {
+    const name = failing.map((r) => r.name).join(', ') || 'checks';
+    return { kind: 'verified', provider: 'github', result: 'failed', url, name };
+  }
+  // Only neutral/skipped/queued runs: no verdict, nothing to start.
+  return { kind: 'unverified', provider: 'github', unverifiedCommits: 'many', startable: false };
 }
 
 const resolveGitlabGate = (input: ResolveGateInput): TestGate => {

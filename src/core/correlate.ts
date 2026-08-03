@@ -1,8 +1,8 @@
 import { mrKey } from './sources/gitlab';
 import { ticketKeyFromBranch } from './sources/jira';
 import type {
-  GitlabDiscussion,
-  GitlabMr,
+  ForgeDiscussion,
+  ForgeMr,
   JiraTicket,
   ThreadSummary,
   WatchItem,
@@ -17,13 +17,13 @@ import type {
  */
 
 export interface CorrelateInput {
-  authored: GitlabMr[];
+  authored: ForgeMr[];
   /** Definitive reviewer signal: requested reviewer ∪ approved by me. */
-  reviewer: GitlabMr[];
+  reviewer: ForgeMr[];
   /** Looser signal: MRs I commented on (Events API), open, not mine. */
-  commented?: GitlabMr[];
+  commented?: ForgeMr[];
   /** Loosest signal: MRs with a pending mention todo for me. */
-  mentioned?: GitlabMr[];
+  mentioned?: ForgeMr[];
   activeTickets: JiraTicket[];
   /** Include MRs updated within this many days even if their ticket is idle. */
   recentDaysFallback: number;
@@ -45,9 +45,11 @@ export const correlate = (input: CorrelateInput): WatchItem[] => {
   const ticketByKey = new Map(activeTickets.map((t) => [t.key, t]));
   const items = new Map<string, WatchItem>();
 
-  const add = (mr: GitlabMr, reason: Reason, participation?: 'commented' | 'mentioned'): void => {
+  const add = (mr: ForgeMr, reason: Reason, participation?: 'commented' | 'mentioned'): void => {
     const projectPath = projectPathOf(mr);
-    const key = mrKey(projectPath, mr.iid);
+    // The forge's own reference IS the key (GitLab `group/repo!7633`, GitHub
+    // `owner/repo#123`) — events.ts looks todos up by this string verbatim.
+    const key = mr.references?.full ?? mrKey(projectPath, mr.iid);
     // An MR can carry several relationships; the strongest wins. Authored is
     // primary (drives trigger actions); reviewer beats participating; a comment
     // (engagement) beats a mention (someone else's ping). Callers add in that
@@ -125,13 +127,16 @@ export const inScope = (args: {
  * before the `!`. Preferred over reconstructing from `web_url`, which also
  * contains `/-/merge_requests/`.
  */
-export const projectPathOf = (mr: GitlabMr): string => {
+export const projectPathOf = (mr: ForgeMr): string => {
   const full = mr.references?.full;
   if (full) {
-    const idx = full.lastIndexOf('!');
+    // Separator is forge-specific: GitLab `!`, GitHub `#`.
+    const idx = Math.max(full.lastIndexOf('!'), full.lastIndexOf('#'));
     if (idx > 0) return full.slice(0, idx);
   }
-  const m = /^https?:\/\/[^/]+\/(.+?)\/-\/merge_requests\/\d+/.exec(mr.web_url);
+  const m =
+    /^https?:\/\/[^/]+\/(.+?)\/-\/merge_requests\/\d+/.exec(mr.web_url) ??
+    /^https?:\/\/[^/]+\/([^/]+\/[^/]+)\/pull\/\d+/.exec(mr.web_url);
   return m?.[1] ?? String(mr.project_id);
 }
 
@@ -143,7 +148,7 @@ export const projectPathOf = (mr: GitlabMr): string => {
  * approvals *do* generate one, which is why an approval still bumps the MR's
  * `updated_at` and our cheap change gate stays correct.
  */
-export const summarizeThreads = (discussions: GitlabDiscussion[]): ThreadSummary[] => {
+export const summarizeThreads = (discussions: ForgeDiscussion[]): ThreadSummary[] => {
   const out: ThreadSummary[] = [];
   for (const d of discussions) {
     const human = d.notes.filter((n) => !n.system);

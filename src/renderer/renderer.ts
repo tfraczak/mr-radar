@@ -663,8 +663,13 @@ const renderRow = (item: UiItem): HTMLElement => {
     row.meta.append(el('span', undefined, `${item.unresolved} unresolved`));
   }
   if (item.approvals) {
-    const { required, left } = item.approvals;
-    row.meta.append(el('span', undefined, `${required - left}/${required} approved`));
+    const { required, left, by } = item.approvals;
+    // GitHub can't always report a required count; degrade to a plain tally.
+    const label =
+      required !== undefined && left !== undefined
+        ? `${required - left}/${required} approved`
+        : `${by.length} approved`;
+    row.meta.append(el('span', undefined, label));
   }
   if (item.overdue) row.meta.append(createBadge('overdue', 'bad'));
   // Secondary (non-gate) suites, e.g. rocket's auto-started frontend. Shown so
@@ -1184,6 +1189,10 @@ const openSettings = async (): Promise<void> => {
   method.select.title =
     'auto = osascript (always delivers). terminal-notifier adds icon + click-to-open but needs ThreatLocker approval — explicit opt-in only. native = Electron (needs a signed app).';
   const updateStyle = selectField('Branch update style', s.updateStyleChoices, s.updateStyle);
+  const forgeSel = selectField('Forge', s.forgeChoices, s.forge);
+  forgeSel.select.title =
+    "Where your MRs/PRs live. 'auto' detects from which CLI (glab/gh) is authenticated" +
+    (s.activeForge ? ` — currently using ${s.activeForge}` : '');
   const rwxEnabled = checkboxField('Use RWX for CI status (requires the rwx CLI)', s.rwxEnabled);
   updateStyle.select.title =
     'How you bring main into a branch. Adjusts guidance text: conflicts say "needs a rebase" vs "merge main into the branch".';
@@ -1314,6 +1323,9 @@ const openSettings = async (): Promise<void> => {
       methodChoices: s.methodChoices,
       updateStyle: updateStyle.select.value,
       rwxEnabled: rwxEnabled.input.checked,
+      forge: forgeSel.select.value,
+      forgeChoices: s.forgeChoices,
+      activeForge: s.activeForge,
       updateStyleChoices: s.updateStyleChoices,
       theme: theme.select.value,
       themeChoices: s.themeChoices,
@@ -1352,7 +1364,8 @@ const openSettings = async (): Promise<void> => {
     return pane;
   };
   const settingsPanes: Record<string, HTMLElement> = {
-    General: paneOf([updateStyle.wrap, rwxEnabled.wrap, login.wrap, ...repoFields.map((f) => f.row)]),
+    General: paneOf([updateStyle.wrap, login.wrap]),
+    Git: paneOf([forgeSel.wrap, rwxEnabled.wrap, ...repoFields.map((f) => f.row)]),
     Jira: paneOf([atlassianUrl.wrap, email.wrap, statusBlock, rulesBlock]),
     Polling: paneOf([pollSecs.wrap, recent.wrap, hoursEnabled.wrap, hoursBlock]),
     Notifications: paneOf([notify.wrap, sound.wrap, method.wrap]),

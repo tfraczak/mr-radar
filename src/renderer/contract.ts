@@ -93,7 +93,7 @@ export interface UiItem {
   hasConflicts: boolean;
   unresolved: number;
   commentCount: number;
-  approvals?: { required: number; left: number; by: string[] } | undefined;
+  approvals?: { required?: number; left?: number; by: string[] } | undefined;
   unread: boolean;
   createdAt: string;
   updatedAt: string;
@@ -163,6 +163,11 @@ export interface EditableSettings {
   updateStyle: string;
   /** Master switch for the RWX integration (also needs the rwx CLI). */
   rwxEnabled: boolean;
+  /** Which forge to watch: 'auto' detects from the authenticated CLI. */
+  forge: string;
+  forgeChoices: string[];
+  /** The resolved forge this install is currently using. */
+  activeForge: string;
   updateStyleChoices: string[];
   /** Palette name; each theme carries a light and a dark half. */
   theme: string;
