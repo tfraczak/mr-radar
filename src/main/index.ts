@@ -327,9 +327,16 @@ const registerIpc = (): void => {
 
     const result = await startRunFor({ db, config, rwx, log }, item);
     if (result.started) {
-      // Poll NOW so the run shows as in-progress immediately. scheduleNext()
-      // alone is not enough: on battery the ladder pins to its slowest rung
-      // (15 min) regardless of the quiet-cycle reset, leaving the UI stale.
+      // Flip the gate in the live snapshot RIGHT NOW — a poll cycle can take
+      // a minute, and "I clicked and nothing changed" is worse than a flip
+      // the next cycle merely confirms. `at` must move or the renderer's
+      // listKey guard skips the rebuild that repaints the chip.
+      item.testGate = { kind: 'in_progress', provider: 'rwx', ...(result.url ? { url: result.url } : {}) };
+      if (state.snapshot) state.snapshot.at = new Date().toISOString();
+      tray.update(state);
+      pushToRenderer();
+      // Then poll for real. scheduleNext() alone is not enough: on battery
+      // the ladder pins to its slowest rung regardless of quiet-cycle resets.
       state.schedule = { ...state.schedule, quietCycles: 0 };
       void runCycle('manual');
     }

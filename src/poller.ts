@@ -263,7 +263,13 @@ const webHandlers = () => ({
       };
     }
     const result = await executeTrigger({ db, config, rwx, log }, item, plan);
-    if (result.started) requestCycle();
+    if (result.started) {
+      // Optimistic flip so the web UI's next snapshot fetch already shows
+      // the run in flight; the requested cycle confirms it.
+      item.testGate = { kind: 'in_progress', provider: 'rwx', ...(result.url ? { url: result.url } : {}) };
+      if (state.snapshot) state.snapshot.at = new Date().toISOString();
+      requestCycle();
+    }
     return result;
   },
   getSettings: () => toEditable(config, knownRepos(db, config), forge.name),
