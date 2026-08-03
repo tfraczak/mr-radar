@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_CONFIG, type StatusRule } from '../src/core/config';
+import {
+  NO_TICKET_STATUS, DEFAULT_CONFIG, type StatusRule } from '../src/core/config';
 import { present } from '../src/main/present';
 import { initialUiState, type UiState } from '../src/main/state';
 import type { JiraTicket, TestGate, WatchItem } from '../src/core/types';
@@ -360,6 +361,40 @@ describe('conditional routing rules', () => {
     const overdue = ticket('To Do', { key: 'ENG-99', dueDate: '2026-07-01' });
     const snap = present(stateWith([item({ ticket: overdue })]), ACTIVE, NOW, 'rebase', DEFAULT_CONFIG.statusSections, rules);
     expect(snap.groups).toHaveLength(1); // pulled into Active by the rule
+  });
+});
+
+describe('(no ticket) sentinel rule', () => {
+  const noTicketItem = () => item({ branch: 'quick-fix', title: 'Patch the widget' });
+
+  it('routes ticketless MRs to ignore', () => {
+    const rules: StatusRule[] = [{ status: NO_TICKET_STATUS, op: 'always', then: 'ignore' }];
+    const snap = present(stateWith([noTicketItem()]), ACTIVE, NOW, 'rebase', DEFAULT_CONFIG.statusSections, rules);
+    expect(
+      snap.groups.length + snap.otherGroups.length + snap.doneGroups.length + snap.verificationGroups.length,
+    ).toBe(0);
+  });
+
+  it('never matches MRs that DO have a ticket', () => {
+    const rules: StatusRule[] = [{ status: NO_TICKET_STATUS, op: 'always', then: 'ignore' }];
+    const snap = present(
+      stateWith([item({ ticket: ticket('In Development') })]),
+      ACTIVE, NOW, 'rebase', DEFAULT_CONFIG.statusSections, rules,
+    );
+    expect(snap.groups).toHaveLength(1);
+  });
+
+  it('can route ticketless MRs into a section instead', () => {
+    const rules: StatusRule[] = [{ status: NO_TICKET_STATUS, op: 'always', then: 'done' }];
+    const snap = present(stateWith([noTicketItem()]), ACTIVE, NOW, 'rebase', DEFAULT_CONFIG.statusSections, rules);
+    expect(snap.doneGroups).toHaveLength(1);
+    expect(snap.doneGroups[0]?.status).toBe('No ticket');
+  });
+
+  it('without the rule, ticketless MRs land in Other as before', () => {
+    const snap = present(stateWith([noTicketItem()]), ACTIVE, NOW, 'rebase', DEFAULT_CONFIG.statusSections, []);
+    expect(snap.otherGroups).toHaveLength(1);
+    expect(snap.otherGroups[0]?.status).toBe('No ticket');
   });
 });
 

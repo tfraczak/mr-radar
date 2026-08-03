@@ -1,4 +1,5 @@
-import { DEFAULT_CONFIG, type Config, type RuleField, type RuleTarget, type StatusRule } from '../core/config';
+import {
+  NO_TICKET_STATUS, DEFAULT_CONFIG, type Config, type RuleField, type RuleTarget, type StatusRule } from '../core/config';
 import { FIELD_LABELS } from '../renderer/contract';
 import { unresolvedCount } from '../core/correlate';
 import { describePause } from '../core/schedule';
@@ -189,12 +190,19 @@ export const resolveRules = (
   now: Date,
   projectPath: string,
 ): RuleOutcome => {
-  if (!t) return {};
   for (const rule of rules) {
-    if (rule.status.toLowerCase() !== t.status.toLowerCase()) continue;
+    // '(no ticket)' is a sentinel: it matches exactly the MRs no other rule
+    // can — those without a Jira ticket. Everything else needs a status match.
+    const matches =
+      rule.status === NO_TICKET_STATUS
+        ? !t
+        : t !== undefined && rule.status.toLowerCase() === t.status.toLowerCase();
+    if (!matches) continue;
     // A rule can be pinned to one repo; empty/absent means any.
     if (rule.repo && rule.repo !== projectPath) continue;
-    const hit = rulePredicate(rule, t, now);
+    // Ticketless MRs have no fields to test: only an unconditional rule can
+    // hit; a conditional one takes its else branch.
+    const hit = rule.op === 'always' ? true : t !== undefined && rulePredicate(rule, t, now);
     const target = hit ? rule.then : (rule.else ?? 'next');
     if (target === 'next') continue;
     return { target, ...(hit && rule.op === 'empty' && rule.field ? { needs: rule.field } : {}) };
@@ -252,6 +260,23 @@ const groupItems = (
     const ui = toUiItem(item, unreadKeys.has(item.key), now, updateStyle, needs);
     const status = item.ticket?.status;
 
+    if (target && !item.ticket) {
+      // Ticketless MRs can't join ticket groups; ignore works fully, the
+      // section targets map onto the 'No ticket' status bucket.
+      switch (target) {
+        case 'ignore':
+          continue;
+        case 'verification':
+          addToStatusGroup(verification, 'No ticket', ui);
+          continue;
+        case 'done':
+          addToStatusGroup(done, 'No ticket', ui);
+          continue;
+        default:
+          addToStatusGroup(byStatus, 'No ticket', ui);
+          continue;
+      }
+    }
     if (target && item.ticket) {
       switch (target) {
         case 'ignore':

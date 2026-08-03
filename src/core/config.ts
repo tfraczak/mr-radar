@@ -14,6 +14,13 @@ export type RuleTarget =
   | 'needs-value'
   | 'next';
 
+/**
+ * Sentinel for the rule-status dropdown: matches MRs with NO Jira ticket at
+ * all (no key in the branch or title). Such rules are inherently
+ * unconditional — there are no ticket fields to test.
+ */
+export const NO_TICKET_STATUS = '(no ticket)';
+
 export const RULE_TARGETS: readonly RuleTarget[] = [
   'active',
   'verification',

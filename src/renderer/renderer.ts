@@ -832,7 +832,10 @@ const openSettings = async (): Promise<void> => {
   ];
   const assignments = new Map<string, { status: string; section: StatusSection }>();
   const knownStatusNames = new Map<string, string>(); // lowercase → display casing
+  const NO_TICKET = '(no ticket)'; // mirrors NO_TICKET_STATUS in core config
   const learnStatus = (status: string): void => {
+    if (status === NO_TICKET) return; // sentinel, not a Jira status
+
     if (status && !knownStatusNames.has(status.toLowerCase())) {
       knownStatusNames.set(status.toLowerCase(), status);
     }
@@ -927,7 +930,12 @@ const openSettings = async (): Promise<void> => {
   const addRuleRow = (r: EditableSettings['statusRules'][number], after?: HTMLElement): void => {
     learnStatus(r.status);
     const root = el('div', 'rule-row');
-    const status = mkSelect([...knownStatusNames.values()].sort((a, b) => a.localeCompare(b)), r.status);
+    // '(no ticket)' leads the list: it routes MRs that have no Jira ticket,
+    // and such rules are unconditional (nothing to test on a missing ticket).
+    const status = createSelect(
+      [NO_TICKET, ...[...knownStatusNames.values()].sort((a, b) => a.localeCompare(b))],
+      r.status,
+    );
     // Repo scope: '' = any repo; the list is what the radar actually tracks.
     const repoChoices = [...new Set([...(s.ruleRepoChoices ?? []), ...(r.repo ? [r.repo] : [])])];
     const repo = createSelect(
@@ -1018,8 +1026,8 @@ const openSettings = async (): Promise<void> => {
     const snapshotRule = (): EditableSettings['statusRules'][number] => ({
       status: status.select.value,
       repo: repo.select.value,
-      field: whenRemoved ? '' : field.select.value,
-      op: effectiveOp(),
+      field: whenRemoved || status.select.value === NO_TICKET ? '' : field.select.value,
+      op: status.select.value === NO_TICKET ? 'always' : effectiveOp(),
       value: value.value,
       also:
         whenRemoved
@@ -1145,15 +1153,18 @@ const openSettings = async (): Promise<void> => {
     // no field, no conditions, no else — only the op select stays as the way
     // back. For conditional rules, the else block only renders when one exists.
     const syncStructure = (): void => {
+      const noTicket = status.select.value === NO_TICKET;
+      const bare = whenRemoved || noTicket;
       const hasElse = elseSel.select.value !== 'next';
-      whenLine.hidden = whenRemoved;
-      addWhenLine.hidden = !whenRemoved;
-      alsoWrap.hidden = whenRemoved;
-      addCondLine.hidden = whenRemoved;
-      elseWordLine.hidden = whenRemoved || !hasElse;
-      elseLine.hidden = whenRemoved || !hasElse;
-      addElseLine.hidden = whenRemoved || hasElse;
+      whenLine.hidden = bare;
+      addWhenLine.hidden = !whenRemoved || noTicket;
+      alsoWrap.hidden = bare;
+      addCondLine.hidden = bare;
+      elseWordLine.hidden = bare || !hasElse;
+      elseLine.hidden = bare || !hasElse;
+      addElseLine.hidden = bare || hasElse;
     };
+    status.select.addEventListener('change', syncStructure);
     elseSel.select.addEventListener('change', syncStructure);
     syncStructure();
     root.append(grip, controls, clone, remove);
