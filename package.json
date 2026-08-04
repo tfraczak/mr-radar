@@ -40,7 +40,7 @@
     "lint:fix": "eslint . --fix",
     "package:dmg": "yarn build && node scripts/make-app-icon.mjs && electron-builder --mac dmg",
     "package:pkg": "yarn build && node scripts/make-app-icon.mjs && electron-builder --mac pkg",
-    "package:signed": "yarn build && node scripts/make-app-icon.mjs && CSC_IDENTITY_AUTO_DISCOVERY=true electron-builder --mac dmg -c.mac.identity="Developer ID Application" -c.mac.notarize=true"
+    "package:signed": "yarn build && node scripts/make-app-icon.mjs && CSC_IDENTITY_AUTO_DISCOVERY=true electron-builder --mac dmg -c.mac.identity='Developer ID Application' -c.mac.notarize=true"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
