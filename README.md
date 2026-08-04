@@ -54,8 +54,9 @@ yarn tray:install # register + start the launchd agent
 installing anything: `yarn install && yarn dev` (dies with the terminal).
 If Electron can't run on your machine at all, there's a headless poller with a
 web UI instead — see its section below (`yarn poller:install`). A normal
-packaged `.app` also builds with `yarn package` (ad-hoc signed: first launch
-may need right-click → Open, and app-control software may block it outright).
+packaged `.app` also builds with `yarn package`, a drag-to-Applications disk
+image with `yarn package:dmg`, and a `.pkg` installer with `yarn package:pkg`
+— see "Signing for distribution" below before sharing any of them.
 
 ## First-run setup
 
@@ -249,6 +250,42 @@ yarn status            # one live read-only cycle: sources, in-scope MRs, what w
 `http://127.0.0.1:8942` (configurable via `web.port`). It binds to 127.0.0.1 only, rejects
 non-localhost Host headers (DNS rebinding), and requires a per-process token on every API
 call, which cross-origin pages can neither read nor send.
+
+## Signing for distribution
+
+Artifacts built on your own machine open fine locally, but a DMG someone
+*downloads* is quarantined: unsigned apps hit Gatekeeper's wall (on current
+macOS, System Settings → Privacy & Security → "Open Anyway" is the only
+bypass — right-click → Open no longer works for unsigned apps). Opening
+cleanly on other people's Macs takes two things, both automated here:
+
+1. **A Developer ID certificate.** Join the Apple Developer Program
+   ($99/year, individual is fine), then in Xcode → Settings → Accounts →
+   Manage Certificates create a **Developer ID Application** certificate
+   (and **Developer ID Installer** if you'll ship signed .pkg). It lands in
+   your login keychain, where electron-builder finds it by name.
+2. **Notarization.** Since macOS 10.15 signing alone isn't enough — Apple
+   must scan and notarize the build. Generate an app-specific password at
+   appleid.apple.com, note your Team ID (developer.apple.com → Membership),
+   and export:
+
+   ```bash
+   export APPLE_ID="you@example.com"
+   export APPLE_APP_SPECIFIC_PASSWORD="xxxx-xxxx-xxxx-xxxx"
+   export APPLE_TEAM_ID="XXXXXXXXXX"
+   yarn package:signed
+   ```
+
+`yarn package:signed` signs with the hardened runtime (entitlements in
+assets/entitlements.mac.plist cover Electron's JIT), uploads to Apple's
+notary service, waits for the verdict, and staples the ticket — the
+resulting DMG opens on any Mac with only the standard "downloaded from the
+internet" prompt. Regular `yarn package*` builds stay unsigned for local
+use.
+
+A signed, notarized app also carries your stable Team ID — exactly the
+identity app-control software (ThreatLocker and similar) can allowlist
+permanently, instead of chasing ad-hoc hashes that change every build.
 
 ## Development
 
