@@ -37,7 +37,9 @@
     "package": "yarn build && node scripts/make-app-icon.mjs && electron-builder --mac dir",
     "install:app": "yarn package && node scripts/install.mjs",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "package:dmg": "yarn build && node scripts/make-app-icon.mjs && electron-builder --mac dmg",
+    "package:pkg": "yarn build && node scripts/make-app-icon.mjs && electron-builder --mac pkg"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -73,6 +75,21 @@
         "LSUIElement": true
       },
       "identity": null
+    },
+    "dmg": {
+      "title": "MR Radar",
+      "contents": [
+        {
+          "x": 130,
+          "y": 160
+        },
+        {
+          "x": 410,
+          "y": 160,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     }
   }
 }
