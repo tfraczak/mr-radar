@@ -91,7 +91,7 @@ export const toEditable = (config: Config, repoChoices: string[] = [], activeFor
     appearanceChoices: [...APPEARANCES],
     pollBaseSeconds: config.poll.baseSeconds,
     activeHours: {
-      enabled: h !== undefined,
+      enabled: h !== undefined && h.enabled !== false,
       days: h?.days ?? DEFAULT_HOURS.days,
       start: h?.start ?? DEFAULT_HOURS.start,
       end: h?.end ?? DEFAULT_HOURS.end,
@@ -238,8 +238,12 @@ export const applyEditable = (
   poll.baseSeconds = s.pollBaseSeconds;
   if (s.activeHours.enabled) {
     poll.activeHours = { days: s.activeHours.days, start: s.activeHours.start, end: s.activeHours.end };
+  } else if (asObject(poll.activeHours)) {
+    // Keep the user's window while it's off, so re-enabling restores it
+    // instead of resetting to the 8-to-7 defaults.
+    poll.activeHours = { ...(asObject(poll.activeHours) as object), enabled: false };
   } else {
-    // Absent means "always active" — remove rather than store a disabled flag.
+    // Never configured — nothing worth remembering.
     delete poll.activeHours;
   }
   next.poll = poll;

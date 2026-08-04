@@ -117,7 +117,12 @@ export interface Config {
     backoffSeconds: number[];
     quietCyclesBeforeBackoff: number;
     reconcileMinutes: number;
-    activeHours?: { days: number[]; start: string; end: string };
+    /**
+     * The polling window. `enabled: false` keeps the user's chosen window in
+     * the config while it's switched off, so re-enabling restores it instead
+     * of resetting to defaults. Absent flag = enabled (pre-flag configs).
+     */
+    activeHours?: { days: number[]; start: string; end: string; enabled?: boolean };
     slowOnBattery: boolean;
   };
   repos: Record<string, RepoOverride>;

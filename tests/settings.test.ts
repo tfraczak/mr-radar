@@ -187,9 +187,27 @@ describe('applyEditable', () => {
     expect(junk.git).toBeUndefined(); // not an enum value → not written
   });
 
-  it('removes poll.activeHours when the window is disabled', () => {
-    const raw: Record<string, unknown> = { poll: { activeHours: { days: [1], start: '08:00', end: '19:00' } } };
-    const next = applyEditable(raw, editable({ activeHours: { enabled: false, days: [1], start: '08:00', end: '19:00' } }));
+  it('disabling the window keeps the settings, marked disabled', () => {
+    const raw: Record<string, unknown> = { poll: { activeHours: { days: [1], start: '10:00', end: '16:00' } } };
+    const next = applyEditable(raw, editable({ activeHours: { enabled: false, days: [1], start: '10:00', end: '16:00' } }));
+    expect((next.poll as Record<string, unknown>).activeHours).toEqual({
+      days: [1], start: '10:00', end: '16:00', enabled: false,
+    });
+  });
+
+  it('re-enabling offers the previously saved window, not the defaults', () => {
+    // Disable, then round-trip through the editable form: the user's own
+    // window must come back, not 08:00-19:00.
+    const disabled = applyEditable(
+      { poll: { activeHours: { days: [2, 4], start: '06:30', end: '14:00' } } },
+      editable({ activeHours: { enabled: false, days: [2, 4], start: '06:30', end: '14:00' } }),
+    );
+    const form = toEditable(disabled as never);
+    expect(form.activeHours).toEqual({ enabled: false, days: [2, 4], start: '06:30', end: '14:00' });
+  });
+
+  it('a never-configured window stays absent when saved disabled', () => {
+    const next = applyEditable({}, editable({ activeHours: { enabled: false, days: [1], start: '08:00', end: '19:00' } }));
     expect((next.poll as Record<string, unknown>).activeHours).toBeUndefined();
   });
 

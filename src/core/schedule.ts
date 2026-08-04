@@ -69,7 +69,7 @@ export const nextIntervalSeconds = (state: ScheduleState, config: Config): numbe
 
 export const withinActiveHours = (now: Date, config: Config): boolean => {
   const window = config.poll.activeHours;
-  if (!window) return true;
+  if (!window || window.enabled === false) return true;
   if (window.days.length > 0 && !window.days.includes(now.getDay())) return false;
 
   const start = parseHhMm(window.start);
