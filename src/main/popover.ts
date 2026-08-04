@@ -17,6 +17,21 @@ export class Popover {
 
   constructor(private readonly onReady: () => void) {}
 
+  /**
+   * Settings intent for a window that is still booting. 'ready-to-show' fires
+   * when the first frame can paint — BEFORE the renderer's module script has
+   * necessarily run and registered its IPC listeners — so a message sent then
+   * is silently dropped on cold starts. The flag is consumed when the renderer
+   * proves it is alive by requesting its first snapshot.
+   */
+  private pendingShowSettings = false;
+
+  consumePendingShowSettings(): boolean {
+    const pending = this.pendingShowSettings;
+    this.pendingShowSettings = false;
+    return pending;
+  }
+
   get isOpen(): boolean {
     return this.win !== undefined && !this.win.isDestroyed();
   }
@@ -66,19 +81,18 @@ export class Popover {
     this.win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     void this.win.loadFile(join(__dirname, '..', 'renderer', 'index.html'));
 
+    if (opts.showSettings) this.pendingShowSettings = true;
     this.win.once('ready-to-show', () => {
       this.position(bounds);
       this.win?.show();
       this.onReady();
-      // Defer the settings signal until the renderer has registered its
-      // listeners, i.e. after first paint.
-      if (opts.showSettings) this.send('ui:show-settings', undefined);
     });
 
     // Click-away dismisses, like a real menu bar popover.
     this.win.on('blur', () => this.close());
     this.win.on('closed', () => {
       this.win = undefined;
+      this.pendingShowSettings = false;
     });
   }
 

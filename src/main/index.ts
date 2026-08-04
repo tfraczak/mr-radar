@@ -302,7 +302,12 @@ const registerPowerMonitor = (): void => {
 // ---------------------------------------------------------------------------
 
 const registerIpc = (): void => {
-  ipcMain.handle('ui:snapshot', () => present(state, config.jira.activeStatuses, new Date(), config.git.updateStyle, config.statusSections, config.statusRules));
+  ipcMain.handle('ui:snapshot', () => {
+    // The renderer requesting its snapshot is the proof its listeners exist —
+    // the safe moment to deliver a settings intent from the tray menu.
+    if (popover.consumePendingShowSettings()) popover.send('ui:show-settings', undefined);
+    return present(state, config.jira.activeStatuses, new Date(), config.git.updateStyle, config.statusSections, config.statusRules);
+  });
   ipcMain.handle('ui:poll-now', () => void runCycle('manual'));
   ipcMain.handle('ui:toggle-pause', () => togglePause());
   ipcMain.handle('ui:mark-all-read', () => markAllRead());

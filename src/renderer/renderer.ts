@@ -808,11 +808,15 @@ const closeSettings = (): void => {
  * reflects what's on disk; edits only take effect on Save.
  */
 const openSettings = async (): Promise<void> => {
+  // Cover the list BEFORE fetching: the round-trip is milliseconds, but even
+  // one visible frame of the main UI reads as a flash when the user asked
+  // for Settings. The overlay's solid background stands in until data lands.
+  settingsEl.replaceChildren();
+  settingsEl.hidden = false;
   const [s, launchAtLogin] = await Promise.all([
     window.radar.getSettings(),
     window.radar.getLaunchAtLogin(),
   ]);
-  settingsEl.hidden = false;
 
   const head = el('div', 'settings-head');
   head.append(el('h2', undefined, 'Settings'));
