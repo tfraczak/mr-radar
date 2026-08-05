@@ -259,3 +259,16 @@ describe('Copy-for-Slack settings', () => {
     expect(raw.slack).toEqual({ readyStatuses: ['Code Review'], template: 'keep me' });
   });
 });
+
+describe('tab counts setting', () => {
+  it('round-trips through the editable form', () => {
+    const editable = toEditable({ ...DEFAULT_CONFIG, ui: { ...DEFAULT_CONFIG.ui, tabCounts: 'all' } });
+    expect(editable.tabCounts).toBe('all');
+    expect(editable.tabCountsChoices).toEqual(['active', 'all']);
+    const raw = applyEditable({}, { ...editable, tabCounts: 'active' });
+    expect((raw.ui as { tabCounts: string }).tabCounts).toBe('active');
+    // Junk values are dropped rather than persisted.
+    const junk = applyEditable({}, { ...editable, tabCounts: 'everything' });
+    expect((junk.ui as { tabCounts?: string }).tabCounts).toBeUndefined();
+  });
+});

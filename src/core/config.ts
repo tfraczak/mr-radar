@@ -170,6 +170,8 @@ export interface Config {
   ui: {
     theme: string;
     appearance: 'system' | 'light' | 'dark';
+    /** What the popover tab labels count: active-scope work, or every section shown. */
+    tabCounts: 'active' | 'all';
   };
   /**
    * The poller's localhost status page — the popover UI served to a browser.
@@ -256,7 +258,7 @@ export const DEFAULT_CONFIG: Config = {
     { status: 'Dev Complete', field: 'fixVersions', op: 'empty', then: 'needs-value', else: 'verification' },
   ],
   recentDaysFallback: 0,
-  ui: { theme: 'system', appearance: 'system' },
+  ui: { theme: 'system', appearance: 'system', tabCounts: 'active' },
   web: { enabled: true, port: 8942 },
   slack: {
     readyStatuses: ['Code Review'],
@@ -341,6 +343,9 @@ const validate = (cfg: Config, path: string): void => {
   }
   if (!(APPEARANCES as readonly string[]).includes(cfg.ui.appearance)) {
     problems.push(`ui.appearance must be one of ${APPEARANCES.join(', ')}`);
+  }
+  if (cfg.ui.tabCounts !== 'active' && cfg.ui.tabCounts !== 'all') {
+    problems.push("ui.tabCounts must be 'active' or 'all'");
   }
   // present() runs the readiness predicate on every snapshot — a malformed
   // slack section must fail loudly at load, not crash every render.

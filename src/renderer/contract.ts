@@ -45,6 +45,8 @@ export interface UiSnapshot {
   ignoredGroups: UiStatusGroup[];
   /** Row to scroll to and flash (notification click-through). `at` dedupes. */
   highlight?: { key: string; at: string } | undefined;
+  /** What the tab labels count: active-scope sections, or everything shown. */
+  tabCounts: 'active' | 'all';
   /** Jira has no stored token yet, so the popover offers a connect field. */
   jiraNeedsToken: boolean;
   /** Atlassian account email, shown next to the connect field for context. */
@@ -184,6 +186,9 @@ export interface EditableSettings {
   /** Which half applies: follow the OS, or pin light/dark. */
   appearance: string;
   appearanceChoices: string[];
+  /** What the tab labels count: 'active' scope only, or 'all' sections. */
+  tabCounts: string;
+  tabCountsChoices: string[];
   pollBaseSeconds: number;
   activeHours: { enabled: boolean; days: number[]; start: string; end: string };
   /** Ticket statuses that make an MR announceable via Copy-for-Slack. */

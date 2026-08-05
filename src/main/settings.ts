@@ -89,6 +89,8 @@ export const toEditable = (config: Config, repoChoices: string[] = [], activeFor
     themeChoices: [...THEMES],
     appearance: config.ui.appearance,
     appearanceChoices: [...APPEARANCES],
+    tabCounts: config.ui.tabCounts,
+    tabCountsChoices: ['active', 'all'],
     pollBaseSeconds: config.poll.baseSeconds,
     slackReadyStatuses: config.slack.readyStatuses,
     slackTemplate: config.slack.template,
@@ -231,6 +233,7 @@ export const applyEditable = (
     const ui = { ...(asObject(next.ui) ?? {}) };
     ui.theme = s.theme;
     ui.appearance = s.appearance;
+    if (s.tabCounts === 'active' || s.tabCounts === 'all') ui.tabCounts = s.tabCounts;
     next.ui = ui;
   }
 

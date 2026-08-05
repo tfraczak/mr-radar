@@ -544,3 +544,13 @@ describe('slackReady is authored-only', () => {
     expect([...snap.groups, ...snap.otherGroups].flatMap((g) => g.items)[0]?.slackReady).toBeUndefined();
   });
 });
+
+describe('tabCounts pass-through', () => {
+  it('defaults to all and carries the configured value', () => {
+    expect(present(stateWith([]), ACTIVE, NOW).tabCounts).toBe('all');
+    expect(
+      present(stateWith([]), ACTIVE, NOW, 'rebase', DEFAULT_CONFIG.statusSections, [], DEFAULT_CONFIG.slack, 'active')
+        .tabCounts,
+    ).toBe('active');
+  });
+});

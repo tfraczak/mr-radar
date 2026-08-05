@@ -304,7 +304,7 @@ const markAllRead = (): void => {
 }
 
 const pushToRenderer = (): void => {
-  popover?.send('ui:snapshot', present(state, config.jira.activeStatuses, new Date(), config.git.updateStyle, config.statusSections, config.statusRules, config.slack));
+  popover?.send('ui:snapshot', present(state, config.jira.activeStatuses, new Date(), config.git.updateStyle, config.statusSections, config.statusRules, config.slack, config.ui.tabCounts));
 }
 
 /**
@@ -361,7 +361,7 @@ const registerIpc = (): void => {
     // The renderer requesting its snapshot is the proof its listeners exist —
     // the safe moment to deliver a settings intent from the tray menu.
     if (popover.consumePendingShowSettings()) popover.send('ui:show-settings', undefined);
-    return present(state, config.jira.activeStatuses, new Date(), config.git.updateStyle, config.statusSections, config.statusRules, config.slack);
+    return present(state, config.jira.activeStatuses, new Date(), config.git.updateStyle, config.statusSections, config.statusRules, config.slack, config.ui.tabCounts);
   });
   ipcMain.handle('ui:poll-now', () => void runCycle('manual'));
   ipcMain.handle('ui:toggle-pause', () => togglePause());

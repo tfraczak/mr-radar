@@ -52,6 +52,7 @@ export const present = (
   sections: StatusSections = DEFAULT_CONFIG.statusSections,
   rules: StatusRule[] = DEFAULT_CONFIG.statusRules,
   slack: Config['slack'] = DEFAULT_CONFIG.slack,
+  tabCounts: Config['ui']['tabCounts'] = 'all',
 ): UiSnapshot => {
   const active = new Set(activeStatuses.map((s) => s.toLowerCase()));
   const hidden = new Set(sections.hidden.map((s) => s.toLowerCase()));
@@ -86,6 +87,7 @@ export const present = (
     doneGroups,
     otherGroups,
     ignoredGroups,
+    tabCounts,
     jiraNeedsToken: !state.jiraConfigured,
     jiraEmail: state.jiraEmail,
   };

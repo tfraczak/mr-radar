@@ -169,13 +169,14 @@ byId('tabs').replaceWith(mainTabs.root);
 
 /** Tab labels carry live counts; the active tab is marked for the CSS. */
 const paintTabs = (s: UiSnapshot): void => {
-  const items = [
-    ...s.groups,
-    ...(s.needsGroups ?? []),
-    ...(s.verificationGroups ?? []),
-    ...(s.doneGroups ?? []),
-    ...s.otherGroups,
-  ].flatMap((g) => g.items);
+  // 'active' counts what needs doing (active + needs-value sections), so the
+  // labels agree with the header's "N in scope"; 'all' counts every section
+  // shown (Verification/Done/Other too — never Ignored).
+  const groups =
+    (s.tabCounts ?? 'all') === 'active'
+      ? [...s.groups, ...(s.needsGroups ?? [])]
+      : [...s.groups, ...(s.needsGroups ?? []), ...(s.verificationGroups ?? []), ...(s.doneGroups ?? []), ...s.otherGroups];
+  const items = groups.flatMap((g) => g.items);
   const count = (tab: Tab): number => items.filter((i) => inTab(i, tab)).length;
   mainTabs.setLabel('work', `My work (${count('work')})`);
   mainTabs.setLabel('reviews', `My reviews (${count('reviews')})`);
@@ -393,7 +394,7 @@ const renderStatus = (s: UiSnapshot): void => {
   const parts: string[] = [];
   if (s.lastPollAt) parts.push(`checked ${timeAgo(s.lastPollAt)}`);
   if (s.nextPollAt) parts.push(`next ${clock(s.nextPollAt)}`);
-  const count = s.groups.reduce((n, g) => n + g.items.length, 0);
+  const count = [...s.groups, ...(s.needsGroups ?? [])].reduce((n, g) => n + g.items.length, 0);
   parts.push(`${count} in scope`);
   statusEl.textContent = parts.join(' · ');
 }
@@ -1479,6 +1480,9 @@ const openSettings = async (): Promise<void> => {
   });
   shareRow.append(exportBtn, importBtn, importInput);
 
+  const tabCountsSel = selectField('Tab counts', s.tabCountsChoices, s.tabCounts);
+  tabCountsSel.wrap.title = "'active': count only the sections that need you; 'all': count every section shown";
+
   const save = createButton('Save', { variant: 'primary' });
   save.addEventListener('click', () => {
     const next: typeof s = {
@@ -1514,6 +1518,8 @@ const openSettings = async (): Promise<void> => {
       themeChoices: s.themeChoices,
       appearance: appearance.select.value,
       appearanceChoices: s.appearanceChoices,
+      tabCounts: tabCountsSel.select.value,
+      tabCountsChoices: s.tabCountsChoices,
       pollBaseSeconds: Number(pollSecs.input.value),
       slackReadyStatuses: [...readySet.values()],
       slackTemplate: slackTemplateField.input.value.trim(),
@@ -1554,7 +1560,7 @@ const openSettings = async (): Promise<void> => {
     Jira: paneOf([atlassianUrl.wrap, email.wrap, statusBlock, rulesBlock, slackBlock]),
     Polling: paneOf([pollSecs.wrap, recent.wrap, hoursEnabled.wrap, hoursBlock]),
     Notifications: paneOf([notify.wrap, sound.wrap, method.wrap]),
-    Display: paneOf([theme.wrap, appearance.wrap]),
+    Display: paneOf([theme.wrap, appearance.wrap, tabCountsSel.wrap]),
   };
   const paneNames = Object.keys(settingsPanes);
   // Reopening settings lands on the tab you were using last (per machine).
