@@ -21,6 +21,7 @@ describe('mcp tool registry', () => {
       'radar_discussions',
       'radar_events',
       'radar_tickets',
+      'radar_review_message',
       'radar_set_ignored',
       'radar_start_run',
       'radar_set_polling',

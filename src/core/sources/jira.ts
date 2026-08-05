@@ -126,8 +126,13 @@ export class JiraSource {
               const r = await this.search(`key = ${k}`, 1);
               if (r.length === 0) this.missingKeys.set(k, now);
               return r;
-            } catch {
-              this.missingKeys.set(k, now); // nonexistent → 400 here too
+            } catch (chunkErr) {
+              // Only a 400/404 means "this key doesn't exist". A timeout, 429,
+              // or 5xx is the outage's fault, not the key's — don't poison it
+              // for 24h; it just misses this round.
+              if (chunkErr instanceof HttpError && (chunkErr.status === 400 || chunkErr.status === 404)) {
+                this.missingKeys.set(k, now);
+              }
               return [] as JiraTicket[];
             }
           }),

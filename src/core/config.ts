@@ -180,6 +180,17 @@ export interface Config {
     enabled: boolean;
     port: number;
   };
+  /**
+   * The "announce for code review" helper (the Copy-for-Slack button). No
+   * Slack credentials live here — iteration 1 is clipboard-only; a webhook,
+   * when added, goes to the Keychain like every other secret.
+   */
+  slack: {
+    /** Ticket statuses that count as ready to announce (case-insensitive). */
+    readyStatuses: string[];
+    /** Message template: {ticketKey} {ticketUrl} {title} {mrUrl}. */
+    template: string;
+  };
   notifications: {
     enabled: boolean;
     coalesce: boolean;
@@ -247,6 +258,10 @@ export const DEFAULT_CONFIG: Config = {
   recentDaysFallback: 0,
   ui: { theme: 'system', appearance: 'system' },
   web: { enabled: true, port: 8942 },
+  slack: {
+    readyStatuses: ['Code Review'],
+    template: 'hey team! {ticketUrl} is ready for review. {title}',
+  },
   notifications: { enabled: true, coalesce: true, sound: 'default', method: 'auto' },
 };
 
@@ -326,6 +341,14 @@ const validate = (cfg: Config, path: string): void => {
   }
   if (!(APPEARANCES as readonly string[]).includes(cfg.ui.appearance)) {
     problems.push(`ui.appearance must be one of ${APPEARANCES.join(', ')}`);
+  }
+  // present() runs the readiness predicate on every snapshot — a malformed
+  // slack section must fail loudly at load, not crash every render.
+  if (!Array.isArray(cfg.slack.readyStatuses) || cfg.slack.readyStatuses.some((s) => typeof s !== 'string')) {
+    problems.push('slack.readyStatuses must be an array of status names');
+  }
+  if (typeof cfg.slack.template !== 'string' || !cfg.slack.template.trim()) {
+    problems.push('slack.template must be a non-empty string');
   }
   for (const [i, rule] of cfg.statusRules.entries()) {
     if (!rule.status?.trim()) problems.push(`statusRules[${i}]: status is required`);

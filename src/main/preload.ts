@@ -37,6 +37,11 @@ const api = {
     ipcRenderer.invoke('ui:become-reviewer', mrKey),
   setIgnored: (mrKey: string, ignored: boolean): Promise<{ ok: boolean; message?: string }> =>
     ipcRenderer.invoke('ui:set-ignored', mrKey, ignored),
+  checkReviewReady: (
+    mrKey: string,
+  ): Promise<{ ok: boolean; eligible?: boolean; reasons?: string[]; message?: string }> =>
+    ipcRenderer.invoke('ui:check-review-ready', mrKey),
+  copyText: (text: string): Promise<boolean> => ipcRenderer.invoke('ui:copy-text', text),
   listStatuses: (): Promise<{ ok: boolean; statuses?: string[]; message?: string }> =>
     ipcRenderer.invoke('ui:list-statuses'),
   exportSettings: (): Promise<{ ok: boolean; settings?: Record<string, unknown>; message?: string }> =>

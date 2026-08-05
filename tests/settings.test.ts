@@ -233,3 +233,29 @@ describe('applyEditable', () => {
     expect(repos['acme/gadget']).toBeUndefined();
   });
 });
+
+describe('Copy-for-Slack settings', () => {
+  it('round-trips ready statuses and the template through the editable form', () => {
+    const editable = toEditable({
+      ...DEFAULT_CONFIG,
+      slack: { readyStatuses: ['Code Review', 'In Review'], template: '{ticketKey}: {title}' },
+    });
+    expect(editable.slackReadyStatuses).toEqual(['Code Review', 'In Review']);
+    expect(editable.slackTemplate).toBe('{ticketKey}: {title}');
+
+    const raw = applyEditable({}, {
+      ...editable,
+      slackReadyStatuses: ['Dev Complete', '  '],
+      slackTemplate: '  new template {title} ',
+    });
+    expect(raw.slack).toEqual({ readyStatuses: ['Dev Complete'], template: 'new template {title}' });
+  });
+
+  it('a blank template falls back to the existing/default one', () => {
+    const raw = applyEditable(
+      { slack: { readyStatuses: [], template: 'keep me' } },
+      { ...toEditable(DEFAULT_CONFIG), slackReadyStatuses: ['Code Review'], slackTemplate: '   ' },
+    );
+    expect(raw.slack).toEqual({ readyStatuses: ['Code Review'], template: 'keep me' });
+  });
+});

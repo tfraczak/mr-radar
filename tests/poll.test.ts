@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Db } from '../src/core/db';
 import { DEFAULT_CONFIG, type Config } from '../src/core/config';
-import { pollOnce, type PollDeps } from '../src/core/poll';
+import { pollOnce, refreshItem, type PollDeps } from '../src/core/poll';
 import type { ForgeMr, JiraTicket, RwxRun } from '../src/core/types';
 
 // Lightweight in-memory fakes. Only the methods pollOnce actually calls are
@@ -497,5 +497,58 @@ describe('quiet-cycle carry-forward (C2)', () => {
     expect(item?.threads).toBeUndefined(); // detail fetch was skipped
     expect(item?.unresolvedFallback).toBe(1); // carried forward, not lost
     expect(item?.approvals).toEqual({ required: 2, left: 1, by: ['a'] });
+  });
+});
+
+
+describe('refreshItem (the Copy-for-Slack freshness pass)', () => {
+  it('re-fetches the MR row, forces the discussions fetch, and re-resolves CI', async () => {
+    db.setRepoRoles('acme/rocket', { testGate: 'none', gitlabIsLintOnly: false, detectedAt: 'now' });
+    const item = {
+      key: 'acme/rocket!5',
+      projectPath: 'acme/rocket',
+      projectId: 1,
+      iid: 5,
+      branch: 'ENG-5',
+      targetBranch: 'main',
+      title: 'stale title',
+      headSha: 'stale-sha',
+      webUrl: '#',
+      updatedAt: 'old',
+      createdAt: 'old',
+      userNotesCount: 0,
+      draft: true, // stale: the fresh fetch says otherwise
+      hasConflicts: false,
+      reason: 'authored' as const,
+      inScope: true,
+      unresolvedFallback: 4, // stale count that fresh threads must supersede
+    };
+    const forge = fakeForge({
+      mrByProjectId: async () => ({
+        id: 5,
+        iid: 5,
+        project_id: 1,
+        title: 'ENG-5: fresh title',
+        state: 'opened',
+        sha: 'fresh-sha',
+        source_branch: 'ENG-5',
+        target_branch: 'main',
+        web_url: '#',
+        updated_at: 'new',
+        created_at: 'old',
+        user_notes_count: 2,
+        draft: false,
+        has_conflicts: false,
+        author: { id: 1, username: 'me', name: 'Me' },
+        references: { full: 'acme/rocket!5' },
+      }),
+      discussions: async () => [],
+    });
+    await refreshItem(deps({ db, forge: forge as never }) , item as never);
+    expect(item.title).toBe('ENG-5: fresh title');
+    expect(item.headSha).toBe('fresh-sha');
+    expect(item.draft).toBe(false);
+    expect((item as { threads?: unknown[] }).threads).toEqual([]); // forced fetch
+    expect((item as { testGate?: { kind: string } }).testGate?.kind).toBe('none');
   });
 });

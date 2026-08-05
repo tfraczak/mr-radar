@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CONFIG_PATH, loadConfig, readRawConfig, writeRawConfig, type Config } from '../core/config';
 import { summarizeThreads, unresolvedCount } from '../core/correlate';
+import { refreshItem } from '../core/poll';
+import { reviewMessage, reviewReadiness } from '../core/review-ready';
 import { effectiveIgnore } from '../core/rules';
 import type { Db } from '../core/db';
 import { writeJiraToken } from '../core/secrets';
@@ -74,7 +76,7 @@ export const makeWebHandlers = (deps: WebHandlerDeps): WebHandlers => {
 
   return {
     getSnapshot: () =>
-      present(state, cfg().jira.activeStatuses, new Date(), cfg().git.updateStyle, cfg().statusSections, cfg().statusRules),
+      present(state, cfg().jira.activeStatuses, new Date(), cfg().git.updateStyle, cfg().statusSections, cfg().statusRules, cfg().slack),
 
     getItemDetail: async (mrKey: string) => {
       const snapshot = state.snapshot;
@@ -165,6 +167,44 @@ export const makeWebHandlers = (deps: WebHandlerDeps): WebHandlers => {
       if (state.schedule.enabled === enabled) return { enabled, changed: false };
       deps.togglePause();
       return { enabled: state.schedule.enabled, changed: true };
+    },
+
+    checkReviewReady: async (mrKey: string) => {
+      const snapshot = state.snapshot;
+      if (!snapshot) {
+        return { ok: false, message: 'MR Radar has not completed a poll yet — try again shortly.' };
+      }
+      const item = snapshot.items.find((i) => i.key === mrKey);
+      if (!item) return { ok: false, message: 'That MR is no longer in scope.' };
+      // A minutes-old snapshot is not good enough to announce on: re-fetch
+      // this one MR (row, ticket status, discussions, CI) before judging.
+      let freshState: string;
+      try {
+        const jira = deps.getJira();
+        ({ state: freshState } = await refreshItem(
+          { db, config: cfg(), forge: deps.getForge(), rwx, ...(jira ? { jira } : {}), log },
+          item,
+        ));
+      } catch (err) {
+        return {
+          ok: false,
+          message: `Could not re-check the MR: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+      if (freshState !== 'opened') {
+        return { ok: true, eligible: false, reasons: [`The MR is already ${freshState}.`] };
+      }
+      // Deliberately NO snapshot.at bump and NO push here: the refreshed item
+      // rides the next natural cycle. Bumping `at` mid-check would rebuild the
+      // popover list under the clicked button, and would stamp a one-item
+      // refresh as if the WHOLE snapshot were that fresh.
+      const readiness = reviewReadiness(item, cfg().slack.readyStatuses);
+      return {
+        ok: true,
+        eligible: readiness.eligible,
+        reasons: readiness.reasons,
+        ...(readiness.eligible ? { message: reviewMessage(item, cfg()) } : {}),
+      };
     },
 
     setIgnored: (mrKey: string, ignored: boolean) => {

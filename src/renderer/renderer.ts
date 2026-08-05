@@ -13,6 +13,7 @@ import {
   createStatusMessage,
   createTabBar,
   el,
+  eyeIcon,
   numberField,
   registerDropdown,
   selectField,
@@ -540,12 +541,15 @@ const renderGroup = (group: UiGroup): HTMLElement => {
     head.append(key);
     head.append(el('span', 'ticket-status', group.ticket.status));
     if (group.ticket.needsField === 'fixVersions') head.append(fixVersionControl(group.ticket.key));
+    head.append(eyeControl(group.items, true)); // styles push it hard right
     wrap.append(head);
   } else {
-    wrap.append(el('div', 'group-head', 'No active ticket'));
+    const head = el('div', 'group-head');
+    head.append(el('span', undefined, 'No active ticket'), eyeControl(group.items, true));
+    wrap.append(head);
   }
 
-  for (const item of group.items) wrap.append(renderRow(item));
+  for (const item of group.items) wrap.append(renderRow(item, { eye: false }));
   return wrap;
 }
 
@@ -630,7 +634,7 @@ const fixVersionControl = (ticketKey: string): HTMLElement => {
   return wrap;
 };
 
-const renderRow = (item: UiItem): HTMLElement => {
+const renderRow = (item: UiItem, opts: { eye?: boolean } = {}): HTMLElement => {
   // Clicking the row opens the MR and clears its unread mark. Buttons and chips
   // inside stop propagation so they don't also trigger this.
   const row = createRow({
@@ -700,41 +704,79 @@ const renderRow = (item: UiItem): HTMLElement => {
   const runControl = rwxRunControl(item);
   if (runControl) row.side.append(runControl);
   if (item.reason === 'participating' && !item.ignored) row.side.append(becomeReviewerButton(item));
-  row.side.append(item.ignored ? restoreButton(item) : ignoreButton(item));
+  if (item.slackReady && !item.ignored) row.side.append(slackButton(item));
+  if (opts.eye !== false) row.side.append(eyeControl([item], !item.ignored));
 
   return row.root;
 }
 
-/** Mute one MR: no section presence, no notifications, until it closes. */
-const ignoreButton = (item: UiItem): HTMLElement => {
-  const btn = createButton('⊘', {
-    variant: 'link',
-    title: 'Ignore this MR until it closes — no notifications, no counts',
-    onClick: (e) => {
-      e.stopPropagation();
-      btn.disabled = true;
-      void window.radar.setIgnored(item.key, true);
-    },
+/**
+ * The ignore toggle, drawn as an eye: open = watching (click to ignore),
+ * closed = ignored (click to restore). Lives on the ticket header line for
+ * grouped MRs and on the row for section lists.
+ */
+const eyeControl = (
+  items: { key: string; ignored?: UiItem['ignored'] }[],
+  ignore: boolean,
+): HTMLElement => {
+  const btn = el('button', 'eye-btn');
+  btn.type = 'button';
+  const byRule = items.some((i) => i.ignored === 'rule');
+  btn.title = ignore
+    ? items.length > 1
+      ? `Ignore this ticket's ${items.length} MRs until they close — no notifications, no counts`
+      : 'Ignore this MR until it closes — no notifications, no counts'
+    : byRule
+      ? 'A status rule ignores this MR — pin it visible without editing the rule'
+      : 'Stop ignoring this MR';
+  btn.append(eyeIcon(ignore)); // the eye shows the CURRENT state's affordance
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    btn.disabled = true;
+    for (const i of items) void window.radar.setIgnored(i.key, ignore);
   });
-  btn.classList.add('ignore-btn');
   return btn;
 };
 
-/** The way back out of the Ignored section. Wording tracks how it got there. */
-const restoreButton = (item: UiItem): HTMLElement => {
-  const byRule = item.ignored === 'rule';
-  const btn = createButton(byRule ? 'Show anyway' : 'Un-ignore', {
-    variant: 'link',
-    title: byRule
-      ? 'A status rule ignores this MR — pin this one visible without editing the rule'
-      : 'Stop ignoring this MR',
-    onClick: (e) => {
-      e.stopPropagation();
-      btn.disabled = true;
-      void window.radar.setIgnored(item.key, false);
-    },
+/**
+ * Copy-for-Slack: re-check this MR with fresh data, then copy the announce
+ * message. The click is the source of truth — the button's presence is only a
+ * hint from the last snapshot.
+ */
+const slackButton = (item: UiItem): HTMLElement => {
+  const btn = createButton('Copy for Slack', {
+    variant: 'action',
+    title: 'Re-check this MR fresh, then copy the review announcement',
   });
-  btn.classList.add('ignore-btn');
+  // The 'action' class is alarm-red for "Start run"; announcing is a calm,
+  // positive act — recolor to the accent (and green once copied).
+  btn.classList.add('slack-copy');
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    btn.disabled = true;
+    btn.textContent = 'Checking…';
+    void window.radar.checkReviewReady(item.key).then(async (r) => {
+      if (r.ok && r.eligible && r.message) {
+        const copied = await window.radar.copyText(r.message);
+        btn.textContent = copied ? 'Copied ✓' : 'Copy failed';
+        if (copied) btn.classList.add('copied');
+        btn.title = r.message; // hover shows exactly what was copied
+        return;
+      }
+      // Not eligible after all (or the check failed): say why, right here.
+      btn.textContent = 'Not ready';
+      const why = r.reasons?.length ? r.reasons : [r.message ?? 'Could not verify.'];
+      btn.title = why.join('\n');
+      const note = el('span', 'chip-detail slack-why', why[0] ?? '');
+      note.title = why.join('\n');
+      btn.insertAdjacentElement('afterend', note);
+    }).catch((err: unknown) => {
+      // A rejected IPC/fetch must not leave the button dead with no story.
+      btn.textContent = 'Check failed';
+      btn.title = err instanceof Error ? err.message : String(err);
+      btn.disabled = false;
+    });
+  });
   return btn;
 };
 
@@ -1311,6 +1353,59 @@ const openSettings = async (): Promise<void> => {
     return { projectPath: r.projectPath, rwxDefinition: r.rwxDefinition, row, checkout, gate };
   });
 
+  // Copy for Slack: which ticket statuses make an MR announceable, and the
+  // message it copies. The statuses are an independent pick-list (an MR can be
+  // announceable regardless of which section its status renders in).
+  for (const st of s.slackReadyStatuses) learnStatus(st);
+  const readySet = new Map<string, string>(); // lowercase → display casing
+  for (const st of s.slackReadyStatuses) readySet.set(st.toLowerCase(), st);
+  const slackBlock = el('div', 'status-sections');
+  slackBlock.append(el('div', 'field-label', 'Copy for Slack'));
+  const readyWrap = el('div', 'field msf');
+  readyWrap.append(el('span', 'field-label', 'Ready-for-review statuses'));
+  const readyBox = el('div', 'msf-box');
+  const readyPanel = el('div', 'msf-panel');
+  registerDropdown(readyBox, readyPanel);
+  const paintReady = (): void => {
+    readyBox.replaceChildren();
+    if (readySet.size === 0) readyBox.append(el('span', 'msf-placeholder', 'Click to choose statuses…'));
+    for (const status of readySet.values()) {
+      readyBox.append(
+        createRemovableChip(status, {
+          removeTitle: `Stop offering Copy for Slack on ${status}`,
+          onRemove: (e) => {
+            e.stopPropagation();
+            readySet.delete(status.toLowerCase());
+            paintReady();
+          },
+        }),
+      );
+    }
+    readyPanel.replaceChildren();
+    const names = [...knownStatusNames.values()].sort((a, b) => a.localeCompare(b));
+    for (const name of names) {
+      const row = el('div', 'msf-row');
+      row.append(el('span', undefined, name));
+      if (readySet.has(name.toLowerCase())) row.append(el('span', 'msf-row-check', '✓'));
+      row.addEventListener('click', () => {
+        if (readySet.has(name.toLowerCase())) readySet.delete(name.toLowerCase());
+        else readySet.set(name.toLowerCase(), name);
+        paintReady();
+      });
+      readyPanel.append(row);
+    }
+  };
+  repaints.push(paintReady);
+  paintReady();
+  readyWrap.append(readyBox, readyPanel);
+  const slackTemplateField = textField(
+    'Message template',
+    s.slackTemplate,
+    'hey team! {ticketUrl} is ready for review. {title}',
+  );
+  slackTemplateField.input.title = 'Placeholders: {ticketKey} {ticketUrl} {title} {mrUrl}';
+  slackBlock.append(readyWrap, slackTemplateField.wrap);
+
   const msg = createStatusMessage();
 
   // Share settings with teammates: export downloads the shareable subset
@@ -1393,6 +1488,8 @@ const openSettings = async (): Promise<void> => {
       appearance: appearance.select.value,
       appearanceChoices: s.appearanceChoices,
       pollBaseSeconds: Number(pollSecs.input.value),
+      slackReadyStatuses: [...readySet.values()],
+      slackTemplate: slackTemplateField.input.value.trim(),
       activeHours: {
         enabled: hoursEnabled.input.checked,
         days: dayToggles.filter((b) => b.classList.contains('on')).map((b) => Number(b.dataset.day)),
@@ -1427,7 +1524,7 @@ const openSettings = async (): Promise<void> => {
   const settingsPanes: Record<string, HTMLElement> = {
     General: paneOf([updateStyle.wrap, login.wrap]),
     Git: paneOf([forgeSel.wrap, rwxEnabled.wrap, ...repoFields.map((f) => f.row)]),
-    Jira: paneOf([atlassianUrl.wrap, email.wrap, statusBlock, rulesBlock]),
+    Jira: paneOf([atlassianUrl.wrap, email.wrap, statusBlock, rulesBlock, slackBlock]),
     Polling: paneOf([pollSecs.wrap, recent.wrap, hoursEnabled.wrap, hoursBlock]),
     Notifications: paneOf([notify.wrap, sound.wrap, method.wrap]),
     Display: paneOf([theme.wrap, appearance.wrap]),

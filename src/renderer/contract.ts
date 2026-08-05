@@ -109,6 +109,9 @@ export interface UiItem {
   /** Set on rows in the Ignored section: how it got there, which decides the
    *  restore control ('Un-ignore' vs 'Show anyway'). */
   ignored?: 'manual' | 'rule' | undefined;
+  /** Snapshot-data hint that this MR looks announceable for review — shows the
+   *  Copy-for-Slack button; the click re-checks fresh before composing. */
+  slackReady?: boolean | undefined;
   ci: {
     label: string;
     tone: 'good' | 'bad' | 'busy' | 'warn' | 'none';
@@ -183,6 +186,10 @@ export interface EditableSettings {
   appearanceChoices: string[];
   pollBaseSeconds: number;
   activeHours: { enabled: boolean; days: number[]; start: string; end: string };
+  /** Ticket statuses that make an MR announceable via Copy-for-Slack. */
+  slackReadyStatuses: string[];
+  /** Announce template: {ticketKey} {ticketUrl} {title} {mrUrl}. */
+  slackTemplate: string;
   repos: { projectPath: string; checkout: string; rwxDefinition: string; testGate: string }[];
   /** 'auto' (detect from live data) plus the pinnable gates. */
   repoGateChoices: string[];
@@ -212,6 +219,13 @@ export interface RadarApi {
   /** Manually ignore / un-ignore one MR. Un-ignoring a rule-ignored MR pins it
    *  visible ('shown') so the rule no longer catches it. */
   setIgnored(mrKey: string, ignored: boolean): Promise<{ ok: boolean; message?: string }>;
+  /** Fresh re-check of one MR for the Copy-for-Slack flow; when eligible,
+   *  `message` is the composed announcement. */
+  checkReviewReady(
+    mrKey: string,
+  ): Promise<{ ok: boolean; eligible?: boolean; reasons?: string[]; message?: string }>;
+  /** Put text on the system clipboard (Electron main clipboard / navigator). */
+  copyText(text: string): Promise<boolean>;
   /** All Jira status names, for the status-section assignment UI. */
   listStatuses(): Promise<{ ok: boolean; statuses?: string[]; message?: string }>;
   /** The shareable config subset (identity stripped; token never in config). */

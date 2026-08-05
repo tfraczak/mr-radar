@@ -2181,12 +2181,45 @@ button.select-trigger {
   cursor: progress;
 }
 
-/* Ignore / restore controls: quiet until hovered — muting is a side action. */
-.ignore-btn {
-  opacity: 0.55;
-  font-size: 12px;
+/* The ignore eye: quiet until hovered — muting is a side action. On ticket
+   headers it sits all the way right; on section rows it rides the side stack. */
+.eye-btn {
+  background: none;
+  border: none;
+  padding: 2px;
+  margin: 0;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.4;
+  display: inline-flex;
+  align-items: center;
+}
+.eye-btn:hover {
+  opacity: 1;
+  color: var(--accent);
+}
+.group-head .eye-btn {
+  margin-left: auto;
+}
+
+/* Copy-for-Slack refusal note: one line, full detail on hover. */
+.slack-why {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-.ignore-btn:hover {
-  opacity: 1;
+
+/* Copy for Slack: accent, not the Start-run alarm red — announcing is calm. */
+.start-run.slack-copy {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
+.start-run.slack-copy.copied {
+  color: var(--good);
+  border-color: color-mix(in srgb, var(--good) 45%, transparent);
+}
+.start-run.slack-copy:disabled {
+  opacity: 0.75;
+}
+

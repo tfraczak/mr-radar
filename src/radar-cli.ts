@@ -41,6 +41,9 @@ read commands (work even when the app is closed; stale data is flagged):
 live-only read:
   discussions <mr-key> [--all] review threads with comment bodies
                                (default: unresolved only)
+  slack <mr-key>               fresh ready-for-review check; prints the
+                               announce message on success (pipe to pbcopy),
+                               or the blocking reasons on failure
 
 actions (need the running app; exit 2 otherwise):
   run <mr-key>                 start an RWX run for the MR's head commit
@@ -253,6 +256,25 @@ export const runCommand = async (argv: string[], deps: CliDeps): Promise<number>
       out(r.started ? green(r.message) : red(r.message));
       if (r.url) out(`  ${r.url}`);
       return r.started ? 0 : 1;
+    }
+
+    if (command === 'slack') {
+      const key = positional[0];
+      if (!key) {
+        err(red('usage: slack <mr-key>'));
+        return 1;
+      }
+      const r = await client.reviewReady(key);
+      if (json) return (emit(r), r.ok && r.eligible ? 0 : 1);
+      if (r.ok && r.eligible && r.message) {
+        out(r.message);
+        return 0;
+      }
+      err(red('Not ready to announce:'));
+      for (const why of r.reasons?.length ? r.reasons : [r.message ?? 'could not verify']) {
+        err(red(`  - ${why}`));
+      }
+      return 1;
     }
 
     if (command === 'ignore' || command === 'unignore') {

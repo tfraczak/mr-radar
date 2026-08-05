@@ -93,6 +93,11 @@ export interface WebHandlers {
   focusItem: (mrKey?: string) => { ok: boolean };
   /** Manual per-MR ignore; un-ignoring a rule-ignored MR pins it visible. */
   setIgnored: (mrKey: string, ignored: boolean) => { ok: boolean; message?: string };
+  /** Fresh single-MR re-check for the Copy-for-Slack flow: re-fetches the MR,
+   *  its ticket, and its CI, then reports announce-eligibility with reasons. */
+  checkReviewReady: (
+    mrKey: string,
+  ) => Promise<{ ok: boolean; eligible?: boolean; reasons?: string[]; message?: string }>;
   pollNow: () => void;
   togglePause: () => void;
   markAllRead: () => void;
@@ -317,6 +322,9 @@ export const startWebServer = (opts: WebServerOptions): Server => {
           return sendJson(res, 400, { error: 'mrKey (string) and ignored (boolean) required' });
         }
         return sendJson(res, 200, handlers.setIgnored(body.mrKey, body.ignored));
+      case 'review-ready':
+        if (typeof body.mrKey !== 'string') return sendJson(res, 400, { error: 'mrKey required' });
+        return sendJson(res, 200, await handlers.checkReviewReady(body.mrKey));
       case 'mark-all-read':
         handlers.markAllRead();
         return sendJson(res, 200, { ok: true });

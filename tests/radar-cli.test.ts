@@ -92,6 +92,21 @@ describe('radar-cli', () => {
     expect((await run(['ignore'], client)).code).toBe(1); // key required
   });
 
+  it('slack prints the message on success and reasons on refusal', async () => {
+    const ok = await run(['slack', 'acme/rocket!1'], {
+      reviewReady: async () => ({ ok: true, eligible: true, reasons: [], message: 'hey team! ...' }),
+    });
+    expect(ok.code).toBe(0);
+    expect(ok.out).toEqual(['hey team! ...']);
+
+    const no = await run(['slack', 'acme/rocket!1'], {
+      reviewReady: async () => ({ ok: true, eligible: false, reasons: ['2 review threads are still open.'] }),
+    });
+    expect(no.code).toBe(1);
+    expect(no.err.join(' ')).toContain('2 review threads');
+    expect((await run(['slack'], {})).code).toBe(1);
+  });
+
   it('pause/resume are idempotent and say so', async () => {
     const { code, out } = await run(['pause'], {
       setPolling: async (enabled: boolean) => ({ enabled, changed: false }),

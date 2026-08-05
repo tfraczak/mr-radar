@@ -125,6 +125,24 @@ window.radar = {
     void refresh();
     return result;
   },
+  checkReviewReady: async (mrKey) => {
+    const result = await api<{ ok: boolean; eligible?: boolean; reasons?: string[]; message?: string }>(
+      'review-ready',
+      { mrKey },
+    );
+    void refresh(); // the check refreshed the item server-side; show it
+    return result;
+  },
+  copyText: async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Clipboard permission denied (unfocused tab etc.) — the caller shows
+      // the text so the user can copy by hand.
+      return false;
+    }
+  },
   setFixVersion: async (ticketKey, versionId) => {
     const result = await api<{ ok: boolean; message: string }>('set-fix-version', {
       ticketKey,

@@ -1,6 +1,7 @@
 import { DEFAULT_CONFIG, type Config, type RuleField, type StatusRule } from '../core/config';
 import { FIELD_LABELS } from '../renderer/contract';
 import { unresolvedCount } from '../core/correlate';
+import { reviewReadiness } from '../core/review-ready';
 import { resolveRules } from '../core/rules';
 import { describePause } from '../core/schedule';
 import type { TestGate, WatchItem } from '../core/types';
@@ -50,6 +51,7 @@ export const present = (
   updateStyle: UpdateStyle = 'rebase',
   sections: StatusSections = DEFAULT_CONFIG.statusSections,
   rules: StatusRule[] = DEFAULT_CONFIG.statusRules,
+  slack: Config['slack'] = DEFAULT_CONFIG.slack,
 ): UiSnapshot => {
   const active = new Set(activeStatuses.map((s) => s.toLowerCase()));
   const hidden = new Set(sections.hidden.map((s) => s.toLowerCase()));
@@ -60,7 +62,7 @@ export const present = (
   const unreadKeys = new Set(state.unread.map((e) => e.mrKey));
 
   const { groups, needsGroups, verificationGroups, doneGroups, otherGroups, ignoredGroups } =
-    groupItems(items, unreadKeys, active, now, updateStyle, sections, rules);
+    groupItems(items, unreadKeys, active, now, updateStyle, sections, rules, slack);
   return {
     at: state.snapshot?.at,
     lastPollAt: state.lastPollAt,
@@ -123,6 +125,7 @@ const groupItems = (
   updateStyle: UpdateStyle,
   sections: StatusSections,
   rules: StatusRule[],
+  slack: Config['slack'],
 ): {
   groups: UiGroup[];
   needsGroups: UiGroup[];
@@ -168,6 +171,10 @@ const groupItems = (
       addToStatusGroup(ignoredMap, status ?? 'No ticket', ui);
       continue;
     }
+
+    // A static hint from (possibly minutes-old) snapshot data; the button's
+    // click still does the authoritative fresh re-check. Never on ignored rows.
+    if (reviewReadiness(item, slack.readyStatuses).eligible) ui.slackReady = true;
 
     if (target && !item.ticket) {
       // Ticketless MRs can't join ticket groups; ignore works fully, the

@@ -193,7 +193,14 @@ export class RadarClient {
     let res: Response;
     try {
       res = await attempt(info);
-    } catch {
+    } catch (err) {
+      // A timeout is NOT "app down" — a long re-check may still be running.
+      if (err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
+        throw new Error(
+          `MR Radar did not answer ${path} within ${(opts.timeoutMs ?? READ_TIMEOUT_MS) / 1000}s — it may still be working; try again shortly.`,
+          { cause: err },
+        );
+      }
       throw new AppDownError(info.port);
     }
     if (res.status === 403) {
@@ -443,6 +450,14 @@ export class RadarClient {
       body: { mrKey: key },
       timeoutMs: START_RUN_TIMEOUT_MS,
     });
+  }
+
+  async reviewReady(
+    key: string,
+  ): Promise<{ ok: boolean; eligible?: boolean; reasons?: string[]; message?: string }> {
+    // The app re-fetches the MR, ticket, and CI before judging; the RWX
+    // history sweeps can legitimately take a while — give it real time.
+    return this.api('review-ready', { method: 'POST', body: { mrKey: key }, timeoutMs: 90_000 });
   }
 
   async setIgnored(key: string, ignored: boolean): Promise<{ ok: boolean; message?: string }> {

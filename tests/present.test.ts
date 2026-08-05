@@ -487,3 +487,42 @@ describe('overdue', () => {
     expect(snap.groups[0]?.items[0]?.overdue).toBe(true);
   });
 });
+
+describe('slackReady hint', () => {
+  const readyItem = () =>
+    item({
+      ticket: ticket('Code Review'),
+      threads: [],
+      testGate: { kind: 'none' },
+      checks: [],
+    });
+
+  it('marks announce-eligible rows, from snapshot data', () => {
+    const snap = present(
+      stateWith([readyItem()]),
+      ['Code Review'], NOW, 'rebase', DEFAULT_CONFIG.statusSections, [],
+      { readyStatuses: ['Code Review'], template: 't' },
+    );
+    const row = [...snap.groups, ...snap.otherGroups.map((g) => ({ items: g.items }))].flatMap((g) => g.items)[0];
+    expect(row?.slackReady).toBe(true);
+  });
+
+  it('never marks ignored rows, even if they would otherwise qualify', () => {
+    const muted = { ...readyItem(), ignoreOverride: 'ignored' as const };
+    const snap = present(
+      stateWith([muted]),
+      ['Code Review'], NOW, 'rebase', DEFAULT_CONFIG.statusSections, [],
+      { readyStatuses: ['Code Review'], template: 't' },
+    );
+    expect(snap.ignoredGroups[0]?.items[0]?.slackReady).toBeUndefined();
+  });
+
+  it('stays off when a requirement is unmet', () => {
+    const snap = present(
+      stateWith([readyItem()]),
+      ['Code Review'], NOW, 'rebase', DEFAULT_CONFIG.statusSections, [],
+      { readyStatuses: ['Dev Complete'], template: 't' }, // wrong status set
+    );
+    expect(snap.groups.flatMap((g) => g.items)[0]?.slackReady).toBeUndefined();
+  });
+});

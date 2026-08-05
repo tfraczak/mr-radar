@@ -94,6 +94,16 @@ export const makeTools = (client: RadarClient): McpToolDef[] => [
     handler: async () => client.tickets(),
   },
   {
+    name: 'radar_review_message',
+    description:
+      "Fresh ready-for-review check for one MR: re-fetches the MR, its Jira ticket, and CI, then reports whether it's announceable (right status, all checks green, no open threads) with the composed Slack message, or the blocking reasons. Requires the running app; takes a few seconds.",
+    inputSchema: obj({ key: KEY }, ['key']),
+    // Not readOnly: the check refreshes the app's in-memory item (and spends
+    // forge/Jira/RWX API calls) even though it writes nothing anywhere.
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    handler: async (args) => client.reviewReady(String(args.key ?? '')),
+  },
+  {
     name: 'radar_set_ignored',
     description:
       "Mute or restore one MR. Ignored MRs move to the collapsed Ignored section, stop notifying, and stop counting toward totals, until the MR closes. Restoring a rule-ignored MR pins it visible. Requires the running app.",

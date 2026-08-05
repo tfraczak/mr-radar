@@ -90,6 +90,8 @@ export const toEditable = (config: Config, repoChoices: string[] = [], activeFor
     appearance: config.ui.appearance,
     appearanceChoices: [...APPEARANCES],
     pollBaseSeconds: config.poll.baseSeconds,
+    slackReadyStatuses: config.slack.readyStatuses,
+    slackTemplate: config.slack.template,
     activeHours: {
       enabled: h !== undefined && h.enabled !== false,
       days: h?.days ?? DEFAULT_HOURS.days,
@@ -155,6 +157,16 @@ export const applyEditable = (
   const bySection = (section: string): string[] =>
     assignments.filter((a) => a.section === section).map((a) => a.status);
   const activeStatuses = assignments.length ? bySection('active') : s.activeStatuses;
+
+  if (Array.isArray(s.slackReadyStatuses)) {
+    const readyStatuses = s.slackReadyStatuses.map((v) => String(v).trim()).filter(Boolean);
+    const template = typeof s.slackTemplate === 'string' && s.slackTemplate.trim() ? s.slackTemplate.trim() : undefined;
+    next.slack = {
+      ...(asObject(next.slack) ?? {}),
+      readyStatuses,
+      ...(template ? { template } : {}),
+    };
+  }
 
   const jira = { ...(asObject(next.jira) ?? {}) };
   jira.email = s.jiraEmail;
@@ -286,6 +298,7 @@ const SHAREABLE_KEYS = [
   'git',
   'recentDaysFallback',
   'web',
+  'slack',
 ] as const;
 
 /**

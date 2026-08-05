@@ -408,6 +408,45 @@ export const createRow = (opts: {
   return { root, main, meta, side };
 };
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/**
+ * Feather-style eye / eye-off glyph, stroke = currentColor. Built with
+ * createElementNS (never innerHTML) like everything else in this renderer.
+ */
+export const eyeIcon = (open: boolean): SVGSVGElement => {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('width', '14');
+  svg.setAttribute('height', '14');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS(SVG_NS, 'path');
+  if (open) {
+    path.setAttribute('d', 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z');
+    const pupil = document.createElementNS(SVG_NS, 'circle');
+    pupil.setAttribute('cx', '12');
+    pupil.setAttribute('cy', '12');
+    pupil.setAttribute('r', '3');
+    svg.append(path, pupil);
+  } else {
+    path.setAttribute(
+      'd',
+      'M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24');
+    const slash = document.createElementNS(SVG_NS, 'line');
+    slash.setAttribute('x1', '1');
+    slash.setAttribute('y1', '1');
+    slash.setAttribute('x2', '23');
+    slash.setAttribute('y2', '23');
+    svg.append(path, slash);
+  }
+  return svg;
+};
+
 // ---------------------------------------------------------------------------
 // Form fields
 // ---------------------------------------------------------------------------

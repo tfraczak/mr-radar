@@ -318,6 +318,113 @@ describe('setIgnored', () => {
   });
 });
 
+describe('checkReviewReady', () => {
+  const freshMr = (over: Partial<Record<string, unknown>> = {}) => ({
+    id: 1,
+    iid: 7001,
+    project_id: 1,
+    title: 'ENG-42: widget',
+    state: 'opened',
+    sha: 'sha1',
+    source_branch: 'ENG-42',
+    target_branch: 'main',
+    web_url: '#',
+    updated_at: 'u2',
+    created_at: 'c',
+    user_notes_count: 0,
+    draft: false,
+    has_conflicts: false,
+    author: { id: 1, username: 'me', name: 'Me' },
+    references: { full: 'acme/rocket!7001' },
+    ...over,
+  });
+
+  const reviewDeps = (over: Partial<WebHandlerDeps> = {}, forgeOver: Record<string, unknown> = {}) => {
+    const it1 = item({
+      ticket: {
+        key: 'ENG-42',
+        summary: 's',
+        status: 'Code Review',
+        updated: '',
+        url: 'https://acme.atlassian.net/browse/ENG-42',
+      },
+      unresolvedFallback: 5, // stale count; the fresh fetch must supersede it
+    });
+    delete it1.threads;
+    delete it1.testGate;
+    const state = stateWith([it1]);
+    const db = new Db(':memory:');
+    db.setRepoRoles('acme/rocket', { testGate: 'none', gitlabIsLintOnly: false, detectedAt: 'now' });
+    const forge = {
+      name: 'gitlab',
+      ci: { model: 'pipelines', pipelines: async () => [], pipelineJobs: async () => [] },
+      mrByProjectId: async () => freshMr({ iid: it1.iid, references: { full: it1.key } }),
+      discussions: async () => [], // fresh truth: nothing open
+      approvals: async () => undefined,
+      commits: async () => [],
+      ...forgeOver,
+    } as unknown as ForgeSource;
+    const rwx = { available: async () => false } as unknown as RwxSource;
+    return {
+      it1,
+      deps: deps({
+        state,
+        db,
+        rwx,
+        getForge: () => forge,
+        getConfig: () => ({ ...DEFAULT_CONFIG, slack: { ...DEFAULT_CONFIG.slack }, jira: { ...DEFAULT_CONFIG.jira, baseUrl: 'https://acme.atlassian.net' } }) as Config,
+        ...over,
+      }),
+    };
+  };
+
+  it('re-fetches fresh data and composes the message when eligible', async () => {
+    const { it1, deps: d } = reviewDeps();
+    const handlers = makeWebHandlers(d);
+    const got = await handlers.checkReviewReady(it1.key);
+    expect(got.ok).toBe(true);
+    expect(got.reasons).toEqual([]);
+    expect(got.eligible).toBe(true); // stale unresolvedFallback=5 was superseded
+    expect(got.message).toContain('https://acme.atlassian.net/browse/ENG-42');
+    expect(got.message).toContain('is ready for review');
+  });
+
+  it('reports the concrete refusal reasons from the FRESH data', async () => {
+    const { it1, deps: d } = reviewDeps({}, {
+      mrByProjectId: async () => freshMr({ draft: true, references: { full: 'x' } }),
+    });
+    const handlers = makeWebHandlers(d);
+    const got = await handlers.checkReviewReady(it1.key);
+    expect(got.ok).toBe(true);
+    expect(got.eligible).toBe(false);
+    expect(got.reasons?.join(' ')).toMatch(/draft/);
+    expect(got.message).toBeUndefined();
+  });
+
+  it('a freshly-merged MR is refused outright', async () => {
+    const { it1, deps: d } = reviewDeps({}, {
+      mrByProjectId: async () => freshMr({ state: 'merged', references: { full: 'x' } }),
+    });
+    const handlers = makeWebHandlers(d);
+    const got = await handlers.checkReviewReady(it1.key);
+    expect(got.ok).toBe(true);
+    expect(got.eligible).toBe(false);
+    expect(got.reasons).toEqual(['The MR is already merged.']);
+  });
+
+  it('a failed refresh is an honest error, not a stale verdict', async () => {
+    const { it1, deps: d } = reviewDeps({}, {
+      mrByProjectId: async () => {
+        throw new Error('glab exploded');
+      },
+    });
+    const handlers = makeWebHandlers(d);
+    const got = await handlers.checkReviewReady(it1.key);
+    expect(got.ok).toBe(false);
+    expect(got.message).toContain('glab exploded');
+  });
+});
+
 describe('focusItem', () => {
   it('highlights a known item and opens the UI; unknown keys still open it', () => {
     const it1 = item();

@@ -1,4 +1,4 @@
-import { app, dialog, ipcMain, nativeTheme, powerMonitor, shell } from 'electron';
+import { app, clipboard, dialog, ipcMain, nativeTheme, powerMonitor, shell } from 'electron';
 import type { Server } from 'node:http';
 import { join } from 'node:path';
 import { Db } from '../core/db';
@@ -304,7 +304,7 @@ const markAllRead = (): void => {
 }
 
 const pushToRenderer = (): void => {
-  popover?.send('ui:snapshot', present(state, config.jira.activeStatuses, new Date(), config.git.updateStyle, config.statusSections, config.statusRules));
+  popover?.send('ui:snapshot', present(state, config.jira.activeStatuses, new Date(), config.git.updateStyle, config.statusSections, config.statusRules, config.slack));
 }
 
 /**
@@ -361,7 +361,7 @@ const registerIpc = (): void => {
     // The renderer requesting its snapshot is the proof its listeners exist —
     // the safe moment to deliver a settings intent from the tray menu.
     if (popover.consumePendingShowSettings()) popover.send('ui:show-settings', undefined);
-    return present(state, config.jira.activeStatuses, new Date(), config.git.updateStyle, config.statusSections, config.statusRules);
+    return present(state, config.jira.activeStatuses, new Date(), config.git.updateStyle, config.statusSections, config.statusRules, config.slack);
   });
   ipcMain.handle('ui:poll-now', () => void runCycle('manual'));
   ipcMain.handle('ui:toggle-pause', () => togglePause());
@@ -466,6 +466,17 @@ const registerIpc = (): void => {
       return { ok: false, message: 'Bad request.' };
     }
     return webHandlers?.setIgnored(mrKey, ignored) ?? { ok: false, message: 'Not ready yet.' };
+  });
+
+  ipcMain.handle('ui:check-review-ready', async (_e, mrKey: unknown) => {
+    if (typeof mrKey !== 'string') return { ok: false, message: 'Bad request.' };
+    return (await webHandlers?.checkReviewReady(mrKey)) ?? { ok: false, message: 'Not ready yet.' };
+  });
+
+  ipcMain.handle('ui:copy-text', (_e, text: unknown) => {
+    if (typeof text !== 'string') return false;
+    clipboard.writeText(text);
+    return true;
   });
 
   ipcMain.handle('ui:become-reviewer', async (_e, mrKey: unknown) => {

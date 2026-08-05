@@ -96,11 +96,19 @@ in-app picker) and versioned ones to Verification. Rules support per-repo scopin
 regexes, due dates, clone/remove, and fall-through.
 
 **Ignoring MRs.** Two paths, one destination: a status rule with the `ignore` target
-(e.g. the `(no ticket)` sentinel), or the ⊘ control on any row. Either way the MR moves to
-a collapsed **Ignored** section at the very bottom and goes fully silent — no notifications,
-no unread badge, no counts — until the MR closes. Rule-ignored rows offer **Show anyway**
-(pins that one MR visible without editing the rule); manually-ignored rows offer
-**Un-ignore**.
+(e.g. the `(no ticket)` sentinel), or the eye control on any ticket header/row. Either way
+the MR moves to a collapsed **Ignored** section at the very bottom and goes fully silent —
+no notifications, no unread badge, no counts — until the MR closes. The closed eye on an
+ignored row restores it (pinning that one MR visible if a rule ignores it).
+
+**Copy for Slack.** Rows that look ready to announce for code review — ticket in a
+ready status (Settings → Jira → *Copy for Slack*, default `Code Review`), every check
+green for the current head commit (repos without CI, like production-scripts, are exempt
+via their `none` test gate; repos with RWX *and* a pipeline need both), no open review
+threads, not a draft, no conflicts — grow a **Copy for Slack** button. Clicking it
+re-fetches that one MR fresh (MR state, ticket status, discussions, CI) and either copies
+the announcement to the clipboard or tells you exactly what still blocks it. The message
+template is editable in the same settings block (`{ticketKey} {ticketUrl} {title} {mrUrl}`).
 
 ### Step 3 — repos and CI (only for RWX users)
 
@@ -279,6 +287,7 @@ radar-cli events --limit 20               # notification history
 radar-cli tickets                         # cached Jira tickets
 radar-cli run 'acme/rocket!7576'          # start an RWX run (safe to retry)
 radar-cli ignore 'acme/rocket!7576'       # mute until it closes (unignore restores)
+radar-cli slack 'acme/rocket!7576'        # fresh ready-for-review check → message (| pbcopy)
 radar-cli pause / resume / poll           # polling controls
 ```
 
@@ -323,7 +332,8 @@ or in a project's `.mcp.json`:
 
 Tools: `radar_status`, `radar_mrs`, `radar_mr`, `radar_discussions`, `radar_events`,
 `radar_tickets` (reads — the first three and last two work app-down, flagged stale), plus
-`radar_set_ignored`, `radar_start_run`, `radar_set_polling`, `radar_poll_now` (actions — need the live app; your
+`radar_review_message`, `radar_set_ignored`, `radar_start_run`, `radar_set_polling`,
+`radar_poll_now` (actions — need the live app; your
 MCP client's tool-permission prompt is the confirmation for `radar_start_run`). CLI and MCP
 share the same client module, so their hybrid semantics are identical. Smoke-test with
 `npx @modelcontextprotocol/inspector node dist/mcp.js`.

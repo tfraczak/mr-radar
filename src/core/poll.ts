@@ -665,6 +665,72 @@ const resolveRoles = async (args: {
   return out;
 }
 
+/**
+ * Re-check ONE MR right now, mutating `item` in place — the freshness pass
+ * behind the Copy-for-Slack button, where a minutes-old snapshot is not good
+ * enough to announce on. Fetches the MR row (draft/conflicts/title/head), the
+ * bound ticket's current status, and this repo's CI inputs, then runs the same
+ * `enrich` the poll cycle uses, with the discussions fetch forced.
+ *
+ * Costs a handful of API calls for a single item; callers are user-initiated.
+ * Returns the MR's fresh state ('opened' | 'merged' | 'closed') — a caller
+ * about to announce should refuse anything that is no longer open.
+ */
+export const refreshItem = async (deps: PollDeps, item: WatchItem): Promise<{ state: string }> => {
+  const { db, config, forge, rwx } = deps;
+  const log = deps.log ?? (() => {});
+  const stats = { detailFetches: 0, commitFetches: 0, apiCalls: 0 };
+
+  const fresh = await forge.mrByProjectId(item.projectId, item.iid);
+  item.title = fresh.title;
+  item.headSha = fresh.sha;
+  item.branch = fresh.source_branch;
+  item.targetBranch = fresh.target_branch;
+  item.draft = fresh.draft;
+  item.hasConflicts = fresh.has_conflicts;
+  item.updatedAt = fresh.updated_at;
+  item.userNotesCount = fresh.user_notes_count;
+
+  // The ticket may have just moved (e.g. into Code Review); re-read it.
+  if (item.ticket && deps.jira?.configured) {
+    try {
+      const [ticket] = await deps.jira.searchByKeys([item.ticket.key], () => {});
+      if (ticket) item.ticket = ticket;
+    } catch (err) {
+      log(`refresh ${item.key}: ticket re-read failed (${msg(err)}) — using cached status`);
+    }
+  }
+
+  // Fresh CI inputs for just this repo/branch; roles come from the cache the
+  // poll maintains (they change on a 7-day TTL, not between button clicks).
+  const rwxOn = config.rwx.enabled && ((await rwx.available?.()) ?? true);
+  const rwxRuns = rwxOn ? await rwx.recentRuns().catch(() => [] as RwxRun[]) : [];
+  const pipelinesByProject = new Map<string, ForgePipeline[]>();
+  if (forge.ci.model === 'pipelines') {
+    pipelinesByProject.set(
+      item.projectPath,
+      await forge.ci.pipelines(item.projectPath).catch(() => []),
+    );
+  }
+  const checksFor = (projectPath: string, sha: string): Promise<ForgeCheckRun[]> =>
+    forge.ci.model === 'checks' ? forge.ci.checksForSha(projectPath, sha).catch(() => []) : Promise.resolve([]);
+  // Same precedence as resolveRoles: a user-pinned test gate beats the cache.
+  const roles = new Map<string, RepoCiRoles>();
+  const pinnedGate = config.repos[item.projectPath]?.testGate;
+  const cachedRoles = db.getRepoRoles(item.projectPath);
+  if (cachedRoles || pinnedGate) {
+    const base = cachedRoles ?? { testGate: 'none' as const, gitlabIsLintOnly: false, detectedAt: nowIsoNow() };
+    roles.set(item.projectPath, pinnedGate ? { ...base, testGate: pinnedGate } : base);
+  }
+
+  // Force the detail (discussions) fetch regardless of change detection.
+  await enrich({ deps, item, rwxRuns, pipelinesByProject, checksFor, roles, forceReconcile: true, stats });
+  log(`refreshed ${item.key} (${stats.apiCalls} api calls)`);
+  return { state: fresh.state };
+};
+
+const nowIsoNow = (): string => new Date().toISOString();
+
 const enrich = async (args: {
   deps: PollDeps;
   item: WatchItem;

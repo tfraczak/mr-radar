@@ -78,6 +78,10 @@ const fakeHandlers = (): WebHandlers & { calls: unknown[][] } => {
       calls.push(['setIgnored', mrKey, ignored]);
       return { ok: true };
     },
+    checkReviewReady: async (mrKey) => {
+      calls.push(['checkReviewReady', mrKey]);
+      return { ok: true, eligible: true, reasons: [], message: 'hey team!' };
+    },
     pollNow: () => {},
     togglePause: () => {},
     markAllRead: () => {},
@@ -248,12 +252,21 @@ describe('startWebServer (live)', () => {
     });
     expect(badIgnore.status).toBe(400);
 
+    const review = await fetch(`http://127.0.0.1:${p}/api/review-ready`, {
+      method: 'POST',
+      headers: { ...h, 'content-type': 'application/json' },
+      body: JSON.stringify({ mrKey: 'acme/rocket!7576' }),
+    });
+    expect(review.status).toBe(200);
+    expect(((await review.json()) as { message: string }).message).toBe('hey team!');
+
     expect(handlers.calls).toEqual([
       ['getItemDetail', 'acme/rocket!7576'],
       ['getEvents', 7, 'acme/rocket!1'],
       ['getEvents', 3, undefined],
       ['setPolling', false],
       ['setIgnored', 'acme/rocket!7576', true],
+      ['checkReviewReady', 'acme/rocket!7576'],
     ]);
   });
 
