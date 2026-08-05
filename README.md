@@ -246,10 +246,50 @@ yarn poller:uninstall  # stop and remove the agent
 yarn status            # one live read-only cycle: sources, in-scope MRs, what would notify
 ```
 
-**The web UI is the popover** — the poller serves the exact same renderer at
-`http://127.0.0.1:8942` (configurable via `web.port`). It binds to 127.0.0.1 only, rejects
+**The web UI is the popover** — both the tray and the poller serve the exact same renderer
+at `http://127.0.0.1:8942` (configurable via `web.port`). It binds to 127.0.0.1 only, rejects
 non-localhost Host headers (DNS rebinding), and requires a per-process token on every API
 call, which cross-origin pages can neither read nor send.
+
+## CLI / agent access
+
+`radar-cli` is an app client: it reads and drives the *running* radar (tray or poller)
+instead of running its own poll cycle. It's built for agents as much as for humans —
+Claude Code can shell out to it directly.
+
+```bash
+yarn radar status                 # build + run; humans
+node --no-warnings dist/radar-cli.js status --json    # agents (no rebuild per call)
+```
+
+```bash
+radar-cli status                          # app health, polling state, section counts
+radar-cli list --section active           # watched MRs (also: --ticket ENG-123)
+radar-cli show 'acme/rocket!7576'         # full detail: test gate, checks, approvals
+radar-cli discussions 'acme/rocket!7576'  # review threads with comment bodies (live only)
+radar-cli events --limit 20               # notification history
+radar-cli tickets                         # cached Jira tickets
+radar-cli run 'acme/rocket!7576'          # start an RWX run (safe to retry)
+radar-cli pause / resume / poll           # polling controls
+```
+
+**The hybrid model:** read commands work even when the app is closed — they fall back to a
+read-only open of the local database and flag the result `stale` with the last-poll
+timestamp. Action commands need the live app and exit `2` with recovery guidance otherwise.
+`--json` emits stable machine shapes: `{source: "live"|"db", dataAsOf, stale?, staleNote?,
+...payload}`.
+
+**Discovery and security:** the running app writes `~/.local/state/mr-radar/web-token.json`
+(mode 0600) with its API token and port; the CLI reads that file. The posture is unchanged
+from the web UI — localhost only, same-user file, no new listener, and no secrets in
+`config.json`.
+
+To give an agent standing access from another repo, add a line like this to that repo's
+`CLAUDE.md`:
+
+> MR/CI status for this machine is available via
+> `node --no-warnings ~/code/personal/mr-radar/dist/radar-cli.js <cmd> --json`
+> (try `status`, `list`, `show <mr-key>`, `discussions <mr-key>`).
 
 ## Signing for distribution
 
