@@ -1476,7 +1476,7 @@ const openSettings = async (): Promise<void> => {
     const sample: Record<string, string> = {
       ticketKey: 'ENG-123',
       ticketUrl: 'https://your-org.atlassian.net/browse/ENG-123',
-      title: 'ENG-123: Short subject line describing the work',
+      title: 'Short subject line describing the work',
       mrUrl: 'https://gitlab.example.com/acme/rocket/-/merge_requests/42',
     };
     const rendered = slackTemplateField.input.value.replace(

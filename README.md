@@ -109,7 +109,7 @@ threads, not a draft, no conflicts — grow a **Copy for Slack** button. Clickin
 re-fetches that one MR fresh (MR state, ticket status, discussions, CI) and either copies
 the announcement to the clipboard or tells you exactly what still blocks it. The message
 template lives in Settings → **Slack** with a variable legend and a live preview —
-`{ticketKey}`, `{ticketUrl}` (Jira link), `{title}` (MR subject line), `{mrUrl}` — so the
+`{ticketKey}`, `{ticketUrl}` (Jira link), `{title}` (MR subject line, leading ticket key stripped), `{mrUrl}` — so the
 announcement speaks in your voice. Named links use `[text](url)` (the **Insert link**
 button writes one for you): the copy carries both clipboard flavors, so Slack's composer
 pastes `[{ticketKey}]({ticketUrl})` as a real hyperlink while plain targets (pbcopy,

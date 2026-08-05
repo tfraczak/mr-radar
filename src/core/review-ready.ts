@@ -129,7 +129,7 @@ export const reviewMessageParts = (
     ticketKey: key,
     ticketUrl:
       item.ticket?.url ?? (key && config.jira.baseUrl ? `${config.jira.baseUrl}/browse/${key}` : item.webUrl),
-    title: item.title,
+    title: stripLeadingKey(item.title, key),
     mrUrl: item.webUrl,
   };
   // Single pass: substituted text (an MR title containing '{mrUrl}') is never
@@ -161,3 +161,17 @@ export const reviewMessageParts = (
 /** The plain-text flavor alone — what the CLI prints and tests assert. */
 export const reviewMessage = (item: WatchItem, config: Config): string =>
   reviewMessageParts(item, config).text;
+
+/**
+ * {title} is the SUBJECT, not the raw MR title: a leading mention of the
+ * bound ticket's key ('ENG-42: …', '[ENG-42] …', 'eng-42 - …') is stripped,
+ * because the key is its own variable and 'ENG-42 … ENG-42: subject' reads
+ * twice. Only the bound key is stripped — a title leading with some OTHER
+ * ticket's key keeps it, and a title that IS just the key stays whole.
+ */
+const stripLeadingKey = (title: string, key: string): string => {
+  if (!key) return title;
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const stripped = title.replace(new RegExp(`^\\[?${escaped}\\]?[\\s:\\-–—]*`, 'i'), '').trim();
+  return stripped || title;
+};

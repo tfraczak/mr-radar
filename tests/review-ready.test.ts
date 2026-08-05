@@ -152,7 +152,7 @@ describe('reviewMessage', () => {
 
   it('renders the default template with ticket link and title', () => {
     expect(reviewMessage(item(), config)).toBe(
-      'hey team! https://acme.atlassian.net/browse/ENG-42 is ready for review. ENG-42: Add the widget',
+      'hey team! https://acme.atlassian.net/browse/ENG-42 is ready for review. Add the widget',
     );
   });
 
@@ -162,7 +162,7 @@ describe('reviewMessage', () => {
       slack: { ...config.slack, template: '{ticketKey} | {ticketUrl} | {title} | {mrUrl}' },
     } as Config;
     expect(reviewMessage(item(), custom)).toBe(
-      'ENG-42 | https://acme.atlassian.net/browse/ENG-42 | ENG-42: Add the widget | https://gitlab.example/mr/1',
+      'ENG-42 | https://acme.atlassian.net/browse/ENG-42 | Add the widget | https://gitlab.example/mr/1',
     );
   });
 });
@@ -178,10 +178,10 @@ describe('reviewMessageParts — the two clipboard flavors', () => {
   it('renders [text](url) as a hyperlink in HTML and as text (url) in plain', () => {
     const parts = reviewMessageParts(item(), withTemplate('hey! [{ticketKey}]({ticketUrl}) is ready. {title}'));
     expect(parts.text).toBe(
-      'hey! ENG-42 (https://acme.atlassian.net/browse/ENG-42) is ready. ENG-42: Add the widget',
+      'hey! ENG-42 (https://acme.atlassian.net/browse/ENG-42) is ready. Add the widget',
     );
     expect(parts.html).toBe(
-      'hey! <a href="https://acme.atlassian.net/browse/ENG-42">ENG-42</a> is ready. ENG-42: Add the widget',
+      'hey! <a href="https://acme.atlassian.net/browse/ENG-42">ENG-42</a> is ready. Add the widget',
     );
   });
 
@@ -208,6 +208,35 @@ describe('reviewMessageParts — the two clipboard flavors', () => {
     const parts = reviewMessageParts(item(), withTemplate('[unclosed({mrUrl}) and [no-url]'));
     expect(parts.text).toBe('[unclosed(https://gitlab.example/mr/1) and [no-url]');
     expect(parts.html).not.toContain('<a ');
+  });
+});
+
+describe('{title} strips the bound ticket key', () => {
+  const config = {
+    ...DEFAULT_CONFIG,
+    jira: { ...DEFAULT_CONFIG.jira, baseUrl: 'https://acme.atlassian.net' },
+    slack: { ...DEFAULT_CONFIG.slack, template: '{title}' },
+  } as Config;
+  const titled = (title: string) => reviewMessage(item({ title }), config);
+
+  it('strips common lead-ins: colon, brackets, dash, case-insensitive', () => {
+    expect(titled('ENG-42: Add the widget')).toBe('Add the widget');
+    expect(titled('[ENG-42] Add the widget')).toBe('Add the widget');
+    expect(titled('eng-42 - Add the widget')).toBe('Add the widget');
+    expect(titled('ENG-42 Add the widget')).toBe('Add the widget');
+  });
+
+  it("keeps other tickets' keys, mid-title mentions, and bare-key titles", () => {
+    expect(titled('ENG-99: Add the widget')).toBe('ENG-99: Add the widget'); // not the bound key
+    expect(titled('Add the ENG-42 widget')).toBe('Add the ENG-42 widget'); // not leading
+    expect(titled('ENG-42')).toBe('ENG-42'); // stripping would leave nothing
+  });
+
+  it('leaves the title alone when no ticket is bound', () => {
+    const unbound = item({ title: 'ENG-42: Add the widget' });
+    delete unbound.ticket;
+    const cfg = { ...config, slack: { ...config.slack, template: '{title}' } } as Config;
+    expect(reviewMessage(unbound, cfg)).toBe('ENG-42: Add the widget');
   });
 });
 
