@@ -89,6 +89,8 @@ export interface WebHandlers {
   getEvents: (limit: number, mrKey?: string) => EventView[];
   health: () => HealthInfo;
   setPolling: (enabled: boolean) => { enabled: boolean; changed: boolean };
+  /** Bring the UI to the user and flash mrKey's row (notification click-through). */
+  focusItem: (mrKey?: string) => { ok: boolean };
   pollNow: () => void;
   togglePause: () => void;
   markAllRead: () => void;
@@ -225,6 +227,27 @@ export const startWebServer = (opts: WebServerOptions): Server => {
     // the unauthenticated GET / page already exposes, and no MR/ticket data.
     if (path === 'health' && method === 'GET') {
       return sendJson(res, 200, handlers.health());
+    }
+
+    // Notification click-through (terminal-notifier -execute → curl). Also
+    // tokenless, on purpose: any local process can already scrape the token
+    // from GET /, so requiring it here adds nothing — and the action is benign
+    // (open the popover, flash a row; discloses nothing). Browsers can't reach
+    // it cross-origin: a JSON body forces a CORS preflight we never answer,
+    // and a form-encoded body fails the JSON parse below.
+    if (path === 'focus' && method === 'POST') {
+      let key: string | undefined;
+      try {
+        const raw = await readBody(req);
+        const parsed: unknown = raw ? JSON.parse(raw) : {};
+        if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          const k = (parsed as { mrKey?: unknown }).mrKey;
+          if (typeof k === 'string') key = k;
+        }
+      } catch {
+        /* focus with no key still opens the UI */
+      }
+      return sendJson(res, 200, handlers.focusItem(key));
     }
 
     if (req.headers['x-radar-token'] !== token) {

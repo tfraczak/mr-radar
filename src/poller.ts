@@ -255,6 +255,9 @@ const webHandlers = () =>
     onStateChanged: () => {
       /* headless: the web page pulls its snapshot on its own cadence */
     },
+    openUi: () => {
+      /* the web page IS the UI here; the highlight rides the next snapshot poll */
+    },
   });
 
 // ---------------------------------------------------------------------------

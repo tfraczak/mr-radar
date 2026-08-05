@@ -54,6 +54,7 @@ const deps = (over: Partial<WebHandlerDeps> = {}): WebHandlerDeps => ({
   requestCycle: () => {},
   togglePause: () => {},
   onStateChanged: () => {},
+  openUi: () => {},
   ...over,
 });
 
@@ -246,6 +247,21 @@ describe('state mutations notify the shell', () => {
     handlers.markAllRead();
     expect(state.unread).toHaveLength(0);
     expect(repaints).toBe(2);
+  });
+});
+
+describe('focusItem', () => {
+  it('highlights a known item and opens the UI; unknown keys still open it', () => {
+    const it1 = item();
+    const state = stateWith([it1]);
+    let opened = 0;
+    const handlers = makeWebHandlers(deps({ state, openUi: () => (opened += 1) }));
+
+    expect(handlers.focusItem(it1.key)).toEqual({ ok: true });
+    expect(state.highlight?.key).toBe(it1.key);
+    handlers.focusItem('acme/rocket!404');
+    expect(state.highlight?.key).toBe(it1.key); // unknown key doesn't clobber
+    expect(opened).toBe(2); // but the UI still opens
   });
 });
 

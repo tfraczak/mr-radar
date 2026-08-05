@@ -49,6 +49,9 @@ export interface WebHandlerDeps {
   togglePause: () => void;
   /** Called after direct state mutations so the tray can repaint icon+popover. */
   onStateChanged: () => void;
+  /** Bring the UI to the user (tray: open the popover; poller: no-op — the
+   *  web page is the UI and polls its own snapshot). */
+  openUi: () => void;
 }
 
 /** Read once; the version only changes with a rebuild, which restarts us. */
@@ -161,6 +164,16 @@ export const makeWebHandlers = (deps: WebHandlerDeps): WebHandlers => {
       if (state.schedule.enabled === enabled) return { enabled, changed: false };
       deps.togglePause();
       return { enabled: state.schedule.enabled, changed: true };
+    },
+
+    focusItem: (mrKey?: string) => {
+      // Same move as the native notification click: flash the row, show the UI.
+      if (mrKey && state.snapshot?.items.some((i) => i.key === mrKey)) {
+        state.highlight = { key: mrKey, at: new Date().toISOString() };
+      }
+      deps.openUi();
+      deps.onStateChanged();
+      return { ok: true };
     },
 
     pollNow: () => deps.requestCycle(),

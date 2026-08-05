@@ -65,10 +65,25 @@ export const resolveSystemMethod = (
   return configured === 'terminal-notifier' ? 'terminal-notifier' : 'osascript';
 };
 
+/**
+ * The shell one-liner terminal-notifier runs on click: poke the app's own
+ * localhost API to open the popover and flash the row — the system-notifier
+ * twin of the native path's onHighlight.
+ */
+export const focusClickCommand = (port: number, mrKey?: string): string => {
+  // One argv element, run by terminal-notifier via the shell. MR keys are
+  // repo paths + an iid; strip anything that could escape the quoting anyway.
+  const safe = (mrKey ?? '').replace(/[^A-Za-z0-9/_.#!-]/g, '');
+  const body = safe ? `{"mrKey":"${safe}"}` : '{}';
+  return `/usr/bin/curl -s -m 3 -X POST -H 'content-type: application/json' --data '${body}' 'http://127.0.0.1:${port}/api/focus'`;
+};
+
 export interface SysNotification {
   title: string;
   body: string;
   url?: string | undefined;
+  /** Shell command to run on click (terminal-notifier -execute). Wins over url. */
+  execute?: string | undefined;
   /** 'default' | 'silent' | a macOS sound name. */
   sound: string;
   /** PNG path shown as the notification's thumbnail (terminal-notifier only). */
@@ -77,17 +92,21 @@ export interface SysNotification {
 
 /**
  * Build the terminal-notifier argv for a notification. Exported for testing so
- * the icon/sender/open wiring is verifiable without spawning anything.
+ * the icon/sender/click wiring is verifiable without spawning anything.
  *
  * `-sender ${BUNDLE_ID}` makes the banner adopt the installed (even if
- * unrunnable) MR Radar bundle's identity and icon; `-contentImage` adds the
- * radar as a thumbnail so it's recognizable even where `-sender`'s icon doesn't
- * render. `-open <url>` opens the MR on click.
+ * unrunnable) MR Radar bundle's identity and icon — but macOS then handles the
+ * click by LAUNCHING that bundle, silently ignoring `-open`/`-execute`. On an
+ * app-control-managed Mac the launch is blocked, so a click does nothing at
+ * all. The icon and the click action are mutually exclusive: any banner with a
+ * click target drops `-sender` and keeps only the `-contentImage` thumbnail.
  */
 export const terminalNotifierArgs = (n: SysNotification): string[] => {
-  const args = ['-title', n.title, '-message', n.body, '-sender', BUNDLE_ID];
+  const args = ['-title', n.title, '-message', n.body];
+  if (n.execute) args.push('-execute', n.execute);
+  else if (n.url) args.push('-open', n.url);
+  else args.push('-sender', BUNDLE_ID);
   if (n.icon) args.push('-contentImage', n.icon);
-  if (n.url) args.push('-open', n.url);
   if (n.sound !== 'silent') args.push('-sound', n.sound === 'default' ? 'default' : n.sound);
   return args;
 };

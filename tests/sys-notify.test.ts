@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveSystemMethod, terminalNotifierArgs } from '../src/main/sys-notify';
+import { focusClickCommand, resolveSystemMethod, terminalNotifierArgs } from '../src/main/sys-notify';
 
 describe('resolveSystemMethod (headless runtime — native impossible)', () => {
   it('auto and native both mean osascript — terminal-notifier is opt-in ONLY', () => {
@@ -17,11 +17,15 @@ describe('resolveSystemMethod (headless runtime — native impossible)', () => {
 describe('terminalNotifierArgs', () => {
   const base = { title: 'MR Radar', body: '2 new comments', sound: 'default' };
 
-  it('always carries the bundle id so the banner shows the app identity', () => {
+  it('carries the bundle id only when there is NO click target', () => {
+    // macOS handles a -sender banner's click by launching that bundle and
+    // silently ignores -open/-execute — so the two are mutually exclusive.
     const args = terminalNotifierArgs(base);
     const at = args.indexOf('-sender');
     expect(at).toBeGreaterThan(-1);
     expect(args[at + 1]).toBe('com.mr-radar.app');
+    expect(terminalNotifierArgs({ ...base, url: 'https://x' })).not.toContain('-sender');
+    expect(terminalNotifierArgs({ ...base, execute: 'curl …' })).not.toContain('-sender');
   });
 
   it('adds -contentImage only when an icon path is given', () => {
@@ -34,6 +38,12 @@ describe('terminalNotifierArgs', () => {
     expect(terminalNotifierArgs(base)).not.toContain('-open');
     const args = terminalNotifierArgs({ ...base, url: 'https://gitlab.com/x/-/merge_requests/1' });
     expect(args[args.indexOf('-open') + 1]).toBe('https://gitlab.com/x/-/merge_requests/1');
+  });
+
+  it('prefers -execute (click-to-item in the app) over -open', () => {
+    const args = terminalNotifierArgs({ ...base, url: 'https://x', execute: 'curl focus' });
+    expect(args[args.indexOf('-execute') + 1]).toBe('curl focus');
+    expect(args).not.toContain('-open');
   });
 
   it('maps the sound setting: silent omits, default stays default, names pass through', () => {
@@ -49,5 +59,25 @@ describe('terminalNotifierArgs', () => {
     const args = terminalNotifierArgs(hostile);
     expect(args[args.indexOf('-title') + 1]).toBe(hostile.title);
     expect(args[args.indexOf('-message') + 1]).toBe(hostile.body);
+  });
+});
+
+describe('focusClickCommand (the -execute payload — this one IS run by a shell)', () => {
+  it('posts the key to /api/focus on the given port', () => {
+    const cmd = focusClickCommand(8942, 'acme/rocket!7576');
+    expect(cmd).toContain(`--data '{"mrKey":"acme/rocket!7576"}'`);
+    expect(cmd).toContain("'http://127.0.0.1:8942/api/focus'");
+  });
+
+  it('strips shell-hostile characters from the key instead of trusting quoting', () => {
+    const cmd = focusClickCommand(8942, `a'; rm -rf ~; echo '`);
+    expect(cmd).not.toContain("'; rm");
+    expect(cmd).not.toContain('$');
+    // Only the sanitized residue of the key remains inside the JSON body.
+    expect(cmd).toContain('{"mrKey":"arm-rfecho"}');
+  });
+
+  it('omits the key for digest banners — the click still opens the UI', () => {
+    expect(focusClickCommand(8942)).toContain(`--data '{}'`);
   });
 });

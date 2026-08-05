@@ -1,7 +1,7 @@
 import { Notification } from 'electron';
 import { toNotifications } from '../core/events';
 import { openExternalSafe } from './open';
-import { resolveMethod, systemNotify, type ResolvedMethod } from './sys-notify';
+import { focusClickCommand, resolveMethod, systemNotify, type ResolvedMethod } from './sys-notify';
 import type { AppEvent } from '../core/types';
 
 /**
@@ -20,7 +20,17 @@ export interface NotifyOptions {
   onOpenPopover: () => void;
   /** Flash this MR's row in the popover (native click-through only). */
   onHighlight?: (mrKey: string) => void;
+  /**
+   * The web API port when it's serving — enables terminal-notifier
+   * click-to-item via `-execute curl /api/focus` (the `-sender` icon path
+   * eats clicks entirely; see sys-notify.ts).
+   */
+  webPort?: number | undefined;
+  /** Radar PNG for terminal-notifier's thumbnail — the visual identity that
+   *  survives dropping `-sender` on click-through banners. */
+  iconPath?: string | undefined;
 }
+
 
 /** Map our sound setting onto Electron's native Notification options. */
 const nativeSoundOpts = (sound: string): { silent: boolean; sound?: string } => {
@@ -63,9 +73,21 @@ const deliver = (
   sound: string,
   onOpenPopover: () => void,
   onHighlight?: (mrKey: string) => void,
+  webPort?: number,
+  iconPath?: string,
 ): void => {
-  if (method === 'native') showNative(n, sound, onOpenPopover, onHighlight);
-  else systemNotify(method, { title: n.title, body: n.body, url: n.url, sound });
+  if (method === 'native') {
+    showNative(n, sound, onOpenPopover, onHighlight);
+    return;
+  }
+  // Mirror the native click precedence: item-in-app > MR page > popover.
+  const execute =
+    webPort !== undefined && n.mrKey
+      ? focusClickCommand(webPort, n.mrKey)
+      : webPort !== undefined && !n.url
+        ? focusClickCommand(webPort)
+        : undefined;
+  systemNotify(method, { title: n.title, body: n.body, url: n.url, execute, sound, icon: iconPath });
 };
 
 export const notify = (events: AppEvent[], opts: NotifyOptions): number => {
@@ -85,6 +107,8 @@ export const notify = (events: AppEvent[], opts: NotifyOptions): number => {
       opts.sound,
       opts.onOpenPopover,
       opts.onHighlight,
+      opts.webPort,
+      opts.iconPath,
     );
   }
   return notifications.length;

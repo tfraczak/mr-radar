@@ -70,6 +70,10 @@ const fakeHandlers = (): WebHandlers & { calls: unknown[][] } => {
       calls.push(['setPolling', enabled]);
       return { enabled, changed: true };
     },
+    focusItem: (mrKey) => {
+      calls.push(['focusItem', mrKey]);
+      return { ok: true };
+    },
     pollNow: () => {},
     togglePause: () => {},
     markAllRead: () => {},
@@ -167,6 +171,26 @@ describe('startWebServer (live)', () => {
 
     const snapshot = await fetch(`http://127.0.0.1:${p}/api/snapshot`);
     expect(snapshot.status).toBe(403);
+  });
+
+  it('accepts tokenless POST /api/focus (notification click-through)', async () => {
+    const p = port();
+    const file = join(tmp, 'focus.json');
+    const { server, handlers } = start(p, file);
+    await listening(server);
+
+    const focus = await fetch(`http://127.0.0.1:${p}/api/focus`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' }, // deliberately no token
+      body: JSON.stringify({ mrKey: 'acme/rocket!7576' }),
+    });
+    expect(focus.status).toBe(200);
+    const noKey = await fetch(`http://127.0.0.1:${p}/api/focus`, { method: 'POST' });
+    expect(noKey.status).toBe(200); // digest click: open the UI, no highlight
+    expect(handlers.calls).toEqual([
+      ['focusItem', 'acme/rocket!7576'],
+      ['focusItem', undefined],
+    ]);
   });
 
   it('routes item/events/set-polling with the token from the discovery file', async () => {

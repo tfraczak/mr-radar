@@ -40,6 +40,8 @@ import { startWebServer } from '../web-server';
 
 const state: UiState = initialUiState();
 let config: Config = ensureConfig();
+/** Radar PNG: web tab icon + terminal-notifier thumbnail. dist/main → repo. */
+const ICON_PATH = join(__dirname, '..', '..', 'assets', 'app-icon.png');
 let db: Db;
 let forge: ForgeSource;
 let rwx: RwxSource;
@@ -87,7 +89,7 @@ const main = async (): Promise<void> => {
     web = startWebServer({
       port: config.web.port,
       rendererDir: join(__dirname, '..', 'renderer'),
-      iconPath: join(__dirname, '..', '..', 'assets', 'app-icon.png'),
+      iconPath: ICON_PATH,
       log,
       mode: 'tray',
       handlers: makeWebHandlers({
@@ -118,6 +120,7 @@ const main = async (): Promise<void> => {
           tray.update(state);
           pushToRenderer();
         },
+        openUi: () => popover.open(trayHandle()),
       }),
     });
   }
@@ -237,6 +240,9 @@ const runCycle = async (reason: 'startup' | 'manual' | 'timer'): Promise<void> =
           popover.open(trayHandle());
           pushToRenderer();
         },
+        // terminal-notifier click-through goes via our own web API.
+        webPort: config.web.enabled ? config.web.port : undefined,
+        iconPath: ICON_PATH,
       });
       log(`${result.events.length} events → ${shown} notification(s)`);
     }
