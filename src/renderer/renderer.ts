@@ -394,8 +394,13 @@ const renderStatus = (s: UiSnapshot): void => {
   const parts: string[] = [];
   if (s.lastPollAt) parts.push(`checked ${timeAgo(s.lastPollAt)}`);
   if (s.nextPollAt) parts.push(`next ${clock(s.nextPollAt)}`);
-  const count = [...s.groups, ...(s.needsGroups ?? [])].reduce((n, g) => n + g.items.length, 0);
-  parts.push(`${count} in scope`);
+  // Two different populations, two different words: "active" is the work
+  // slice at the top of the list; "tracked" is everything the radar polls —
+  // the exact number the tray menu shows. Both together kill the 8-vs-28
+  // mystery.
+  const active = [...s.groups, ...(s.needsGroups ?? [])].reduce((n, g) => n + g.items.length, 0);
+  const tracked = s.trackedCount ?? active;
+  parts.push(active === tracked ? `${active} active` : `${active} active · ${tracked} tracked`);
   statusEl.textContent = parts.join(' · ');
 }
 

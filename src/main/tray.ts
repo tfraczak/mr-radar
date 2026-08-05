@@ -72,7 +72,9 @@ export class TrayController {
     return Menu.buildFromTemplate([
       { label: state ? tooltip(state) : 'MR Radar — starting…', enabled: false },
       { type: 'separator' },
-      { label: `Open (${items.length} in scope)`, click: () => this.cb.onOpen() },
+      // "tracked" = the whole polling universe; the popover header shows the
+      // narrower "active" slice — two words, so the two counts can't collide.
+      { label: `Open (${items.length} tracked)`, click: () => this.cb.onOpen() },
       {
         label: byUser ? 'Resume polling' : 'Pause polling',
         click: () => this.cb.onToggle(),

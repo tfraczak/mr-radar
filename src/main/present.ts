@@ -88,6 +88,9 @@ export const present = (
     otherGroups,
     ignoredGroups,
     tabCounts,
+    // Raw in-scope count, BEFORE the hidden/stale-closed filters — the same
+    // population the tray menu counts, so "tracked" reads identically in both.
+    trackedCount: (state.snapshot?.items ?? []).filter((i) => i.inScope).length,
     jiraNeedsToken: !state.jiraConfigured,
     jiraEmail: state.jiraEmail,
   };

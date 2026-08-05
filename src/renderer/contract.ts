@@ -47,6 +47,8 @@ export interface UiSnapshot {
   highlight?: { key: string; at: string } | undefined;
   /** What the tab labels count: active-scope sections, or everything shown. */
   tabCounts: 'active' | 'all';
+  /** Every in-scope MR the radar polls — the tray menu's number, pre-filters. */
+  trackedCount: number;
   /** Jira has no stored token yet, so the popover offers a connect field. */
   jiraNeedsToken: boolean;
   /** Atlassian account email, shown next to the connect field for context. */
