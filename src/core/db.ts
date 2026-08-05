@@ -1,5 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DB_PATH } from './config';
 import type { AppEvent, JiraTicket, RepoCiRoles } from './types';
@@ -20,13 +20,18 @@ const SCHEMA_VERSION = 1;
 export class Db {
   private readonly db: DatabaseSync;
 
-  constructor(path: string = DB_PATH) {
-    if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
-    this.db = new DatabaseSync(path);
-    this.db.exec('PRAGMA journal_mode = WAL');
-    this.db.exec('PRAGMA foreign_keys = ON');
+  constructor(path: string = DB_PATH, opts: { readOnly?: boolean } = {}) {
+    const readOnly = opts.readOnly ?? false;
+    if (!readOnly && path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
+    this.db = new DatabaseSync(path, { readOnly });
+    if (!readOnly) {
+      // Both pragmas write (journal-mode change, schema pin); a read-only
+      // handle inherits WAL from the writer and must not attempt either.
+      this.db.exec('PRAGMA journal_mode = WAL');
+      this.db.exec('PRAGMA foreign_keys = ON');
+    }
     this.db.exec('PRAGMA busy_timeout = 5000');
-    this.migrate();
+    if (!readOnly) this.migrate();
   }
 
   private migrate(): void {
@@ -584,7 +589,12 @@ export class Db {
     }
   }
 
-  recentEvents(limit = 50): EventRow[] {
+  recentEvents(limit = 50, mrKey?: string): EventRow[] {
+    if (mrKey !== undefined) {
+      return this.db
+        .prepare('SELECT * FROM events WHERE mr_key = ? ORDER BY id DESC LIMIT ?')
+        .all(mrKey, limit) as unknown as EventRow[];
+    }
     return this.db
       .prepare('SELECT * FROM events ORDER BY id DESC LIMIT ?')
       .all(limit) as unknown as EventRow[];
@@ -617,6 +627,57 @@ export class Db {
     return removed;
   }
 }
+
+/** The read surface of `Db` — all a second, non-writing process may touch. */
+export type ReadOnlyDb = Pick<
+  Db,
+  | 'getMr'
+  | 'allMrs'
+  | 'recentEvents'
+  | 'eventStats'
+  | 'cachedJiraTickets'
+  | 'allWatchedRuns'
+  | 'openWatchedRuns'
+  | 'completedTestRuns'
+  | 'completedWatchedRuns'
+  | 'seenStatuses'
+  | 'seenRepos'
+  | 'getMeta'
+  | 'knownTicketPrefixes'
+  | 'close'
+>;
+
+/**
+ * Open the DB without write access — no migrate, no WAL pragma — safe from a
+ * second process while the tray/poller holds its read-write handle (WAL).
+ * `undefined` means "no data yet": the file doesn't exist (a read-only open
+ * cannot create one), exists but was never migrated (empty/foreign file), or
+ * cannot be read right now (corrupt, or a WAL left by a crashed writer that a
+ * read-only handle cannot recover).
+ */
+export const openReadOnlyDb = (
+  path: string = process.env.MR_RADAR_DB ?? DB_PATH,
+): ReadOnlyDb | undefined => {
+  if (!existsSync(path)) return undefined;
+  let db: Db | undefined;
+  try {
+    db = new Db(path, { readOnly: true });
+    // Probe: a handle that can't read the schema would throw 'no such table'
+    // on the first real query anyway — degrade to "no data" here instead.
+    if (db.getMeta('schema_version') === undefined) {
+      db.close();
+      return undefined;
+    }
+    return db;
+  } catch {
+    try {
+      db?.close();
+    } catch {
+      /* already closed or never opened */
+    }
+    return undefined;
+  }
+};
 
 export interface MrRow {
   key: string;

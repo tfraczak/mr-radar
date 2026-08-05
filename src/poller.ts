@@ -23,31 +23,20 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import type { Server } from 'node:http';
 import { dirname, join } from 'node:path';
 import { Db } from './core/db';
-import {
-  CONFIG_PATH,
-  DB_PATH,
-  ensureConfig,
-  loadConfig,
-  readRawConfig,
-  writeRawConfig,
-  type Config,
-} from './core/config';
+import { DB_PATH, ensureConfig, loadConfig, type Config } from './core/config';
 import { toNotifications } from './core/events';
 import { pollOnce } from './core/poll';
 import { afterCycle, nextIntervalSeconds, pausedBecause } from './core/schedule';
-import { readJiraToken, writeJiraToken } from './core/secrets';
-import { executeTrigger, inFlightRun, planTrigger } from './core/trigger';
+import { readJiraToken } from './core/secrets';
 import type { AppEvent } from './core/types';
 import { createForge, resolveForgeName } from './core/sources/forge';
 import { JiraSource } from './core/sources/jira';
 import { RwxSource } from './core/sources/rwx';
 import { fixPath } from './main/fix-path';
-import { present } from './main/present';
-import { applyEditable, knownRepos, knownStatuses, mergeSharedSettings, shareableSettings, toEditable, validateEditable } from './main/settings';
 import { dedupeUnread, initialUiState, type UiState } from './main/state';
 import { resolveSystemMethod, systemNotify } from './main/sys-notify';
+import { makeWebHandlers } from './main/web-handlers';
 import { startWebServer } from './web-server';
-import type { EditableSettings } from './renderer/contract';
 
 const log = (msg: string): void => {
   console.log(`[mr-radar] ${new Date().toISOString()} ${msg}`);
@@ -225,135 +214,48 @@ const requestCycle = (): void => {
 };
 
 // ---------------------------------------------------------------------------
-// Web UI handlers — the browser-side twin of the Electron IPC surface.
+// Web UI handlers — shared with the tray (see main/web-handlers.ts); only the
+// shell-specific glue lives here.
 // ---------------------------------------------------------------------------
 
-const webHandlers = () => ({
-  getSnapshot: () => present(state, config.jira.activeStatuses, new Date(), config.git.updateStyle, config.statusSections, config.statusRules),
-  pollNow: () => requestCycle(),
-  togglePause: () => {
-    state.schedule = { ...state.schedule, enabled: !state.schedule.enabled };
-    state.pausedReason = pausedBecause(state.schedule, config, new Date());
-    if (state.schedule.enabled) {
-      log('resumed (web)');
-      requestCycle();
-    } else {
-      log('paused by user (web)');
-      scheduleNext(undefined, config);
-    }
-  },
-  markAllRead: () => {
-    state.unread = [];
-  },
-  markRead: (mrKey: string) => {
-    state.unread = state.unread.filter((e) => e.mrKey !== mrKey);
-  },
-  startRun: async (mrKey: string) => {
-    // The web page already confirmed with the user; validate and execute.
-    const item = state.snapshot?.items.find((i) => i.key === mrKey);
-    if (!item) return { started: false, message: 'That MR is no longer in scope.' };
-    const plan = planTrigger(config, item);
-    if (typeof plan === 'string') return { started: false, message: plan };
-    const inFlight = inFlightRun(db, item);
-    if (inFlight) {
-      return {
-        started: true,
-        message: 'A run for this commit is already in flight.',
-        ...(inFlight.url ? { url: inFlight.url } : {}),
-      };
-    }
-    const result = await executeTrigger({ db, config, rwx, log }, item, plan);
-    if (result.started) {
-      // Optimistic flip so the web UI's next snapshot fetch already shows
-      // the run in flight; the requested cycle confirms it.
-      item.testGate = { kind: 'in_progress', provider: 'rwx', ...(result.url ? { url: result.url } : {}) };
-      if (state.snapshot) state.snapshot.at = new Date().toISOString();
-      requestCycle();
-    }
-    return result;
-  },
-  getSettings: () => toEditable(config, knownRepos(db, config), forge.name),
-  saveSettings: async (s: EditableSettings) => {
-    const invalid = validateEditable(s);
-    if (invalid) return { ok: false, message: invalid };
-    try {
-      const raw = applyEditable(readRawConfig(CONFIG_PATH), s);
-      writeRawConfig(raw, CONFIG_PATH); // validates the merged result too
-      config = loadConfig(CONFIG_PATH);
-      const forgeName = await resolveForgeName(config, db);
-      if (forgeName !== forge.name) forge = createForge(forgeName);
-      jira = undefined; // email may have changed; reconnect on the next cycle
-      await refreshJira(config);
-      requestCycle();
-      return { ok: true, message: 'Settings saved.' };
-    } catch (err) {
-      return { ok: false, message: `Could not save: ${err instanceof Error ? err.message : String(err)}` };
-    }
-  },
-  listFixVersions: async (ticketKey: string) => {
-    if (!jira) return { ok: false, message: 'Jira is not connected.' };
-    try {
-      const versions = await jira.projectVersions(ticketKey.split('-')[0] ?? '');
-      return { ok: true, versions };
-    } catch (err) {
-      return { ok: false, message: err instanceof Error ? err.message : String(err) };
-    }
-  },
-  setFixVersion: async (ticketKey: string, versionId: string) => {
-    if (!jira) return { ok: false, message: 'Jira is not connected.' };
-    try {
-      await jira.setFixVersion(ticketKey, versionId);
-      requestCycle(); // move the ticket out of its 'Needs fix version' section
-      return { ok: true, message: `Fix version set on ${ticketKey}.` };
-    } catch (err) {
-      return { ok: false, message: err instanceof Error ? err.message : String(err) };
-    }
-  },
-  listStatuses: async () => ({ ok: true, statuses: knownStatuses(db, config) }),
-  exportSettings: async () => ({ ok: true, settings: shareableSettings(readRawConfig(CONFIG_PATH)) }),
-  importSettings: async (shared: Record<string, unknown>) => {
-    try {
-      const merged = mergeSharedSettings(readRawConfig(CONFIG_PATH), shared);
-      writeRawConfig(merged, CONFIG_PATH); // validates before persisting
-      config = loadConfig(CONFIG_PATH);
-      requestCycle();
-      return { ok: true, message: 'Settings imported. Your email and tokens were kept.' };
-    } catch (err) {
-      return { ok: false, message: `Import rejected: ${err instanceof Error ? err.message : String(err)}` };
-    }
-  },
-  becomeReviewer: async (mrKey: string) => {
-    const item = state.snapshot?.items.find((i) => i.key === mrKey);
-    if (!item) return { ok: false, message: 'That MR is no longer in scope.' };
-    try {
-      const userId = config.gitlab.userId ?? (await forge.currentUser()).id;
-      await forge.addReviewer(item.projectId, item.iid, userId);
-      requestCycle(); // the row migrates to My reviews next cycle
-      return { ok: true, message: `You are now a reviewer on ${mrKey}.` };
-    } catch (err) {
-      return { ok: false, message: err instanceof Error ? err.message : String(err) };
-    }
-  },
-  setJiraToken: async (token: string) => {
-    if (!token.trim()) return { ok: false, message: 'Enter a token.' };
-    if (!config.jira.baseUrl) return { ok: false, message: 'Set the Atlassian URL in Settings → Jira first.' };
-    if (!config.jira.email) return { ok: false, message: 'Set your Jira email in Settings → Jira first.' };
-    // Verify against Jira before storing, so a wrong paste fails here rather
-    // than silently degrading every poll. Only a valid token is written.
-    const probe = new JiraSource(config.jira.baseUrl, config.jira.email, token.trim());
-    const check = await probe.verify();
-    if (!check.ok) return { ok: false, message: `Rejected by Jira: ${check.error ?? 'unauthorized'}` };
-    try {
-      await writeJiraToken(token.trim());
-    } catch (err) {
-      return { ok: false, message: `Could not save to Keychain: ${err instanceof Error ? err.message : String(err)}` };
-    }
-    jira = undefined;
-    await refreshJira(config);
+const togglePause = (): void => {
+  state.schedule = { ...state.schedule, enabled: !state.schedule.enabled };
+  state.pausedReason = pausedBecause(state.schedule, config, new Date());
+  if (state.schedule.enabled) {
+    log('resumed');
     requestCycle();
-    return { ok: true, message: 'Jira connected.' };
-  },
-});
+  } else {
+    log('paused by user');
+    scheduleNext(undefined, config);
+  }
+};
+
+const webHandlers = () =>
+  makeWebHandlers({
+    state,
+    db,
+    rwx,
+    log,
+    mode: 'poller',
+    getConfig: () => config,
+    setConfig: (c) => {
+      config = c;
+    },
+    getForge: () => forge,
+    setForge: (f) => {
+      forge = f;
+    },
+    getJira: () => jira,
+    reconnectJira: async () => {
+      jira = undefined; // email may have changed; reconnect from the Keychain
+      await refreshJira(config);
+    },
+    requestCycle,
+    togglePause,
+    onStateChanged: () => {
+      /* headless: the web page pulls its snapshot on its own cadence */
+    },
+  });
 
 // ---------------------------------------------------------------------------
 // Lifecycle
@@ -397,6 +299,7 @@ const main = async (): Promise<void> => {
       rendererDir: join(__dirname, 'renderer'),
       iconPath: ICON_PATH,
       log,
+      mode: 'poller',
       handlers: webHandlers(),
     });
   }

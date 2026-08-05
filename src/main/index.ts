@@ -1,4 +1,6 @@
 import { app, dialog, ipcMain, nativeTheme, powerMonitor, shell } from 'electron';
+import type { Server } from 'node:http';
+import { join } from 'node:path';
 import { Db } from '../core/db';
 import {
   CONFIG_PATH,
@@ -25,6 +27,8 @@ import { present } from './present';
 import { dedupeUnread, initialUiState, type UiState } from './state';
 import { TrayController } from './tray';
 import { startRunFor } from './trigger';
+import { makeWebHandlers } from './web-handlers';
+import { startWebServer } from '../web-server';
 
 /**
  * Menu bar app entry point.
@@ -43,6 +47,7 @@ let jira: JiraSource | undefined;
 let tray: TrayController;
 let popover: Popover;
 let timer: NodeJS.Timeout | undefined;
+let web: Server | undefined;
 
 const log = (msg: string): void => {
   console.log(`[mr-radar] ${new Date().toISOString()} ${msg}`);
@@ -75,6 +80,47 @@ const main = async (): Promise<void> => {
   // The alert badge icon's polarity depends on the menu bar theme, so re-render
   // the tray when the system appearance changes.
   nativeTheme.on('updated', () => tray.update(state));
+
+  // The same localhost API the poller serves, so local clients (browser tab,
+  // radar CLI, MCP server) work regardless of which shell is running.
+  if (config.web.enabled) {
+    web = startWebServer({
+      port: config.web.port,
+      rendererDir: join(__dirname, '..', 'renderer'),
+      iconPath: join(__dirname, '..', '..', 'assets', 'app-icon.png'),
+      log,
+      mode: 'tray',
+      handlers: makeWebHandlers({
+        state,
+        db,
+        rwx,
+        log,
+        mode: 'tray',
+        getConfig: () => config,
+        setConfig: (c) => {
+          config = c;
+        },
+        getForge: () => forge,
+        setForge: (f) => {
+          forge = f;
+        },
+        getJira: () => jira,
+        reconnectJira: () => refreshJira(),
+        requestCycle: () => {
+          state.schedule = { ...state.schedule, quietCycles: 0 };
+          // Re-arm the timer under the (possibly new) config even when a poll
+          // is in flight — same order as the IPC ui:save-settings path.
+          scheduleNext();
+          void runCycle('manual');
+        },
+        togglePause,
+        onStateChanged: () => {
+          tray.update(state);
+          pushToRenderer();
+        },
+      }),
+    });
+  }
 
   tray.update(state);
   await runCycle('startup');
@@ -494,6 +540,7 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   if (timer) clearTimeout(timer);
+  web?.close(); // also removes the web-token file (pid claim-check)
   tray?.destroy();
   try {
     db?.close();

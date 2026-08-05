@@ -1,8 +1,10 @@
 import { randomBytes } from 'node:crypto';
-import { readFileSync, existsSync } from 'node:fs';
+import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { STATE_DIR } from './core/config';
 import type { EditableSettings, UiSnapshot } from './renderer/contract';
+import type { Check, JiraTicket, TestGate, ThreadSummary, WatchItem } from './core/types';
 import type { TriggerResult } from './core/trigger';
 
 /**
@@ -22,8 +24,71 @@ import type { TriggerResult } from './core/trigger';
  *  - static paths are an allowlist, so there is no traversal surface.
  */
 
+/**
+ * One MR straight from the live snapshot — the fields `present()` flattens
+ * away (thread bodies, the raw test gate) preserved verbatim for API clients.
+ */
+export interface ItemDetail {
+  key: string;
+  projectPath: string;
+  iid: number;
+  branch: string;
+  targetBranch: string;
+  title: string;
+  url: string;
+  headSha: string;
+  draft: boolean;
+  hasConflicts: boolean;
+  reason: WatchItem['reason'];
+  participation?: WatchItem['participation'];
+  createdAt: string;
+  updatedAt: string;
+  ticket?: JiraTicket;
+  approvals?: WatchItem['approvals'];
+  unresolved: number;
+  testGate?: TestGate;
+  checks?: (Check & { stale: boolean })[];
+  threads?: ThreadSummary[];
+  /** The snapshot timestamp this detail was read from. */
+  dataAsOf: string;
+}
+
+/** One row of durable event history, payload pre-parsed for clients. */
+export interface EventView {
+  id: number;
+  at: string;
+  type: string;
+  mrKey: string;
+  branch?: string;
+  provider?: string;
+  notified: boolean;
+  payload: unknown;
+}
+
+/**
+ * Unauthenticated liveness probe — no MR or ticket data, ever. That rule is
+ * why there is no lastError here: cycle-failure text can quote project paths;
+ * the tokened /api/snapshot carries it instead.
+ */
+export interface HealthInfo {
+  ok: true;
+  app: 'mr-radar';
+  version: string;
+  mode: 'tray' | 'poller';
+  pid: number;
+  polling: boolean;
+  enabled: boolean;
+  paused?: string;
+  lastPollAt?: string;
+  nextPollAt?: string;
+}
+
 export interface WebHandlers {
   getSnapshot: () => UiSnapshot;
+  getItemDetail: (mrKey: string) => Promise<{ ok: boolean; message?: string; item?: ItemDetail }>;
+  getEvents: (limit: number, mrKey?: string) => EventView[];
+  health: () => HealthInfo;
+  setPolling: (enabled: boolean) => { enabled: boolean; changed: boolean };
   pollNow: () => void;
   togglePause: () => void;
   markAllRead: () => void;
@@ -50,6 +115,10 @@ export interface WebServerOptions {
   iconPath?: string | undefined;
   log: (msg: string) => void;
   handlers: WebHandlers;
+  /** Which shell is serving; recorded in the token file and /api/health. */
+  mode: 'tray' | 'poller';
+  /** Override for tests; defaults to `<STATE_DIR>/web-token.json`. */
+  tokenFilePath?: string | undefined;
 }
 
 const STATIC_FILES: Record<string, string> = {
@@ -119,27 +188,67 @@ const sendJson = (res: ServerResponse, status: number, value: unknown): void => 
   res.end(body);
 };
 
+/**
+ * Token-file cleanups pending for this process, flushed on exit. Both shells
+ * shut down via process.exit() right after web.close(), which preempts the
+ * server's async 'close' event — a process 'exit' hook is the only reliable
+ * place to remove the file. One shared hook, so tests that start many servers
+ * don't stack listeners.
+ */
+const tokenCleanups = new Set<() => void>();
+let exitHookInstalled = false;
+const onExitCleanup = (cleanup: () => void): void => {
+  tokenCleanups.add(cleanup);
+  if (exitHookInstalled) return;
+  exitHookInstalled = true;
+  process.on('exit', () => {
+    for (const fn of tokenCleanups) fn();
+  });
+};
+
 export const startWebServer = (opts: WebServerOptions): Server => {
-  const { port, rendererDir, iconPath, log, handlers } = opts;
+  const { port, rendererDir, iconPath, log, handlers, mode } = opts;
   const token = randomBytes(16).toString('hex');
   const hasIcon = Boolean(iconPath && existsSync(iconPath));
+  const tokenFilePath = opts.tokenFilePath ?? join(STATE_DIR, 'web-token.json');
 
   const handleApi = async (
     req: IncomingMessage,
     res: ServerResponse,
     path: string,
+    params: URLSearchParams,
   ): Promise<void> => {
+    const method = req.method ?? 'GET';
+
+    // Liveness probe for local clients (CLI/MCP) validating a possibly-stale
+    // token file. Deliberately tokenless: it discloses a strict subset of what
+    // the unauthenticated GET / page already exposes, and no MR/ticket data.
+    if (path === 'health' && method === 'GET') {
+      return sendJson(res, 200, handlers.health());
+    }
+
     if (req.headers['x-radar-token'] !== token) {
       sendJson(res, 403, { error: 'bad token' });
       return;
     }
-    const method = req.method ?? 'GET';
 
     if (method === 'GET') {
       if (path === 'snapshot') return sendJson(res, 200, handlers.getSnapshot());
       if (path === 'settings') return sendJson(res, 200, handlers.getSettings());
       if (path === 'statuses') return sendJson(res, 200, await handlers.listStatuses());
       if (path === 'export-settings') return sendJson(res, 200, await handlers.exportSettings());
+      if (path === 'item') {
+        const key = params.get('key');
+        if (!key) return sendJson(res, 400, { error: 'key required' });
+        return sendJson(res, 200, await handlers.getItemDetail(key));
+      }
+      if (path === 'events') {
+        const rawLimit = Number(params.get('limit') ?? '50');
+        const limit = Number.isFinite(rawLimit) ? rawLimit : 50;
+        // '?mr=' (present but empty) means no filter, not mr_key = ''.
+        const mr = params.get('mr');
+        return sendJson(res, 200, handlers.getEvents(limit, mr || undefined));
+      }
       sendJson(res, 404, { error: 'unknown endpoint' });
       return;
     }
@@ -151,7 +260,14 @@ export const startWebServer = (opts: WebServerOptions): Server => {
     let body: Record<string, unknown>;
     try {
       const raw = await readBody(req);
-      body = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+      const parsed: unknown = raw ? JSON.parse(raw) : {};
+      // JSON.parse('null') and scalars survive the truthy-raw check; only an
+      // object body is a valid request.
+      if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        sendJson(res, 400, { error: 'bad body' });
+        return;
+      }
+      body = parsed as Record<string, unknown>;
     } catch {
       sendJson(res, 400, { error: 'bad body' });
       return;
@@ -164,6 +280,13 @@ export const startWebServer = (opts: WebServerOptions): Server => {
       case 'toggle-pause':
         handlers.togglePause();
         return sendJson(res, 200, { ok: true });
+      // 'set-polling', not 'set-pause': {enabled: true} means polling ON, and
+      // an endpoint named set-pause would read as the inverse.
+      case 'set-polling':
+        if (typeof body.enabled !== 'boolean') {
+          return sendJson(res, 400, { error: 'enabled (boolean) required' });
+        }
+        return sendJson(res, 200, handlers.setPolling(body.enabled));
       case 'mark-all-read':
         handlers.markAllRead();
         return sendJson(res, 200, { ok: true });
@@ -212,7 +335,7 @@ export const startWebServer = (opts: WebServerOptions): Server => {
         const path = url.pathname;
 
         if (path.startsWith('/api/')) {
-          await handleApi(req, res, path.slice('/api/'.length));
+          await handleApi(req, res, path.slice('/api/'.length), url.searchParams);
           return;
         }
         if (req.method !== 'GET') {
@@ -247,9 +370,40 @@ export const startWebServer = (opts: WebServerOptions): Server => {
     })();
   });
 
+  // Same claim-check as the poller pidfile: only delete a file we wrote.
+  // Idempotent — runs on server 'close' AND on process exit (whichever first).
+  const removeTokenFile = (): void => {
+    try {
+      const owner = (JSON.parse(readFileSync(tokenFilePath, 'utf8')) as { pid?: number }).pid;
+      if (owner === process.pid) rmSync(tokenFilePath, { force: true });
+    } catch {
+      /* not ours, unreadable, or already gone */
+    }
+  };
+
   server.listen(port, '127.0.0.1', () => {
     log(`web ui at http://127.0.0.1:${port}`);
+    // Discovery file for local clients (CLI/MCP): token + port in one read.
+    // Written only after a successful bind, so a second instance that loses
+    // the port race can never clobber the live instance's token. Any local
+    // process can already scrape this token from the unauthenticated GET /
+    // page, so the same-user 0600 file adds no attack surface — it's stricter.
+    try {
+      mkdirSync(dirname(tokenFilePath), { recursive: true });
+      writeFileSync(
+        tokenFilePath,
+        `${JSON.stringify({ token, port, pid: process.pid, mode, startedAt: new Date().toISOString() })}\n`,
+        { mode: 0o600 },
+      );
+      // writeFileSync's mode only applies on creation; re-assert on overwrite
+      // (e.g. a stale file left by a crash) so the perms can't drift wider.
+      chmodSync(tokenFilePath, 0o600);
+      onExitCleanup(removeTokenFile);
+    } catch (err) {
+      log(`web: could not write token file: ${err instanceof Error ? err.message : String(err)}`);
+    }
   });
+  server.on('close', removeTokenFile);
   server.on('error', (err) => {
     log(`web: server error: ${err.message} — status page unavailable`);
   });
