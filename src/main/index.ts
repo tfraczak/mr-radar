@@ -473,9 +473,10 @@ const registerIpc = (): void => {
     return (await webHandlers?.checkReviewReady(mrKey)) ?? { ok: false, message: 'Not ready yet.' };
   });
 
-  ipcMain.handle('ui:copy-text', (_e, text: unknown) => {
+  ipcMain.handle('ui:copy-text', (_e, text: unknown, html: unknown) => {
     if (typeof text !== 'string') return false;
-    clipboard.writeText(text);
+    if (typeof html === 'string' && html) clipboard.write({ text, html });
+    else clipboard.writeText(text);
     return true;
   });
 

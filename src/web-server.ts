@@ -97,7 +97,15 @@ export interface WebHandlers {
    *  its ticket, and its CI, then reports announce-eligibility with reasons. */
   checkReviewReady: (
     mrKey: string,
-  ) => Promise<{ ok: boolean; eligible?: boolean; reasons?: string[]; message?: string }>;
+  ) => Promise<{
+    ok: boolean;
+    eligible?: boolean;
+    reasons?: string[];
+    /** Plain-text announce message (the pbcopy/CLI flavor). */
+    message?: string;
+    /** HTML flavor of the same message — named links paste as hyperlinks. */
+    messageHtml?: string;
+  }>;
   pollNow: () => void;
   togglePause: () => void;
   markAllRead: () => void;

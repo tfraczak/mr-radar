@@ -227,12 +227,13 @@ export interface RadarApi {
    *  visible ('shown') so the rule no longer catches it. */
   setIgnored(mrKey: string, ignored: boolean): Promise<{ ok: boolean; message?: string }>;
   /** Fresh re-check of one MR for the Copy-for-Slack flow; when eligible,
-   *  `message` is the composed announcement. */
+   *  `message`/`messageHtml` are the composed announcement's two flavors. */
   checkReviewReady(
     mrKey: string,
-  ): Promise<{ ok: boolean; eligible?: boolean; reasons?: string[]; message?: string }>;
-  /** Put text on the system clipboard (Electron main clipboard / navigator). */
-  copyText(text: string): Promise<boolean>;
+  ): Promise<{ ok: boolean; eligible?: boolean; reasons?: string[]; message?: string; messageHtml?: string }>;
+  /** Put text on the system clipboard; `html` adds a rich flavor so targets
+   *  like Slack's composer paste named links as real hyperlinks. */
+  copyText(text: string, html?: string): Promise<boolean>;
   /** All Jira status names, for the status-section assignment UI. */
   listStatuses(): Promise<{ ok: boolean; statuses?: string[]; message?: string }>;
   /** The shareable config subset (identity stripped; token never in config). */

@@ -454,7 +454,7 @@ export class RadarClient {
 
   async reviewReady(
     key: string,
-  ): Promise<{ ok: boolean; eligible?: boolean; reasons?: string[]; message?: string }> {
+  ): Promise<{ ok: boolean; eligible?: boolean; reasons?: string[]; message?: string; messageHtml?: string }> {
     // The app re-fetches the MR, ticket, and CI before judging; the RWX
     // history sweeps can legitimately take a while — give it real time.
     return this.api('review-ready', { method: 'POST', body: { mrKey: key }, timeoutMs: 90_000 });

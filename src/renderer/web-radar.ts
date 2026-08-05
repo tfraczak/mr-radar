@@ -133,14 +133,28 @@ window.radar = {
     void refresh(); // the check refreshed the item server-side; show it
     return result;
   },
-  copyText: async (text) => {
+  copyText: async (text, html) => {
     try {
+      if (html && typeof ClipboardItem !== 'undefined') {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/plain': new Blob([text], { type: 'text/plain' }),
+            'text/html': new Blob([html], { type: 'text/html' }),
+          }),
+        ]);
+        return true;
+      }
       await navigator.clipboard.writeText(text);
       return true;
     } catch {
-      // Clipboard permission denied (unfocused tab etc.) — the caller shows
-      // the text so the user can copy by hand.
-      return false;
+      // Rich write refused (permissions vary by browser) — plain is better
+      // than nothing, and failing that the caller offers click-to-copy.
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        return false;
+      }
     }
   },
   setFixVersion: async (ticketKey, versionId) => {

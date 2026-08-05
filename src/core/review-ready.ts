@@ -105,8 +105,25 @@ const ciReasons = (item: WatchItem): string[] => {
   return [...new Set(reasons)];
 };
 
-/** Render the announce message. Placeholders: {ticketKey} {ticketUrl} {title} {mrUrl}. */
-export const reviewMessage = (item: WatchItem, config: Config): string => {
+/**
+ * Markdown-style named links in the template: `[text](https://…)`. The two
+ * clipboard flavors render them differently — rich targets (Slack's composer)
+ * read the HTML flavor and paste a real hyperlink; plain targets get
+ * `text (url)`.
+ */
+const LINK_RE = /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g;
+
+const escapeHtml = (s: string): string =>
+  s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+
+/**
+ * Render the announce message in both clipboard flavors.
+ * Placeholders: {ticketKey} {ticketUrl} {title} {mrUrl}; links: [text](url).
+ */
+export const reviewMessageParts = (
+  item: WatchItem,
+  config: Config,
+): { text: string; html: string } => {
   const key = item.ticket?.key ?? '';
   const values: Record<string, string> = {
     ticketKey: key,
@@ -117,8 +134,30 @@ export const reviewMessage = (item: WatchItem, config: Config): string => {
   };
   // Single pass: substituted text (an MR title containing '{mrUrl}') is never
   // itself rescanned for placeholders.
-  return config.slack.template.replace(
+  const substituted = config.slack.template.replace(
     /\{(ticketKey|ticketUrl|title|mrUrl)\}/g,
     (_, name: string) => values[name] ?? '',
   );
+
+  let text = '';
+  let html = '';
+  let last = 0;
+  for (const m of substituted.matchAll(LINK_RE)) {
+    const [whole, label, url] = m as unknown as [string, string, string];
+    const before = substituted.slice(last, m.index);
+    text += before;
+    html += escapeHtml(before);
+    // Plain flavor: skip the parenthetical when the label IS the url.
+    text += label === url ? url : `${label} (${url})`;
+    html += `<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>`;
+    last = (m.index ?? 0) + whole.length;
+  }
+  const rest = substituted.slice(last);
+  text += rest;
+  html += escapeHtml(rest);
+  return { text, html: html.replaceAll('\n', '<br>') };
 };
+
+/** The plain-text flavor alone — what the CLI prints and tests assert. */
+export const reviewMessage = (item: WatchItem, config: Config): string =>
+  reviewMessageParts(item, config).text;

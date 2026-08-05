@@ -2245,3 +2245,10 @@ button.select-trigger {
   border-radius: 0 6px 6px 0;
   word-break: break-word;
 }
+
+/* Preview links: look like the real thing, click like nothing. */
+.slack-preview-link {
+  color: var(--accent);
+  text-decoration: underline;
+  pointer-events: none;
+}

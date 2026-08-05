@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { CONFIG_PATH, loadConfig, readRawConfig, writeRawConfig, type Config } from '../core/config';
 import { summarizeThreads, unresolvedCount } from '../core/correlate';
 import { refreshItem } from '../core/poll';
-import { reviewMessage, reviewReadiness } from '../core/review-ready';
+import { reviewMessageParts, reviewReadiness } from '../core/review-ready';
 import { effectiveIgnore } from '../core/rules';
 import type { Db } from '../core/db';
 import { writeJiraToken } from '../core/secrets';
@@ -199,12 +199,13 @@ export const makeWebHandlers = (deps: WebHandlerDeps): WebHandlers => {
       // popover list under the clicked button, and would stamp a one-item
       // refresh as if the WHOLE snapshot were that fresh.
       const readiness = reviewReadiness(item, cfg().slack.readyStatuses);
-      return {
-        ok: true,
-        eligible: readiness.eligible,
-        reasons: readiness.reasons,
-        ...(readiness.eligible ? { message: reviewMessage(item, cfg()) } : {}),
-      };
+      if (!readiness.eligible) {
+        return { ok: true, eligible: false, reasons: readiness.reasons };
+      }
+      // Both clipboard flavors: rich targets paste [text](url) as a real
+      // hyperlink; plain targets get 'text (url)'.
+      const parts = reviewMessageParts(item, cfg());
+      return { ok: true, eligible: true, reasons: [], message: parts.text, messageHtml: parts.html };
     },
 
     setIgnored: (mrKey: string, ignored: boolean) => {

@@ -110,7 +110,10 @@ re-fetches that one MR fresh (MR state, ticket status, discussions, CI) and eith
 the announcement to the clipboard or tells you exactly what still blocks it. The message
 template lives in Settings → **Slack** with a variable legend and a live preview —
 `{ticketKey}`, `{ticketUrl}` (Jira link), `{title}` (MR subject line), `{mrUrl}` — so the
-announcement speaks in your voice.
+announcement speaks in your voice. Named links use `[text](url)` (the **Insert link**
+button writes one for you): the copy carries both clipboard flavors, so Slack's composer
+pastes `[{ticketKey}]({ticketUrl})` as a real hyperlink while plain targets (pbcopy,
+terminals) see `ISV-123 (https://…)`.
 
 ### Step 3 — repos and CI (only for RWX users)
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG, type Config } from '../src/core/config';
-import { reviewMessage, reviewReadiness } from '../src/core/review-ready';
+import { reviewMessage, reviewMessageParts, reviewReadiness } from '../src/core/review-ready';
 import type { Check, JiraTicket, TestGate, WatchItem } from '../src/core/types';
 
 const READY = ['Code Review'];
@@ -164,6 +164,50 @@ describe('reviewMessage', () => {
     expect(reviewMessage(item(), custom)).toBe(
       'ENG-42 | https://acme.atlassian.net/browse/ENG-42 | ENG-42: Add the widget | https://gitlab.example/mr/1',
     );
+  });
+});
+
+describe('reviewMessageParts — the two clipboard flavors', () => {
+  const config = {
+    ...DEFAULT_CONFIG,
+    jira: { ...DEFAULT_CONFIG.jira, baseUrl: 'https://acme.atlassian.net' },
+  } as Config;
+  const withTemplate = (template: string): Config =>
+    ({ ...config, slack: { ...config.slack, template } }) as Config;
+
+  it('renders [text](url) as a hyperlink in HTML and as text (url) in plain', () => {
+    const parts = reviewMessageParts(item(), withTemplate('hey! [{ticketKey}]({ticketUrl}) is ready. {title}'));
+    expect(parts.text).toBe(
+      'hey! ENG-42 (https://acme.atlassian.net/browse/ENG-42) is ready. ENG-42: Add the widget',
+    );
+    expect(parts.html).toBe(
+      'hey! <a href="https://acme.atlassian.net/browse/ENG-42">ENG-42</a> is ready. ENG-42: Add the widget',
+    );
+  });
+
+  it('a label that IS the url skips the redundant parenthetical in plain', () => {
+    const parts = reviewMessageParts(item(), withTemplate('see [{ticketUrl}]({ticketUrl})'));
+    expect(parts.text).toBe('see https://acme.atlassian.net/browse/ENG-42');
+  });
+
+  it('escapes markup from external text (MR titles) in the HTML flavor', () => {
+    const hostile = item({ title: 'Fix <script>alert(1)</script> & stuff' });
+    const parts = reviewMessageParts(hostile, withTemplate('{title}'));
+    expect(parts.html).toBe('Fix &lt;script&gt;alert(1)&lt;/script&gt; &amp; stuff');
+    expect(parts.text).toBe('Fix <script>alert(1)</script> & stuff');
+  });
+
+  it('a template with no links yields identical text and (escaped) html', () => {
+    const parts = reviewMessageParts(item(), config);
+    expect(parts.text).toBe(reviewMessage(item(), config));
+    expect(parts.html).toContain('is ready for review');
+    expect(parts.html).not.toContain('<a ');
+  });
+
+  it('malformed link syntax passes through verbatim', () => {
+    const parts = reviewMessageParts(item(), withTemplate('[unclosed({mrUrl}) and [no-url]'));
+    expect(parts.text).toBe('[unclosed(https://gitlab.example/mr/1) and [no-url]');
+    expect(parts.html).not.toContain('<a ');
   });
 });
 

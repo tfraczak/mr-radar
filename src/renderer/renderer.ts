@@ -770,7 +770,8 @@ const slackButton = (item: UiItem): HTMLElement => {
     void window.radar.checkReviewReady(item.key).then(async (r) => {
       if (r.ok && r.eligible && r.message) {
         const message = r.message;
-        const copied = await window.radar.copyText(message);
+        const messageHtml = r.messageHtml;
+        const copied = await window.radar.copyText(message, messageHtml);
         btn.title = message; // hover shows exactly what will be / was copied
         if (copied) {
           btn.textContent = 'Copied ✓';
@@ -786,7 +787,7 @@ const slackButton = (item: UiItem): HTMLElement => {
           'click',
           (e2) => {
             e2.stopPropagation();
-            void window.radar.copyText(message).then((ok) => {
+            void window.radar.copyText(message, messageHtml).then((ok) => {
               btn.textContent = ok ? 'Copied ✓' : 'Copy failed';
               if (ok) btn.classList.add('copied');
               btn.disabled = true;
@@ -1437,6 +1438,25 @@ const openSettings = async (): Promise<void> => {
     'hey team! {ticketUrl} is ready for review. {title}',
   );
   slackTemplateField.input.title = 'Placeholders: {ticketKey} {ticketUrl} {title} {mrUrl}';
+  // One click inserts a named link at the cursor — or wraps the selection,
+  // so "select the words, click Insert link" does what it reads like.
+  const insertLink = createButton('Insert link', {
+    variant: 'link',
+    title: 'Insert [text](url) at the cursor — pastes into Slack as a real hyperlink',
+    onClick: () => {
+      const input = slackTemplateField.input;
+      const start = input.selectionStart ?? input.value.length;
+      const end = input.selectionEnd ?? start;
+      const selected = input.value.slice(start, end);
+      const snippet = `[${selected || '{ticketKey}'}]({ticketUrl})`;
+      input.value = input.value.slice(0, start) + snippet + input.value.slice(end);
+      const cursor = start + snippet.length;
+      input.focus();
+      input.setSelectionRange(cursor, cursor);
+      paintSlackPreview();
+    },
+  });
+
   const slackLegend = el('div', 'field-hint');
   slackLegend.append(
     el('span', undefined, 'Variables: '),
@@ -1447,6 +1467,8 @@ const openSettings = async (): Promise<void> => {
     el('code', undefined, '{title}'),
     el('span', undefined, ' MR subject line · '),
     el('code', undefined, '{mrUrl}'),
+    el('span', undefined, ' · links: '),
+    el('code', undefined, '[text](url)'),
   );
   // Live preview with sample values, so the voice is auditioned before saving.
   const slackPreview = el('div', 'slack-preview');
@@ -1461,11 +1483,25 @@ const openSettings = async (): Promise<void> => {
       /\{(ticketKey|ticketUrl|title|mrUrl)\}/g,
       (_, name: string) => sample[name] ?? '',
     );
-    slackPreview.textContent = rendered ? `Preview: ${rendered}` : '';
+    slackPreview.replaceChildren();
+    if (!rendered) return;
+    // Named links render as real (inert) anchors — the preview shows what
+    // Slack's composer will paste, not the raw [text](url) source.
+    slackPreview.append(el('span', undefined, 'Preview: '));
+    const linkRe = /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g;
+    let last = 0;
+    for (const m of rendered.matchAll(linkRe)) {
+      slackPreview.append(el('span', undefined, rendered.slice(last, m.index)));
+      const a = el('a', 'slack-preview-link', m[1] ?? '');
+      a.title = m[2] ?? '';
+      slackPreview.append(a);
+      last = (m.index ?? 0) + m[0].length;
+    }
+    slackPreview.append(el('span', undefined, rendered.slice(last)));
   };
   slackTemplateField.input.addEventListener('input', paintSlackPreview);
   paintSlackPreview();
-  slackBlock.append(readyWrap, slackTemplateField.wrap, slackLegend, slackPreview);
+  slackBlock.append(readyWrap, slackTemplateField.wrap, insertLink, slackLegend, slackPreview);
 
   const msg = createStatusMessage();
 
