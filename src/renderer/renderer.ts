@@ -1437,7 +1437,35 @@ const openSettings = async (): Promise<void> => {
     'hey team! {ticketUrl} is ready for review. {title}',
   );
   slackTemplateField.input.title = 'Placeholders: {ticketKey} {ticketUrl} {title} {mrUrl}';
-  slackBlock.append(readyWrap, slackTemplateField.wrap);
+  const slackLegend = el('div', 'field-hint');
+  slackLegend.append(
+    el('span', undefined, 'Variables: '),
+    el('code', undefined, '{ticketKey}'),
+    el('span', undefined, ' · '),
+    el('code', undefined, '{ticketUrl}'),
+    el('span', undefined, ' Jira link · '),
+    el('code', undefined, '{title}'),
+    el('span', undefined, ' MR subject line · '),
+    el('code', undefined, '{mrUrl}'),
+  );
+  // Live preview with sample values, so the voice is auditioned before saving.
+  const slackPreview = el('div', 'slack-preview');
+  const paintSlackPreview = (): void => {
+    const sample: Record<string, string> = {
+      ticketKey: 'ENG-123',
+      ticketUrl: 'https://your-org.atlassian.net/browse/ENG-123',
+      title: 'ENG-123: Short subject line describing the work',
+      mrUrl: 'https://gitlab.example.com/acme/rocket/-/merge_requests/42',
+    };
+    const rendered = slackTemplateField.input.value.replace(
+      /\{(ticketKey|ticketUrl|title|mrUrl)\}/g,
+      (_, name: string) => sample[name] ?? '',
+    );
+    slackPreview.textContent = rendered ? `Preview: ${rendered}` : '';
+  };
+  slackTemplateField.input.addEventListener('input', paintSlackPreview);
+  paintSlackPreview();
+  slackBlock.append(readyWrap, slackTemplateField.wrap, slackLegend, slackPreview);
 
   const msg = createStatusMessage();
 
@@ -1562,8 +1590,9 @@ const openSettings = async (): Promise<void> => {
   const settingsPanes: Record<string, HTMLElement> = {
     General: paneOf([updateStyle.wrap, login.wrap]),
     Git: paneOf([forgeSel.wrap, rwxEnabled.wrap, ...repoFields.map((f) => f.row)]),
-    Jira: paneOf([atlassianUrl.wrap, email.wrap, statusBlock, rulesBlock, slackBlock]),
+    Jira: paneOf([atlassianUrl.wrap, email.wrap, statusBlock, rulesBlock]),
     Polling: paneOf([pollSecs.wrap, recent.wrap, hoursEnabled.wrap, hoursBlock]),
+    Slack: paneOf([slackBlock]),
     Notifications: paneOf([notify.wrap, sound.wrap, method.wrap]),
     Display: paneOf([theme.wrap, appearance.wrap, tabCountsSel.wrap]),
   };

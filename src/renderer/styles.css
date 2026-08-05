@@ -2223,3 +2223,25 @@ button.select-trigger {
   opacity: 0.75;
 }
 
+
+/* Slack settings: variable legend + live template preview. */
+.field-hint {
+  font-size: 10px;
+  opacity: 0.65;
+  margin: 2px 0 0;
+}
+.field-hint code {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  opacity: 0.9;
+}
+.slack-preview {
+  font-size: 10.5px;
+  opacity: 0.75;
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-left: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  border-radius: 0 6px 6px 0;
+  word-break: break-word;
+}

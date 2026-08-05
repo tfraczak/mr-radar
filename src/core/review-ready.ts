@@ -31,7 +31,7 @@ export const reviewReadiness = (item: WatchItem, readyStatuses: string[]): Revie
     // than emitting a baffling "X is not one of: " for every ticket.
     return {
       eligible: false,
-      reasons: ['No ready-for-review statuses are configured (Settings → Jira → Copy for Slack).'],
+      reasons: ['No ready-for-review statuses are configured (Settings → Slack).'],
     };
   }
 

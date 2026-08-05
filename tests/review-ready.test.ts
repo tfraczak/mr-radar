@@ -172,7 +172,7 @@ describe('empty ready-status list', () => {
     const r = reviewReadiness(item(), []);
     expect(r.eligible).toBe(false);
     expect(r.reasons).toEqual([
-      'No ready-for-review statuses are configured (Settings → Jira → Copy for Slack).',
+      'No ready-for-review statuses are configured (Settings → Slack).',
     ]);
   });
 });
