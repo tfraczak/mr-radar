@@ -118,7 +118,7 @@ template lives in Settings → **Slack** with a variable legend and a live previ
 announcement speaks in your voice. Named links use `[text](url)` (the **Insert link**
 button writes one for you): the copy carries both clipboard flavors, so Slack's composer
 pastes `[{ticketKey}]({ticketUrl})` as a real hyperlink while plain targets (pbcopy,
-terminals) see `ISV-123 (https://…)`.
+terminals) see `ENG-123 (https://…)`.
 
 ### Step 3 — repos and CI (only for RWX users)
 

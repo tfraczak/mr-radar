@@ -38,6 +38,7 @@
     "start": "node scripts/kill-stale.mjs && electron dist/main/index.js",
     "package": "yarn build && node scripts/make-app-icon.mjs && electron-builder --mac dir",
     "install:app": "yarn package && node scripts/install.mjs",
+    "sweep": "node scripts/sweep.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "package:dmg": "yarn build && node scripts/make-app-icon.mjs && electron-builder --mac dmg",
