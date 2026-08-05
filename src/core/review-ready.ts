@@ -26,6 +26,15 @@ export const reviewReadiness = (item: WatchItem, readyStatuses: string[]): Revie
   const reasons: string[] = [];
   const ready = new Set(readyStatuses.map((s) => s.toLowerCase()));
 
+  if (readyStatuses.length === 0) {
+    // Savable state (every chip removed) = the feature is off; say so rather
+    // than emitting a baffling "X is not one of: " for every ticket.
+    return {
+      eligible: false,
+      reasons: ['No ready-for-review statuses are configured (Settings → Jira → Copy for Slack).'],
+    };
+  }
+
   if (!item.ticket) {
     reasons.push('No Jira ticket is bound to this MR.');
   } else if (!ready.has(item.ticket.status.toLowerCase())) {
@@ -83,6 +92,18 @@ const ciReasons = (item: WatchItem): string[] => {
     if (check.state === 'failed') reasons.push(`${check.name} failed.`);
     else if (check.state === 'in_progress' || check.state === 'waiting') {
       reasons.push(`${check.name} is still ${check.state === 'in_progress' ? 'running' : 'waiting'}.`);
+    }
+  }
+
+  // Fail CLOSED on an absent pipeline where one is expected (juno/rocket:
+  // pipeline alongside an RWX gate): canceled, [ci skip], not created yet, or
+  // the pipelines fetch failing must all block, not silently pass.
+  if (item.pipelineExpected) {
+    const pipelineForHead = (item.checks ?? []).some(
+      (c) => c.provider !== 'rwx' && c.sha === item.headSha,
+    );
+    if (!pipelineForHead) {
+      reasons.push('The pipeline has no result for the head commit (not run, canceled, or skipped).');
     }
   }
 

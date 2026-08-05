@@ -292,6 +292,12 @@ export interface WatchItem {
   // Populated only for in-scope MRs whose details were fetched this cycle.
   threads?: ThreadSummary[];
   approvals?: { required?: number; left?: number; by: string[] };
+  /**
+   * A pipeline rides alongside a non-pipeline test gate in this repo (juno,
+   * rocket): announce-readiness must see a green pipeline result for the head
+   * — an ABSENT one (canceled, [ci skip], fetch failure) must fail closed.
+   */
+  pipelineExpected?: boolean;
   /** Last-known unresolved count, used when a cycle skips the discussions fetch. */
   unresolvedFallback?: number;
   checks?: Check[];

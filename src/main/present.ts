@@ -173,8 +173,11 @@ const groupItems = (
     }
 
     // A static hint from (possibly minutes-old) snapshot data; the button's
-    // click still does the authoritative fresh re-check. Never on ignored rows.
-    if (reviewReadiness(item, slack.readyStatuses).eligible) ui.slackReady = true;
+    // click still does the authoritative fresh re-check. Never on ignored
+    // rows, and only on MRs the user authored — you announce your own work.
+    if (item.reason === 'authored' && reviewReadiness(item, slack.readyStatuses).eligible) {
+      ui.slackReady = true;
+    }
 
     if (target && !item.ticket) {
       // Ticketless MRs can't join ticket groups; ignore works fully, the

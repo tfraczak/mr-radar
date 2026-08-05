@@ -733,7 +733,13 @@ const eyeControl = (
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     btn.disabled = true;
-    for (const i of items) void window.radar.setIgnored(i.key, ignore);
+    // Sequential, and re-enabled on failure — a dead disabled eye with no
+    // story would strand the remaining MRs half-toggled.
+    void (async () => {
+      for (const i of items) await window.radar.setIgnored(i.key, ignore);
+    })().catch(() => {
+      btn.disabled = false;
+    });
   });
   return btn;
 };
@@ -757,10 +763,31 @@ const slackButton = (item: UiItem): HTMLElement => {
     btn.textContent = 'Checking…';
     void window.radar.checkReviewReady(item.key).then(async (r) => {
       if (r.ok && r.eligible && r.message) {
-        const copied = await window.radar.copyText(r.message);
-        btn.textContent = copied ? 'Copied ✓' : 'Copy failed';
-        if (copied) btn.classList.add('copied');
-        btn.title = r.message; // hover shows exactly what was copied
+        const message = r.message;
+        const copied = await window.radar.copyText(message);
+        btn.title = message; // hover shows exactly what will be / was copied
+        if (copied) {
+          btn.textContent = 'Copied ✓';
+          btn.classList.add('copied');
+          return;
+        }
+        // Browser clipboard writes need user activation, which the seconds of
+        // re-checking consumed. The NEXT click has fresh activation: copy
+        // directly, no re-check.
+        btn.textContent = 'Click to copy';
+        btn.disabled = false;
+        btn.addEventListener(
+          'click',
+          (e2) => {
+            e2.stopPropagation();
+            void window.radar.copyText(message).then((ok) => {
+              btn.textContent = ok ? 'Copied ✓' : 'Copy failed';
+              if (ok) btn.classList.add('copied');
+              btn.disabled = true;
+            });
+          },
+          { once: true },
+        );
         return;
       }
       // Not eligible after all (or the check failed): say why, right here.

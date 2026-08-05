@@ -526,3 +526,21 @@ describe('slackReady hint', () => {
     expect(snap.groups.flatMap((g) => g.items)[0]?.slackReady).toBeUndefined();
   });
 });
+
+describe('slackReady is authored-only', () => {
+  it("no hint on colleagues' MRs even when otherwise eligible", () => {
+    const reviewing = item({
+      reason: 'reviewer',
+      ticket: ticket('Code Review'),
+      threads: [],
+      testGate: { kind: 'none' },
+      checks: [],
+    });
+    const snap = present(
+      stateWith([reviewing]),
+      ['Code Review'], NOW, 'rebase', DEFAULT_CONFIG.statusSections, [],
+      { readyStatuses: ['Code Review'], template: 't' },
+    );
+    expect([...snap.groups, ...snap.otherGroups].flatMap((g) => g.items)[0]?.slackReady).toBeUndefined();
+  });
+});
