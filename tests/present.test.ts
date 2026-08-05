@@ -367,12 +367,30 @@ describe('conditional routing rules', () => {
 describe('(no ticket) sentinel rule', () => {
   const noTicketItem = () => item({ branch: 'quick-fix', title: 'Patch the widget' });
 
-  it('routes ticketless MRs to ignore', () => {
+  it('routes ticketless MRs to the collapsed Ignored bucket, not a drop', () => {
     const rules: StatusRule[] = [{ status: NO_TICKET_STATUS, op: 'always', then: 'ignore' }];
     const snap = present(stateWith([noTicketItem()]), ACTIVE, NOW, 'rebase', DEFAULT_CONFIG.statusSections, rules);
     expect(
       snap.groups.length + snap.otherGroups.length + snap.doneGroups.length + snap.verificationGroups.length,
     ).toBe(0);
+    expect(snap.ignoredGroups).toHaveLength(1);
+    expect(snap.ignoredGroups[0]?.status).toBe('No ticket');
+    expect(snap.ignoredGroups[0]?.items[0]?.ignored).toBe('rule'); // → 'Show anyway'
+  });
+
+  it("a 'shown' override rescues an MR from the ignore rule", () => {
+    const rules: StatusRule[] = [{ status: NO_TICKET_STATUS, op: 'always', then: 'ignore' }];
+    const shown = { ...noTicketItem(), ignoreOverride: 'shown' as const };
+    const snap = present(stateWith([shown]), ACTIVE, NOW, 'rebase', DEFAULT_CONFIG.statusSections, rules);
+    expect(snap.ignoredGroups).toHaveLength(0);
+    expect(snap.otherGroups).toHaveLength(1); // plain mapping applies again
+  });
+
+  it("a manual 'ignored' override wins regardless of rules", () => {
+    const muted = { ...item({ ticket: ticket('In Development') }), ignoreOverride: 'ignored' as const };
+    const snap = present(stateWith([muted]), ACTIVE, NOW, 'rebase', DEFAULT_CONFIG.statusSections, []);
+    expect(snap.groups).toHaveLength(0); // not in Active despite active status
+    expect(snap.ignoredGroups[0]?.items[0]?.ignored).toBe('manual'); // → 'Un-ignore'
   });
 
   it('never matches MRs that DO have a ticket', () => {

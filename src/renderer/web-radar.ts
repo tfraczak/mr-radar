@@ -120,6 +120,11 @@ window.radar = {
     void refresh();
     return result;
   },
+  setIgnored: async (mrKey, ignored) => {
+    const result = await api<{ ok: boolean; message?: string }>('set-ignored', { mrKey, ignored });
+    void refresh();
+    return result;
+  },
   setFixVersion: async (ticketKey, versionId) => {
     const result = await api<{ ok: boolean; message: string }>('set-fix-version', {
       ticketKey,

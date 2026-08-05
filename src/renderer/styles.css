@@ -2180,3 +2180,13 @@ button.select-trigger {
   opacity: 1;
   cursor: progress;
 }
+
+/* Ignore / restore controls: quiet until hovered — muting is a side action. */
+.ignore-btn {
+  opacity: 0.55;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.ignore-btn:hover {
+  opacity: 1;
+}

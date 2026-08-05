@@ -35,6 +35,8 @@ const api = {
     ipcRenderer.invoke('ui:set-fix-version', ticketKey, versionId),
   becomeReviewer: (mrKey: string): Promise<{ ok: boolean; message: string }> =>
     ipcRenderer.invoke('ui:become-reviewer', mrKey),
+  setIgnored: (mrKey: string, ignored: boolean): Promise<{ ok: boolean; message?: string }> =>
+    ipcRenderer.invoke('ui:set-ignored', mrKey, ignored),
   listStatuses: (): Promise<{ ok: boolean; statuses?: string[]; message?: string }> =>
     ipcRenderer.invoke('ui:list-statuses'),
   exportSettings: (): Promise<{ ok: boolean; settings?: Record<string, unknown>; message?: string }> =>

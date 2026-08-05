@@ -91,6 +91,8 @@ export interface WebHandlers {
   setPolling: (enabled: boolean) => { enabled: boolean; changed: boolean };
   /** Bring the UI to the user and flash mrKey's row (notification click-through). */
   focusItem: (mrKey?: string) => { ok: boolean };
+  /** Manual per-MR ignore; un-ignoring a rule-ignored MR pins it visible. */
+  setIgnored: (mrKey: string, ignored: boolean) => { ok: boolean; message?: string };
   pollNow: () => void;
   togglePause: () => void;
   markAllRead: () => void;
@@ -310,6 +312,11 @@ export const startWebServer = (opts: WebServerOptions): Server => {
           return sendJson(res, 400, { error: 'enabled (boolean) required' });
         }
         return sendJson(res, 200, handlers.setPolling(body.enabled));
+      case 'set-ignored':
+        if (typeof body.mrKey !== 'string' || typeof body.ignored !== 'boolean') {
+          return sendJson(res, 400, { error: 'mrKey (string) and ignored (boolean) required' });
+        }
+        return sendJson(res, 200, handlers.setIgnored(body.mrKey, body.ignored));
       case 'mark-all-read':
         handlers.markAllRead();
         return sendJson(res, 200, { ok: true });

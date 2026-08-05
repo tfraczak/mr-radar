@@ -71,6 +71,27 @@ describe('radar-cli', () => {
     expect(out[0]).toContain('already passed');
   });
 
+  it('ignore/unignore forward to setIgnored and read back clearly', async () => {
+    const seen: unknown[] = [];
+    const client = {
+      setIgnored: async (key: string, ignored: boolean) => {
+        seen.push([key, ignored]);
+        return { ok: true };
+      },
+    };
+    const a = await run(['ignore', 'acme/rocket!1'], client);
+    expect(a.code).toBe(0);
+    expect(a.out[0]).toContain('ignored acme/rocket!1');
+    const b = await run(['unignore', 'acme/rocket!1'], client);
+    expect(b.code).toBe(0);
+    expect(b.out[0]).toContain('restored');
+    expect(seen).toEqual([
+      ['acme/rocket!1', true],
+      ['acme/rocket!1', false],
+    ]);
+    expect((await run(['ignore'], client)).code).toBe(1); // key required
+  });
+
   it('pause/resume are idempotent and say so', async () => {
     const { code, out } = await run(['pause'], {
       setPolling: async (enabled: boolean) => ({ enabled, changed: false }),

@@ -181,6 +181,10 @@ export class Db {
       'ALTER TABLE jira_tickets ADD COLUMN fix_versions TEXT',
       'ALTER TABLE mrs ADD COLUMN approvals_required INTEGER',
       'ALTER TABLE mrs ADD COLUMN approvals_by TEXT',
+      // Manual per-MR ignore override: 'ignored' | 'shown' | NULL (rules
+      // decide). Deliberately outside upsertMr's column list so it survives
+      // every cycle, and dies with the row when the closed MR is pruned.
+      'ALTER TABLE mrs ADD COLUMN ignore_override TEXT',
     ]) {
       try {
         this.db.exec(stmt);
@@ -238,7 +242,7 @@ export class Db {
     return this.db.prepare('SELECT * FROM mrs ORDER BY updated_at DESC').all() as unknown as MrRow[];
   }
 
-  upsertMr(row: Omit<MrRow, 'first_seen_at' | 'last_seen_at'>, at: string): void {
+  upsertMr(row: Omit<MrRow, 'first_seen_at' | 'last_seen_at' | 'ignore_override'>, at: string): void {
     this.db
       .prepare(
         `INSERT INTO mrs (
@@ -295,6 +299,12 @@ export class Db {
         at,
         at,
       );
+  }
+
+  /** Set/clear the manual ignore override. False = no such MR row (yet). */
+  setIgnoreOverride(key: string, value: 'ignored' | 'shown' | null): boolean {
+    const r = this.db.prepare('UPDATE mrs SET ignore_override = ? WHERE key = ?').run(value, key);
+    return Number(r.changes ?? 0) > 0;
   }
 
   /** Drop MRs we no longer see at all (merged/closed), and their child rows. */
@@ -701,6 +711,7 @@ export interface MrRow {
   ticket_status: string | null;
   unverified_count: string | null;
   unverified_sha: string | null;
+  ignore_override: string | null;
   first_seen_at: string;
   last_seen_at: string;
 }

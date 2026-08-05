@@ -28,7 +28,7 @@ import { dedupeUnread, initialUiState, type UiState } from './state';
 import { TrayController } from './tray';
 import { startRunFor } from './trigger';
 import { makeWebHandlers } from './web-handlers';
-import { startWebServer } from '../web-server';
+import { startWebServer, type WebHandlers } from '../web-server';
 
 /**
  * Menu bar app entry point.
@@ -50,6 +50,8 @@ let tray: TrayController;
 let popover: Popover;
 let timer: NodeJS.Timeout | undefined;
 let web: Server | undefined;
+/** Shared handler surface: the web API serves it, and new IPC delegates to it. */
+let webHandlers: WebHandlers | undefined;
 
 const log = (msg: string): void => {
   console.log(`[mr-radar] ${new Date().toISOString()} ${msg}`);
@@ -77,6 +79,36 @@ const main = async (): Promise<void> => {
     onQuit: () => app.quit(),
   });
   tray.init();
+  webHandlers = makeWebHandlers({
+    state,
+    db,
+    rwx,
+    log,
+    mode: 'tray',
+    getConfig: () => config,
+    setConfig: (c) => {
+      config = c;
+    },
+    getForge: () => forge,
+    setForge: (f) => {
+      forge = f;
+    },
+    getJira: () => jira,
+    reconnectJira: () => refreshJira(),
+    requestCycle: () => {
+      state.schedule = { ...state.schedule, quietCycles: 0 };
+      // Re-arm the timer under the (possibly new) config even when a poll
+      // is in flight — same order as the IPC ui:save-settings path.
+      scheduleNext();
+      void runCycle('manual');
+    },
+    togglePause,
+    onStateChanged: () => {
+      tray.update(state);
+      pushToRenderer();
+    },
+    openUi: () => popover.open(trayHandle()),
+  });
   registerIpc();
   registerPowerMonitor();
   // The alert badge icon's polarity depends on the menu bar theme, so re-render
@@ -92,36 +124,7 @@ const main = async (): Promise<void> => {
       iconPath: ICON_PATH,
       log,
       mode: 'tray',
-      handlers: makeWebHandlers({
-        state,
-        db,
-        rwx,
-        log,
-        mode: 'tray',
-        getConfig: () => config,
-        setConfig: (c) => {
-          config = c;
-        },
-        getForge: () => forge,
-        setForge: (f) => {
-          forge = f;
-        },
-        getJira: () => jira,
-        reconnectJira: () => refreshJira(),
-        requestCycle: () => {
-          state.schedule = { ...state.schedule, quietCycles: 0 };
-          // Re-arm the timer under the (possibly new) config even when a poll
-          // is in flight — same order as the IPC ui:save-settings path.
-          scheduleNext();
-          void runCycle('manual');
-        },
-        togglePause,
-        onStateChanged: () => {
-          tray.update(state);
-          pushToRenderer();
-        },
-        openUi: () => popover.open(trayHandle()),
-      }),
+      handlers: webHandlers,
     });
   }
 
@@ -456,6 +459,13 @@ const registerIpc = (): void => {
     } catch (err) {
       return { ok: false, message: msg(err) };
     }
+  });
+
+  ipcMain.handle('ui:set-ignored', (_e, mrKey: unknown, ignored: unknown) => {
+    if (typeof mrKey !== 'string' || typeof ignored !== 'boolean') {
+      return { ok: false, message: 'Bad request.' };
+    }
+    return webHandlers?.setIgnored(mrKey, ignored) ?? { ok: false, message: 'Not ready yet.' };
   });
 
   ipcMain.handle('ui:become-reviewer', async (_e, mrKey: unknown) => {

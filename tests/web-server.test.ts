@@ -74,6 +74,10 @@ const fakeHandlers = (): WebHandlers & { calls: unknown[][] } => {
       calls.push(['focusItem', mrKey]);
       return { ok: true };
     },
+    setIgnored: (mrKey, ignored) => {
+      calls.push(['setIgnored', mrKey, ignored]);
+      return { ok: true };
+    },
     pollNow: () => {},
     togglePause: () => {},
     markAllRead: () => {},
@@ -231,11 +235,25 @@ describe('startWebServer (live)', () => {
     });
     expect(nullBody.status).toBe(400);
 
+    const setIgnored = await fetch(`http://127.0.0.1:${p}/api/set-ignored`, {
+      method: 'POST',
+      headers: { ...h, 'content-type': 'application/json' },
+      body: JSON.stringify({ mrKey: 'acme/rocket!7576', ignored: true }),
+    });
+    expect(setIgnored.status).toBe(200);
+    const badIgnore = await fetch(`http://127.0.0.1:${p}/api/set-ignored`, {
+      method: 'POST',
+      headers: { ...h, 'content-type': 'application/json' },
+      body: JSON.stringify({ mrKey: 'acme/rocket!7576' }),
+    });
+    expect(badIgnore.status).toBe(400);
+
     expect(handlers.calls).toEqual([
       ['getItemDetail', 'acme/rocket!7576'],
       ['getEvents', 7, 'acme/rocket!1'],
       ['getEvents', 3, undefined],
       ['setPolling', false],
+      ['setIgnored', 'acme/rocket!7576', true],
     ]);
   });
 

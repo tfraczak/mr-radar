@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CONFIG_PATH, loadConfig, readRawConfig, writeRawConfig, type Config } from '../core/config';
 import { summarizeThreads, unresolvedCount } from '../core/correlate';
+import { effectiveIgnore } from '../core/rules';
 import type { Db } from '../core/db';
 import { writeJiraToken } from '../core/secrets';
 import { createForge, resolveForgeName, type ForgeSource } from '../core/sources/forge';
@@ -164,6 +165,37 @@ export const makeWebHandlers = (deps: WebHandlerDeps): WebHandlers => {
       if (state.schedule.enabled === enabled) return { enabled, changed: false };
       deps.togglePause();
       return { enabled: state.schedule.enabled, changed: true };
+    },
+
+    setIgnored: (mrKey: string, ignored: boolean) => {
+      const item = state.snapshot?.items.find((i) => i.key === mrKey);
+      // Un-ignoring a rule-ignored MR pins it 'shown' (the rule would just
+      // re-ignore it next cycle); un-ignoring a manual one reverts to rules.
+      let override: 'ignored' | 'shown' | null = null;
+      if (ignored) {
+        override = 'ignored';
+      } else if (item) {
+        const byRule =
+          effectiveIgnore(
+            cfg().statusRules,
+            { ...(item.ticket ? { ticket: item.ticket } : {}), projectPath: item.projectPath },
+            new Date(),
+          ) === 'rule';
+        override = byRule ? 'shown' : null;
+      }
+      const persisted = db.setIgnoreOverride(mrKey, override);
+      if (!persisted && !item) return { ok: false, message: 'That MR is not tracked.' };
+      if (item) {
+        if (override) item.ignoreOverride = override;
+        else delete item.ignoreOverride;
+        if (ignored) state.unread = state.unread.filter((e) => e.mrKey !== mrKey);
+        // `at` must move or the renderer's listKey guard skips the rebuild.
+        if (state.snapshot) state.snapshot.at = new Date().toISOString();
+      }
+      deps.onStateChanged();
+      return persisted
+        ? { ok: true }
+        : { ok: true, message: 'Applied for now; persists after the next poll records this MR.' };
     },
 
     focusItem: (mrKey?: string) => {

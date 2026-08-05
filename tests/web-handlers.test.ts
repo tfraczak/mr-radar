@@ -250,6 +250,74 @@ describe('state mutations notify the shell', () => {
   });
 });
 
+describe('setIgnored', () => {
+  const seedRow = (db: Db, key: string): void => {
+    db.upsertMr(
+      {
+        key,
+        project_path: 'acme/rocket',
+        project_id: 1,
+        iid: 1,
+        branch: 'b',
+        title: 't',
+        head_sha: 's',
+        web_url: '#',
+        updated_at: 'u',
+        user_notes_count: 0,
+        unresolved: 0,
+        approvals_left: null,
+        approvals_required: null,
+        approvals_by: null,
+        has_conflicts: 0,
+        in_scope: 1,
+        reason: 'authored',
+        ticket_key: null,
+        ticket_status: null,
+        unverified_count: null,
+        unverified_sha: null,
+      },
+      'now',
+    );
+  };
+
+  it('ignores: persists the override, mutates the live item, purges unread', () => {
+    const it1 = item();
+    const state = stateWith([it1]);
+    state.unread = [{ type: 'comment', mrKey: it1.key, branch: 'b' } as unknown as AppEvent];
+    const db = new Db(':memory:');
+    seedRow(db, it1.key);
+    const handlers = makeWebHandlers(deps({ state, db }));
+
+    expect(handlers.setIgnored(it1.key, true)).toEqual({ ok: true });
+    expect(db.getMr(it1.key)?.ignore_override).toBe('ignored');
+    expect(it1.ignoreOverride).toBe('ignored');
+    expect(state.unread).toHaveLength(0);
+  });
+
+  it("un-ignoring a rule-ignored MR pins it 'shown'; a manual one reverts to rules", () => {
+    const ticketless = item(); // matched by the (no ticket) ignore rule
+    const state = stateWith([ticketless]);
+    const db = new Db(':memory:');
+    seedRow(db, ticketless.key);
+    const cfg = {
+      ...DEFAULT_CONFIG,
+      statusRules: [{ status: '(no ticket)', op: 'always', then: 'ignore' }],
+    } as Config;
+    const handlers = makeWebHandlers(deps({ state, db, getConfig: () => cfg }));
+
+    handlers.setIgnored(ticketless.key, false);
+    expect(db.getMr(ticketless.key)?.ignore_override).toBe('shown'); // rule would re-catch it
+
+    handlers.setIgnored(ticketless.key, true);
+    expect(db.getMr(ticketless.key)?.ignore_override).toBe('ignored');
+  });
+
+  it('reports untracked keys instead of pretending', () => {
+    const handlers = makeWebHandlers(deps());
+    expect(handlers.setIgnored('acme/rocket!404', true).ok).toBe(false);
+  });
+});
+
 describe('focusItem', () => {
   it('highlights a known item and opens the UI; unknown keys still open it', () => {
     const it1 = item();

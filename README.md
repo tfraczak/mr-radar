@@ -86,13 +86,21 @@ seen on your tickets is offered as a chip in four multi-selects:
   In Development, Code Review, Dev Complete);
 - **Verification** — out of dev's hands, collapsed section;
 - **Done** — collapsed at the bottom; long-closed tickets disappear;
-- **Ignore** — never shown (Backlog noise).
+- **Hide** — never shown at all (Backlog noise). Not to be confused with *ignoring*:
+  hidden statuses vanish entirely, while ignored MRs (below) stay one click away.
 
 Anything unassigned lands in a collapsed "Other" section, so nothing is silently lost.
 **Advanced: conditional rules** routes by ticket fields — the shipped example sends a
 Dev Complete ticket with *no fix version* to its own "needs a fix version" section (with an
 in-app picker) and versioned ones to Verification. Rules support per-repo scoping, issue-type
 regexes, due dates, clone/remove, and fall-through.
+
+**Ignoring MRs.** Two paths, one destination: a status rule with the `ignore` target
+(e.g. the `(no ticket)` sentinel), or the ⊘ control on any row. Either way the MR moves to
+a collapsed **Ignored** section at the very bottom and goes fully silent — no notifications,
+no unread badge, no counts — until the MR closes. Rule-ignored rows offer **Show anyway**
+(pins that one MR visible without editing the rule); manually-ignored rows offer
+**Un-ignore**.
 
 ### Step 3 — repos and CI (only for RWX users)
 
@@ -198,7 +206,7 @@ opens Jira. The footer shows per-source health and the last poll time.
 Only MRs whose branch maps to a Jira ticket in an **active** status are watched — plus
 review requests, which are always in scope. That's the whole point of querying Jira: it
 turns a wall of stale MRs into the few that are actually in flight. Which statuses count as
-active, and where every other status lands (Verification / Done / Ignore / Other), is
+active, and where every other status lands (Verification / Done / Hide / Other), is
 configurable in Settings → Jira, including conditional routing rules
 ("*Dev Complete* in *any repo* when *fixVersions* *empty* → *needs a fix version*").
 
@@ -270,6 +278,7 @@ radar-cli discussions 'acme/rocket!7576'  # review threads with comment bodies (
 radar-cli events --limit 20               # notification history
 radar-cli tickets                         # cached Jira tickets
 radar-cli run 'acme/rocket!7576'          # start an RWX run (safe to retry)
+radar-cli ignore 'acme/rocket!7576'       # mute until it closes (unignore restores)
 radar-cli pause / resume / poll           # polling controls
 ```
 
@@ -314,7 +323,7 @@ or in a project's `.mcp.json`:
 
 Tools: `radar_status`, `radar_mrs`, `radar_mr`, `radar_discussions`, `radar_events`,
 `radar_tickets` (reads — the first three and last two work app-down, flagged stale), plus
-`radar_start_run`, `radar_set_polling`, `radar_poll_now` (actions — need the live app; your
+`radar_set_ignored`, `radar_start_run`, `radar_set_polling`, `radar_poll_now` (actions — need the live app; your
 MCP client's tool-permission prompt is the confirmation for `radar_start_run`). CLI and MCP
 share the same client module, so their hybrid semantics are identical. Smoke-test with
 `npx @modelcontextprotocol/inspector node dist/mcp.js`.

@@ -31,7 +31,8 @@ usage: node --no-warnings dist/radar-cli.js <command> [options] [--json]
 read commands (work even when the app is closed; stale data is flagged):
   status                       app health, polling state, section counts
   list [--section S] [--ticket KEY]
-                               watched MRs; S: active|needs|verification|done|other
+                               watched MRs; S: active|needs|verification|done|
+                               other|ignored
   show <mr-key>                one MR in full (test gate, checks, approvals)
   events [--limit N] [--mr KEY]
                                notification history, newest first (default 30)
@@ -44,6 +45,10 @@ live-only read:
 actions (need the running app; exit 2 otherwise):
   run <mr-key>                 start an RWX run for the MR's head commit
                                (safe to retry: in-flight runs are detected)
+  ignore <mr-key>              mute an MR until it closes (no notifications,
+                               no counts; it moves to the Ignored section)
+  unignore <mr-key>            restore an MR (pins it visible if a rule
+                               ignores it)
   pause | resume               polling on/off (idempotent)
   poll                         request a poll cycle now
 
@@ -86,7 +91,7 @@ const parse = (
   return { command, positional, flags };
 };
 
-const SECTIONS: Section[] = ['active', 'needs', 'verification', 'done', 'other'];
+const SECTIONS: Section[] = ['active', 'needs', 'verification', 'done', 'other', 'ignored'];
 
 export const runCommand = async (argv: string[], deps: CliDeps): Promise<number> => {
   const { out, err, client } = deps;
@@ -248,6 +253,23 @@ export const runCommand = async (argv: string[], deps: CliDeps): Promise<number>
       out(r.started ? green(r.message) : red(r.message));
       if (r.url) out(`  ${r.url}`);
       return r.started ? 0 : 1;
+    }
+
+    if (command === 'ignore' || command === 'unignore') {
+      const key = positional[0];
+      if (!key) {
+        err(red(`usage: ${command} <mr-key>`));
+        return 1;
+      }
+      const r = await client.setIgnored(key, command === 'ignore');
+      if (json) return (emit(r), r.ok ? 0 : 1);
+      if (!r.ok) {
+        err(red(r.message ?? 'failed'));
+        return 1;
+      }
+      out(command === 'ignore' ? `ignored ${key} until it closes` : `restored ${key}`);
+      if (r.message) out(dim(r.message));
+      return 0;
     }
 
     if (command === 'pause' || command === 'resume') {

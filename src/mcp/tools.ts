@@ -41,7 +41,7 @@ export const makeTools = (client: RadarClient): McpToolDef[] => [
     inputSchema: obj({
       section: {
         type: 'string',
-        enum: ['active', 'needs', 'verification', 'done', 'other'],
+        enum: ['active', 'needs', 'verification', 'done', 'other', 'ignored'],
         description: 'Only this popover section (live app only; ignored app-down)',
       },
       ticket: { type: 'string', description: 'Only MRs bound to this Jira key, e.g. ENG-123' },
@@ -92,6 +92,17 @@ export const makeTools = (client: RadarClient): McpToolDef[] => [
     inputSchema: obj(),
     annotations: READ_ONLY,
     handler: async () => client.tickets(),
+  },
+  {
+    name: 'radar_set_ignored',
+    description:
+      "Mute or restore one MR. Ignored MRs move to the collapsed Ignored section, stop notifying, and stop counting toward totals, until the MR closes. Restoring a rule-ignored MR pins it visible. Requires the running app.",
+    inputSchema: obj({ key: KEY, ignored: { type: 'boolean' } }, ['key', 'ignored']),
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+    handler: async (args) => {
+      if (typeof args.ignored !== 'boolean') throw new Error('ignored (boolean) is required');
+      return client.setIgnored(String(args.key ?? ''), args.ignored);
+    },
   },
   {
     name: 'radar_start_run',

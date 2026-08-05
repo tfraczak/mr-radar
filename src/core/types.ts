@@ -281,6 +281,13 @@ export interface WatchItem {
   participation?: 'commented' | 'mentioned';
   ticket?: JiraTicket;
   inScope: boolean;
+  /**
+   * Per-MR manual ignore override, loaded from the DB row each cycle:
+   * 'ignored' pins the MR into the Ignored bucket, 'shown' rescues it from an
+   * ignore rule, absent defers to the status rules. Dies with the row when
+   * the MR closes and is pruned.
+   */
+  ignoreOverride?: 'ignored' | 'shown';
 
   // Populated only for in-scope MRs whose details were fetched this cycle.
   threads?: ThreadSummary[];

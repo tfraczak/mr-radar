@@ -485,6 +485,13 @@ const renderList = (s: UiSnapshot): void => {
   }
   if (other.length > 0) listEl.append(renderStatusSection('Other', other, 'mr-radar-other-collapsed', true));
   if (done.length > 0) listEl.append(renderStatusSection('Done', done, 'mr-radar-done-collapsed', true));
+  // Ignored (by rule or by hand) sits below even Done: silent, but one click
+  // from coming back. Deliberately outside the tab/filter/empty-state math —
+  // ignored MRs count toward nothing.
+  const ignored = s.ignoredGroups ?? [];
+  if (ignored.length > 0) {
+    listEl.append(renderStatusSection('Ignored', ignored, 'mr-radar-ignored-collapsed', true));
+  }
 }
 
 /** Filter + sort the non-active "Other" status groups the same way as active. */
@@ -692,10 +699,44 @@ const renderRow = (item: UiItem): HTMLElement => {
   if (item.ci.detail) row.side.append(el('span', 'chip-detail', item.ci.detail));
   const runControl = rwxRunControl(item);
   if (runControl) row.side.append(runControl);
-  if (item.reason === 'participating') row.side.append(becomeReviewerButton(item));
+  if (item.reason === 'participating' && !item.ignored) row.side.append(becomeReviewerButton(item));
+  row.side.append(item.ignored ? restoreButton(item) : ignoreButton(item));
 
   return row.root;
 }
+
+/** Mute one MR: no section presence, no notifications, until it closes. */
+const ignoreButton = (item: UiItem): HTMLElement => {
+  const btn = createButton('⊘', {
+    variant: 'link',
+    title: 'Ignore this MR until it closes — no notifications, no counts',
+    onClick: (e) => {
+      e.stopPropagation();
+      btn.disabled = true;
+      void window.radar.setIgnored(item.key, true);
+    },
+  });
+  btn.classList.add('ignore-btn');
+  return btn;
+};
+
+/** The way back out of the Ignored section. Wording tracks how it got there. */
+const restoreButton = (item: UiItem): HTMLElement => {
+  const byRule = item.ignored === 'rule';
+  const btn = createButton(byRule ? 'Show anyway' : 'Un-ignore', {
+    variant: 'link',
+    title: byRule
+      ? 'A status rule ignores this MR — pin this one visible without editing the rule'
+      : 'Stop ignoring this MR',
+    onClick: (e) => {
+      e.stopPropagation();
+      btn.disabled = true;
+      void window.radar.setIgnored(item.key, false);
+    },
+  });
+  btn.classList.add('ignore-btn');
+  return btn;
+};
 
 const ciChip = (item: UiItem): HTMLElement => {
   const chip = createChip(item.ci.label, item.ci.tone);
@@ -837,7 +878,7 @@ const openSettings = async (): Promise<void> => {
     { key: 'active', label: 'Active (watch list)' },
     { key: 'verification', label: 'Verification' },
     { key: 'done', label: 'Done' },
-    { key: 'ignore', label: 'Ignore (never show)' },
+    { key: 'ignore', label: 'Hide (never show)' },
   ];
   const assignments = new Map<string, { status: string; section: StatusSection }>();
   const knownStatusNames = new Map<string, string>(); // lowercase → display casing

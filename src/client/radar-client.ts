@@ -19,7 +19,7 @@ import type { TriggerResult } from '../core/trigger';
  * Everything effectful is injectable so tests use literal fakes.
  */
 
-export type Section = 'active' | 'needs' | 'verification' | 'done' | 'other';
+export type Section = 'active' | 'needs' | 'verification' | 'done' | 'other' | 'ignored';
 
 export interface Freshness {
   source: 'live' | 'db';
@@ -53,6 +53,8 @@ export interface MrRowView {
   dueDate?: string;
   overdue?: boolean;
   lastSeenAt?: string;
+  /** Present on rows in the ignored section: how it got there. */
+  ignored?: 'manual' | 'rule';
   /** Fields the offline (DB) shape genuinely lacks — never faked. */
   unavailableOffline?: string[];
 }
@@ -286,6 +288,7 @@ export class RadarClient {
           verification: count(snapshot.verificationGroups),
           done: count(snapshot.doneGroups),
           other: count(snapshot.otherGroups),
+          ignored: count(snapshot.ignoredGroups ?? []),
         },
       };
     }
@@ -309,6 +312,7 @@ export class RadarClient {
         ...snapshot.verificationGroups.flatMap((g) => g.items.map((i) => liveRow(i, 'verification', { status: g.status }))),
         ...snapshot.doneGroups.flatMap((g) => g.items.map((i) => liveRow(i, 'done', { status: g.status }))),
         ...snapshot.otherGroups.flatMap((g) => g.items.map((i) => liveRow(i, 'other', { status: g.status }))),
+        ...(snapshot.ignoredGroups ?? []).flatMap((g) => g.items.map((i) => liveRow(i, 'ignored', { status: g.status }))),
       ];
       return {
         source: 'live',
@@ -441,6 +445,13 @@ export class RadarClient {
     });
   }
 
+  async setIgnored(key: string, ignored: boolean): Promise<{ ok: boolean; message?: string }> {
+    return this.api<{ ok: boolean; message?: string }>('set-ignored', {
+      method: 'POST',
+      body: { mrKey: key, ignored },
+    });
+  }
+
   async setPolling(enabled: boolean): Promise<{ enabled: boolean; changed: boolean }> {
     return this.api<{ enabled: boolean; changed: boolean }>('set-polling', {
       method: 'POST',
@@ -486,6 +497,7 @@ const liveRow = (
   updatedAt: i.updatedAt,
   ...(i.dueDate ? { dueDate: i.dueDate } : {}),
   overdue: i.overdue,
+  ...(i.ignored ? { ignored: i.ignored } : {}),
 });
 
 const dbRow = (r: MrRow): MrRowView => ({
@@ -512,6 +524,8 @@ const dbRow = (r: MrRow): MrRowView => ({
   headSha: r.head_sha,
   updatedAt: r.updated_at,
   lastSeenAt: r.last_seen_at,
+  // Only manual ignores are knowable offline; rule ignores need live rules.
+  ...(r.ignore_override === 'ignored' ? { section: 'ignored' as const, ignored: 'manual' as const } : {}),
   unavailableOffline: DB_LIST_UNAVAILABLE,
 });
 

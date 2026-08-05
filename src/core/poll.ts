@@ -13,6 +13,7 @@ import { buildJql, type Config } from './config';
 import { correlate, detailsChanged, summarizeThreads, unresolvedCount } from './correlate';
 import type { Db } from './db';
 import { coalesce, diff } from './events';
+import { effectiveIgnore } from './rules';
 import type { ForgeSource } from './sources/forge';
 import { JiraSource, ticketKeyCandidates, titleKeyCandidate, type TicketKeyCandidate } from './sources/jira';
 import { RwxSource, isTerminal } from './sources/rwx';
@@ -295,8 +296,27 @@ export const pollOnce = async (deps: PollDeps, opts: { dryRun?: boolean } = {}):
   // notifying twice across the two paths. Watched-run resolution commits in the
   // same transaction as the events, so the two can't diverge on a crash.
   const me = config[forge.name].username ?? '';
+  // Manual ignore overrides ride the MR row; load them before events and
+  // presentation so both see the same ignore decision.
+  for (const item of items) {
+    const override = db.getMr(item.key)?.ignore_override;
+    if (override === 'ignored' || override === 'shown') item.ignoreOverride = override;
+  }
+  const ignoredKeys = new Set([
+    ...items
+      .filter((i) => effectiveIgnore(config.statusRules, i, new Date(nowIso)) !== undefined)
+      .map((i) => i.key),
+    // Watched-run results can reference MRs missing from this cycle's list
+    // (e.g. a list-source hiccup); manual ignores still apply to them.
+    ...db
+      .allMrs()
+      .filter((r) => r.ignore_override === 'ignored')
+      .map((r) => r.key),
+  ]);
   const { events, commit } = diff({ db, items, todos, me, now: nowIso });
-  const allEvents = [...watched.events, ...events];
+  // Ignored MRs are silent, not merely hidden: their events never notify,
+  // never count as unread, and never enter the durable history.
+  const allEvents = [...watched.events, ...events].filter((e) => !ignoredKeys.has(e.mrKey));
   const finalEvents = config.notifications.coalesce ? coalesce(allEvents) : allEvents;
 
   if (!opts.dryRun) {

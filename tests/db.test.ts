@@ -59,3 +59,42 @@ describe('read-only Db', () => {
     expect(db.recentEvents(10)).toHaveLength(2);
   });
 });
+
+describe('ignore override', () => {
+  it('survives the per-cycle upsert and dies with the pruned row', () => {
+    const db = new Db(':memory:');
+    const row = {
+      key: 'acme/rocket!1',
+      project_path: 'acme/rocket',
+      project_id: 1,
+      iid: 1,
+      branch: 'ENG-1',
+      title: 't',
+      head_sha: 's',
+      web_url: '#',
+      updated_at: 'u',
+      user_notes_count: 0,
+      unresolved: 0,
+      approvals_left: null,
+      approvals_required: null,
+      approvals_by: null,
+      has_conflicts: 0,
+      in_scope: 1,
+      reason: 'authored',
+      ticket_key: null,
+      ticket_status: null,
+      unverified_count: null,
+      unverified_sha: null,
+    };
+    db.upsertMr(row, 't1');
+    expect(db.setIgnoreOverride('acme/rocket!1', 'ignored')).toBe(true);
+    db.upsertMr(row, 't2'); // the every-cycle write must not clobber it
+    expect(db.getMr('acme/rocket!1')?.ignore_override).toBe('ignored');
+    db.setIgnoreOverride('acme/rocket!1', null);
+    expect(db.getMr('acme/rocket!1')?.ignore_override).toBeNull();
+    expect(db.setIgnoreOverride('acme/rocket!404', 'ignored')).toBe(false); // no row
+    db.pruneMrsNotIn([]);
+    expect(db.getMr('acme/rocket!1')).toBeUndefined(); // override gone with the MR
+    db.close();
+  });
+});

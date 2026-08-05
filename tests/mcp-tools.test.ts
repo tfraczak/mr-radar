@@ -12,7 +12,7 @@ const find = (tools: ReturnType<typeof makeTools>, name: string) => {
 };
 
 describe('mcp tool registry', () => {
-  it('exposes exactly the nine planned tools, reads annotated read-only', () => {
+  it('exposes exactly the planned tools, reads annotated read-only', () => {
     const tools = toolsWith({});
     expect(tools.map((t) => t.name)).toEqual([
       'radar_status',
@@ -21,6 +21,7 @@ describe('mcp tool registry', () => {
       'radar_discussions',
       'radar_events',
       'radar_tickets',
+      'radar_set_ignored',
       'radar_start_run',
       'radar_set_polling',
       'radar_poll_now',

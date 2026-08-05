@@ -40,6 +40,9 @@ export interface UiSnapshot {
   /** MRs whose ticket status is unmapped, grouped by real status for a
    *  collapsed "Other" section below the active groups. */
   otherGroups: UiStatusGroup[];
+  /** Ignored MRs — by rule or manually — collapsed at the very bottom.
+   *  Silent everywhere else: no notifications, no unread, no totals. */
+  ignoredGroups: UiStatusGroup[];
   /** Row to scroll to and flash (notification click-through). `at` dedupes. */
   highlight?: { key: string; at: string } | undefined;
   /** Jira has no stored token yet, so the popover offers a connect field. */
@@ -103,6 +106,9 @@ export interface UiItem {
   /** A second, independent signal shown beside the primary one (e.g. a
    *  good "Checks passed" paired with a warn "Target not main"). */
   attentionExtra?: Attention | undefined;
+  /** Set on rows in the Ignored section: how it got there, which decides the
+   *  restore control ('Un-ignore' vs 'Show anyway'). */
+  ignored?: 'manual' | 'rule' | undefined;
   ci: {
     label: string;
     tone: 'good' | 'bad' | 'busy' | 'warn' | 'none';
@@ -203,6 +209,9 @@ export interface RadarApi {
   setFixVersion(ticketKey: string, versionId: string): Promise<{ ok: boolean; message: string }>;
   /** Add me as a formal reviewer on a participating MR (keeps existing reviewers). */
   becomeReviewer(mrKey: string): Promise<{ ok: boolean; message: string }>;
+  /** Manually ignore / un-ignore one MR. Un-ignoring a rule-ignored MR pins it
+   *  visible ('shown') so the rule no longer catches it. */
+  setIgnored(mrKey: string, ignored: boolean): Promise<{ ok: boolean; message?: string }>;
   /** All Jira status names, for the status-section assignment UI. */
   listStatuses(): Promise<{ ok: boolean; statuses?: string[]; message?: string }>;
   /** The shareable config subset (identity stripped; token never in config). */

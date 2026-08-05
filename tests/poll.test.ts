@@ -148,6 +148,42 @@ describe('watched runs', () => {
     expect(db.openWatchedRuns()).toHaveLength(0); // resolved
   });
 
+  it('mutes every event for a manually-ignored MR — even watched-run results', async () => {
+    seedWatched();
+    db.upsertMr(
+      {
+        key: 'acme/rocket!9',
+        project_path: 'acme/rocket',
+        project_id: 1,
+        iid: 9,
+        branch: 'ENG-9',
+        title: 't',
+        head_sha: 'deadbeef',
+        web_url: '#',
+        updated_at: 'u',
+        user_notes_count: 0,
+        unresolved: 0,
+        approvals_left: null,
+        approvals_required: null,
+        approvals_by: null,
+        has_conflicts: 0,
+        in_scope: 1,
+        reason: 'authored',
+        ticket_key: null,
+        ticket_status: null,
+        unverified_count: null,
+        unverified_sha: null,
+      },
+      '2026-07-30T11:00:00Z',
+    );
+    db.setIgnoreOverride('acme/rocket!9', 'ignored');
+    const rwx = fakeRwx({ showRun: async () => ({ ...finishedRun('failed'), Branch: '' }) });
+    const result = await pollOnce(deps({ db, rwx: rwx as never }), {});
+    expect(result.events).toEqual([]); // silent: no notification, no unread
+    expect(db.recentEvents(10)).toEqual([]); // and no durable history either
+    expect(db.openWatchedRuns()).toHaveLength(0); // the run still resolves
+  });
+
   it('does not re-emit a watched run result on the next cycle', async () => {
     seedWatched();
     const rwx = fakeRwx({ showRun: async () => ({ ...finishedRun('succeeded'), Branch: '' }) });
