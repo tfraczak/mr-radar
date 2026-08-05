@@ -291,6 +291,34 @@ To give an agent standing access from another repo, add a line like this to that
 > `node --no-warnings ~/code/personal/mr-radar/dist/radar-cli.js <cmd> --json`
 > (try `status`, `list`, `show <mr-key>`, `discussions <mr-key>`).
 
+### MCP server
+
+The same nine capabilities are also exposed as an MCP stdio server (hand-rolled protocol
+core — still zero runtime dependencies) for agent clients that speak MCP instead of
+shelling out:
+
+```bash
+yarn build
+claude mcp add mr-radar -- node --no-warnings "$PWD/dist/mcp.js"
+```
+
+or in a project's `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "mr-radar": { "command": "node", "args": ["--no-warnings", "/path/to/mr-radar/dist/mcp.js"] }
+  }
+}
+```
+
+Tools: `radar_status`, `radar_mrs`, `radar_mr`, `radar_discussions`, `radar_events`,
+`radar_tickets` (reads — the first three and last two work app-down, flagged stale), plus
+`radar_start_run`, `radar_set_polling`, `radar_poll_now` (actions — need the live app; your
+MCP client's tool-permission prompt is the confirmation for `radar_start_run`). CLI and MCP
+share the same client module, so their hybrid semantics are identical. Smoke-test with
+`npx @modelcontextprotocol/inspector node dist/mcp.js`.
+
 ## Signing for distribution
 
 Artifacts built on your own machine open fine locally, but a DMG someone

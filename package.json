@@ -16,6 +16,7 @@
     "cli": "yarn build && node --no-warnings dist/cli.js",
     "status": "yarn build && node --no-warnings dist/cli.js --dry-run",
     "radar": "yarn build && node --no-warnings dist/radar-cli.js",
+    "mcp": "yarn build && node --no-warnings dist/mcp.js",
     "poller": "yarn build && node --no-warnings dist/poller.js",
     "poller:install": "yarn build && node scripts/install-poller.mjs",
     "poller:uninstall": "node scripts/install-poller.mjs --uninstall",
