@@ -841,10 +841,6 @@ const enrich = async (args: {
   // Build the check list from both providers. A repo can legitimately have both.
   const checks: Check[] = [];
   const forgeRole = repoRoles.testGate === forge.name ? 'tests' : 'lint';
-  // gitlabIsLintOnly means "a pipeline exists here alongside a non-pipeline
-  // gate" — announce-readiness uses it to require the head's pipeline result
-  // to EXIST, so a canceled/[ci skip]/unfetched pipeline fails closed.
-  item.pipelineExpected = repoRoles.gitlabIsLintOnly && repoRoles.testGate !== forge.name;
   let failing: string[] | undefined;
   let headChecks: ForgeCheckRun[] | undefined;
   if (forge.ci.model === 'pipelines') {

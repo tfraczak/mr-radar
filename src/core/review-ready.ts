@@ -95,18 +95,13 @@ const ciReasons = (item: WatchItem): string[] => {
     }
   }
 
-  // Fail CLOSED on an absent pipeline where one is expected (juno/rocket:
-  // pipeline alongside an RWX gate): canceled, [ci skip], not created yet, or
-  // the pipelines fetch failing must all block, not silently pass.
-  if (item.pipelineExpected) {
-    const pipelineForHead = (item.checks ?? []).some(
-      (c) => c.provider !== 'rwx' && c.sha === item.headSha,
-    );
-    if (!pipelineForHead) {
-      reasons.push('The pipeline has no result for the head commit (not run, canceled, or skipped).');
-    }
-  }
-
+  // Deliberately NO "side suite must exist for the head" rule. Live data
+  // killed two attempts at one: side suites can be conditional (juno's
+  // flow-client is path-filtered and legitimately absent for backend-only
+  // heads) and old pipelines scroll out of the API page — both false-block.
+  // Accepted edge: a canceled/[ci skip] pipeline that produced no judgeable
+  // result does not block; the gate, thread, and status checks still must
+  // pass, all verified fresh.
   return [...new Set(reasons)];
 };
 

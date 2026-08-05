@@ -167,28 +167,6 @@ describe('reviewMessage', () => {
   });
 });
 
-describe('expected-pipeline fail-closed (juno/rocket)', () => {
-  const rwxCheck = check({ provider: 'rwx', role: 'tests', name: '.rwx/ci.yml' });
-
-  it('blocks when the expected pipeline has no result for the head', () => {
-    const r = reviewReadiness(item({ pipelineExpected: true, checks: [rwxCheck] }), READY);
-    expect(r.eligible).toBe(false);
-    expect(r.reasons[0]).toContain('pipeline has no result for the head commit');
-  });
-
-  it('passes when the pipeline result for the head exists and is green', () => {
-    const r = reviewReadiness(
-      item({ pipelineExpected: true, checks: [rwxCheck, check({ provider: 'gitlab', name: 'flow-client' })] }),
-      READY,
-    );
-    expect(r.eligible).toBe(true);
-  });
-
-  it('repos without a riding pipeline are unaffected', () => {
-    expect(reviewReadiness(item({ pipelineExpected: false, checks: [rwxCheck] }), READY).eligible).toBe(true);
-  });
-});
-
 describe('empty ready-status list', () => {
   it('reads as "feature off", not a per-ticket status mismatch', () => {
     const r = reviewReadiness(item(), []);
