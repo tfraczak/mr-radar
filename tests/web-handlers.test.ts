@@ -449,3 +449,26 @@ describe('startRun', () => {
     });
   });
 });
+
+describe('listOwnerFields', () => {
+  it('prepends Watcher, dedupes by clause, and requires Jira', async () => {
+    const jira = {
+      userFields: async () => [
+        { clause: 'assignee', label: 'Assignee' },
+        { clause: 'cf[10123]', label: 'Dev Resource' },
+        { clause: 'watcher', label: 'Shadow Watcher' }, // hypothetical dupe loses
+      ],
+    };
+    const handlers = makeWebHandlers(deps({ getJira: () => jira as never }));
+    const got = await handlers.listOwnerFields();
+    expect(got.ok).toBe(true);
+    expect(got.fields).toEqual([
+      { clause: 'watcher', label: 'Watcher' },
+      { clause: 'assignee', label: 'Assignee' },
+      { clause: 'cf[10123]', label: 'Dev Resource' },
+    ]);
+
+    const off = makeWebHandlers(deps());
+    expect(await off.listOwnerFields()).toEqual({ ok: false, message: 'Jira is not connected.' });
+  });
+});

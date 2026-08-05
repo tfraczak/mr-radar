@@ -8,7 +8,7 @@ import { effectiveIgnore } from '../core/rules';
 import type { Db } from '../core/db';
 import { writeJiraToken } from '../core/secrets';
 import { createForge, resolveForgeName, type ForgeSource } from '../core/sources/forge';
-import { JiraSource } from '../core/sources/jira';
+import { JiraSource, type OwnerField } from '../core/sources/jira';
 import type { RwxSource } from '../core/sources/rwx';
 import { executeTrigger, inFlightRun, planTrigger } from '../core/trigger';
 import type { EditableSettings } from '../renderer/contract';
@@ -365,6 +365,19 @@ export const makeWebHandlers = (deps: WebHandlerDeps): WebHandlers => {
         await deps.getForge().addReviewer(item.projectId, item.iid, userId);
         deps.requestCycle(); // the row migrates to My reviews next cycle
         return { ok: true, message: `You are now a reviewer on ${mrKey}.` };
+      } catch (err) {
+        return { ok: false, message: err instanceof Error ? err.message : String(err) };
+      }
+    },
+
+    listOwnerFields: async () => {
+      const jira = deps.getJira();
+      if (!jira) return { ok: false, message: 'Jira is not connected.' };
+      try {
+        // Watcher is a JQL concept, not a field — always offered, first.
+        const fields: OwnerField[] = [{ clause: 'watcher', label: 'Watcher' }, ...(await jira.userFields())];
+        const seen = new Set<string>();
+        return { ok: true, fields: fields.filter((f) => !seen.has(f.clause) && seen.add(f.clause)) };
       } catch (err) {
         return { ok: false, message: err instanceof Error ? err.message : String(err) };
       }

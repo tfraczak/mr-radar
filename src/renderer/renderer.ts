@@ -971,6 +971,64 @@ const openSettings = async (): Promise<void> => {
     if (a.section !== 'other') assignments.set(a.status.toLowerCase(), { status: a.status, section: a.section });
   }
 
+  // "My-ticket fields": which Jira fields make a ticket yours. Selection is a
+  // clause→label map; the panel lists the site's real user-valued fields.
+  const ownerSel = new Map<string, string>();
+  for (const f of s.ownerFields) ownerSel.set(f.clause, f.label || f.clause);
+  let ownerChoices: { clause: string; label: string }[] = [];
+  let ownerFetchError = '';
+  const ownerWrap = el('div', 'field msf');
+  ownerWrap.append(el('span', 'field-label', 'My-ticket fields'));
+  ownerWrap.title = 'A ticket is yours when any of these fields names you (field = currentUser() in the scope query)';
+  const ownerBox = el('div', 'msf-box');
+  const ownerPanel = el('div', 'msf-panel');
+  registerDropdown(ownerBox, ownerPanel);
+  const paintOwner = (): void => {
+    ownerBox.replaceChildren();
+    if (ownerSel.size === 0) ownerBox.append(el('span', 'msf-placeholder', 'Click to choose fields…'));
+    for (const [clause, label] of ownerSel) {
+      ownerBox.append(
+        createRemovableChip(label, {
+          removeTitle: `Tickets where ${label} names you will no longer count as yours`,
+          onRemove: (e) => {
+            e.stopPropagation();
+            if (ownerSel.size === 1) return; // empty scope is not savable anyway
+            ownerSel.delete(clause);
+            paintOwner();
+          },
+        }),
+      );
+    }
+    ownerPanel.replaceChildren();
+    const known = new Map(ownerChoices.map((f) => [f.clause, f.label]));
+    for (const [clause, label] of ownerSel) if (!known.has(clause)) known.set(clause, label);
+    for (const [clause, label] of [...known.entries()].sort((a, b) => a[1].localeCompare(b[1]))) {
+      const row = el('div', 'msf-row');
+      row.append(el('span', undefined, label));
+      if (ownerSel.has(clause)) row.append(el('span', 'msf-row-check', '✓'));
+      row.addEventListener('click', () => {
+        if (ownerSel.has(clause)) {
+          if (ownerSel.size === 1) return;
+          ownerSel.delete(clause);
+        } else {
+          ownerSel.set(clause, label);
+        }
+        paintOwner();
+      });
+      ownerPanel.append(row);
+    }
+    if (ownerFetchError) {
+      ownerPanel.append(el('div', 'msf-row msf-placeholder', `Connect Jira to list more fields (${ownerFetchError})`));
+    }
+  };
+  paintOwner();
+  ownerWrap.append(ownerBox, ownerPanel);
+  void window.radar.listOwnerFields().then((res) => {
+    if (res.ok && res.fields) ownerChoices = res.fields;
+    else ownerFetchError = res.message ?? 'unavailable';
+    paintOwner();
+  });
+
   const statusBlock = el('div', 'status-sections');
   statusBlock.append(el('div', 'field-label', 'Jira status sections'));
   const repaints: (() => void)[] = [];
@@ -1557,6 +1615,7 @@ const openSettings = async (): Promise<void> => {
     const next: typeof s = {
       jiraEmail: email.input.value.trim(),
       jiraBaseUrl: atlassianUrl.input.value.trim(),
+      ownerFields: [...ownerSel.entries()].map(([clause, label]) => ({ clause, label })),
       activeStatuses: [...assignments.values()]
         .filter((a) => a.section === 'active')
         .map((a) => a.status),
@@ -1626,7 +1685,7 @@ const openSettings = async (): Promise<void> => {
   const settingsPanes: Record<string, HTMLElement> = {
     General: paneOf([updateStyle.wrap, login.wrap]),
     Git: paneOf([forgeSel.wrap, rwxEnabled.wrap, ...repoFields.map((f) => f.row)]),
-    Jira: paneOf([atlassianUrl.wrap, email.wrap, statusBlock, rulesBlock]),
+    Jira: paneOf([atlassianUrl.wrap, email.wrap, ownerWrap, statusBlock, rulesBlock]),
     Polling: paneOf([pollSecs.wrap, recent.wrap, hoursEnabled.wrap, hoursBlock]),
     Slack: paneOf([slackBlock]),
     Notifications: paneOf([notify.wrap, sound.wrap, method.wrap]),

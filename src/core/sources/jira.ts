@@ -48,6 +48,19 @@ export class JiraSource {
   }
 
   /**
+   * The user-valued fields of this Jira site — candidates for "a ticket names
+   * ME here, so it's mine" scoping (assignee, reporter, or a custom
+   * user-picker like an org's developer field).
+   */
+  async userFields(): Promise<OwnerField[]> {
+    const catalog = await fetchJsonWithRetries<JiraFieldCatalogEntry[]>(
+      `${this.baseUrl}/rest/api/3/field`,
+      { headers: this.headers },
+    );
+    return userFieldsFromCatalog(catalog);
+  }
+
+  /**
    * Search issues by JQL.
    *
    * Uses `/rest/api/3/search/jql`. The classic `/rest/api/3/search` endpoint was
@@ -204,6 +217,44 @@ interface JiraIssue {
     fixVersions?: { id?: string; name?: string }[];
   };
 }
+
+/** One selectable "this field names me" option: JQL clause + display label. */
+export interface OwnerField {
+  /** What goes left of `= currentUser()`: `assignee` or rename-proof `cf[10123]`. */
+  clause: string;
+  /** The display name shown in the picker (e.g. 'Dev Resource'). */
+  label: string;
+}
+
+/** The slice of `GET /rest/api/3/field` entries this module reads. */
+export interface JiraFieldCatalogEntry {
+  id?: string;
+  name?: string;
+  custom?: boolean;
+  schema?: { type?: string; items?: string; customId?: number };
+}
+
+/**
+ * Filter a field catalog down to fields that hold USERS — the only ones that
+ * can mean "this ticket is mine". System fields keep their JQL names; custom
+ * fields become `cf[<id>]`, which survives admins renaming them.
+ */
+export const userFieldsFromCatalog = (catalog: JiraFieldCatalogEntry[]): OwnerField[] => {
+  const out: OwnerField[] = [];
+  for (const f of catalog) {
+    const schema = f.schema;
+    const holdsUsers =
+      schema?.type === 'user' || (schema?.type === 'array' && schema.items === 'user');
+    if (!holdsUsers || !f.name) continue;
+    if (f.custom) {
+      if (typeof schema?.customId !== 'number') continue;
+      out.push({ clause: `cf[${schema.customId}]`, label: f.name });
+    } else if (f.id) {
+      out.push({ clause: f.id, label: f.name });
+    }
+  }
+  return out.sort((a, b) => a.label.localeCompare(b.label));
+};
 
 interface JiraSearchResponse {
   issues?: JiraIssue[];

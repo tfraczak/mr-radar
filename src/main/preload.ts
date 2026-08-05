@@ -45,6 +45,8 @@ const api = {
     ipcRenderer.invoke('ui:copy-text', text, html),
   listStatuses: (): Promise<{ ok: boolean; statuses?: string[]; message?: string }> =>
     ipcRenderer.invoke('ui:list-statuses'),
+  listOwnerFields: (): Promise<{ ok: boolean; fields?: { clause: string; label: string }[]; message?: string }> =>
+    ipcRenderer.invoke('ui:list-owner-fields'),
   exportSettings: (): Promise<{ ok: boolean; settings?: Record<string, unknown>; message?: string }> =>
     ipcRenderer.invoke('ui:export-settings'),
   importSettings: (shared: Record<string, unknown>): Promise<{ ok: boolean; message: string }> =>

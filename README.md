@@ -77,6 +77,11 @@ the fix-version picker, and status sections all need it.
 Within a poll cycle the popover regroups by Jira ticket, and the footer's Jira source goes
 green.
 
+**If your org designates the developer via a custom field** (a user-picker like a
+"Dev Resource" field), add it under Settings → Jira → **My-ticket fields**: the picker
+lists your site's real user-valued fields, and any you select count a ticket as yours
+(`field = currentUser()`), alongside the default Assignee + Watcher.
+
 ### Step 2 — tell it how your statuses map (optional)
 
 Settings → **Jira** also holds the status→section mapping. Every status the app has ever

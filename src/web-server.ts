@@ -91,6 +91,12 @@ export interface WebHandlers {
   setPolling: (enabled: boolean) => { enabled: boolean; changed: boolean };
   /** Bring the UI to the user and flash mrKey's row (notification click-through). */
   focusItem: (mrKey?: string) => { ok: boolean };
+  /** The Jira site's user-valued fields (+ Watcher) for the ownership picker. */
+  listOwnerFields: () => Promise<{
+    ok: boolean;
+    fields?: { clause: string; label: string }[];
+    message?: string;
+  }>;
   /** Manual per-MR ignore; un-ignoring a rule-ignored MR pins it visible. */
   setIgnored: (mrKey: string, ignored: boolean) => { ok: boolean; message?: string };
   /** Fresh single-MR re-check for the Copy-for-Slack flow: re-fetches the MR,
@@ -275,6 +281,7 @@ export const startWebServer = (opts: WebServerOptions): Server => {
       if (path === 'settings') return sendJson(res, 200, handlers.getSettings());
       if (path === 'statuses') return sendJson(res, 200, await handlers.listStatuses());
       if (path === 'export-settings') return sendJson(res, 200, await handlers.exportSettings());
+      if (path === 'owner-fields') return sendJson(res, 200, await handlers.listOwnerFields());
       if (path === 'item') {
         const key = params.get('key');
         if (!key) return sendJson(res, 400, { error: 'key required' });

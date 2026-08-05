@@ -94,6 +94,10 @@ const fakeHandlers = (): WebHandlers & { calls: unknown[][] } => {
     setFixVersion: async () => ({ ok: true, message: '' }),
     becomeReviewer: async () => ({ ok: true, message: '' }),
     listStatuses: async () => ({ ok: true, statuses: [] }),
+    listOwnerFields: async () => {
+      calls.push(['listOwnerFields']);
+      return { ok: true, fields: [{ clause: 'assignee', label: 'Assignee' }] };
+    },
     exportSettings: async () => ({ ok: true, settings: {} }),
     importSettings: async () => ({ ok: true, message: '' }),
   };
@@ -219,6 +223,10 @@ describe('startWebServer (live)', () => {
     const emptyMr = await fetch(`http://127.0.0.1:${p}/api/events?limit=3&mr=`, { headers: h });
     expect(emptyMr.status).toBe(200); // '?mr=' means no filter, not mr_key=''
 
+    const ownerFields = await fetch(`http://127.0.0.1:${p}/api/owner-fields`, { headers: h });
+    expect(ownerFields.status).toBe(200);
+    expect(((await ownerFields.json()) as { fields: unknown[] }).fields).toHaveLength(1);
+
     const pause = await fetch(`http://127.0.0.1:${p}/api/set-polling`, {
       method: 'POST',
       headers: { ...h, 'content-type': 'application/json' },
@@ -264,6 +272,7 @@ describe('startWebServer (live)', () => {
       ['getItemDetail', 'acme/rocket!7576'],
       ['getEvents', 7, 'acme/rocket!1'],
       ['getEvents', 3, undefined],
+      ['listOwnerFields'],
       ['setPolling', false],
       ['setIgnored', 'acme/rocket!7576', true],
       ['checkReviewReady', 'acme/rocket!7576'],

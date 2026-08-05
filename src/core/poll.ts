@@ -9,7 +9,7 @@ import {
   rwxChecksFor,
   rwxRunsFor,
 } from './ci';
-import { buildJql, type Config } from './config';
+import { buildJql, ownerClause, type Config } from './config';
 import { correlate, detailsChanged, summarizeThreads, unresolvedCount } from './correlate';
 import type { Db } from './db';
 import { coalesce, diff } from './events';
@@ -384,7 +384,7 @@ const fetchJira = async (
     // One extra query per refresh, results used solely for jira_statuses.
     try {
       const recentMine = await jira.search(
-        '(assignee = currentUser() OR watcher = currentUser()) AND updated >= -90d',
+        `${ownerClause(config)} AND updated >= -90d`,
       );
       const names = [...new Set([...tickets, ...recentMine].map((t) => t.status))];
       db.transaction(() => db.rememberStatuses(names, nowIso));

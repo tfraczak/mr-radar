@@ -109,6 +109,7 @@ window.radar = {
   setJiraToken: (token) => api('jira-token', { token }),
   listFixVersions: (ticketKey) => api('fix-versions', { ticketKey }),
   listStatuses: () => api('statuses'),
+  listOwnerFields: () => api('owner-fields'),
   exportSettings: () => api('export-settings'),
   importSettings: async (shared) => {
     const result = await api<{ ok: boolean; message: string }>('import-settings', { shared });

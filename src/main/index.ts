@@ -497,6 +497,10 @@ const registerIpc = (): void => {
 
   ipcMain.handle('ui:list-statuses', () => ({ ok: true, statuses: knownStatuses(db, config) }));
 
+  ipcMain.handle('ui:list-owner-fields', async () => {
+    return (await webHandlers?.listOwnerFields()) ?? { ok: false, message: 'Not ready yet.' };
+  });
+
   ipcMain.handle('ui:export-settings', () => ({
     ok: true,
     settings: shareableSettings(readRawConfig(CONFIG_PATH)),

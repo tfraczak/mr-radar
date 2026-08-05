@@ -59,6 +59,7 @@ export const toEditable = (config: Config, repoChoices: string[] = [], activeFor
     jiraEmail: config.jira.email,
     jiraBaseUrl: config.jira.baseUrl,
     activeStatuses: config.jira.activeStatuses,
+    ownerFields: config.jira.ownerFields,
     statusAssignments: toAssignments(config),
     sectionChoices: ['active', 'verification', 'done', 'ignore', 'other'],
     statusRules: config.statusRules.map((r) => ({
@@ -174,6 +175,15 @@ export const applyEditable = (
   jira.email = s.jiraEmail;
   jira.baseUrl = s.jiraBaseUrl;
   jira.activeStatuses = activeStatuses;
+  if (Array.isArray(s.ownerFields)) {
+    // Sanitize but never write an empty list (validate() would reject it and
+    // an old UI shell may simply not send the field).
+    const ownerFields = s.ownerFields
+      .map((f) => ({ clause: String(f?.clause ?? '').trim(), label: String(f?.label ?? '').trim() }))
+      .filter((f) => f.clause)
+      .map((f) => ({ clause: f.clause, label: f.label || f.clause }));
+    if (ownerFields.length) jira.ownerFields = ownerFields;
+  }
   next.jira = jira;
 
   if (assignments.length) {
@@ -319,6 +329,7 @@ export const shareableSettings = (raw: Record<string, unknown>): Record<string, 
     const shared: Record<string, unknown> = {};
     if (jira.baseUrl !== undefined) shared.baseUrl = jira.baseUrl;
     if (jira.activeStatuses !== undefined) shared.activeStatuses = jira.activeStatuses;
+    if (jira.ownerFields !== undefined) shared.ownerFields = jira.ownerFields; // team convention, like statuses
     if (jira.refreshMinutes !== undefined) shared.refreshMinutes = jira.refreshMinutes;
     out.jira = shared;
   }

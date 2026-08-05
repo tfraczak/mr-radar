@@ -139,6 +139,8 @@ export interface EditableSettings {
   jiraEmail: string;
   jiraBaseUrl: string;
   activeStatuses: string[];
+  /** Fields whose `= currentUser()` makes a ticket "mine" (JQL clause + label). */
+  ownerFields: { clause: string; label: string }[];
   /**
    * Per-status section assignment, driving the dropdown UI. `active` rows are
    * the source of truth for `activeStatuses` on save (they also drive scope).
@@ -236,6 +238,8 @@ export interface RadarApi {
   copyText(text: string, html?: string): Promise<boolean>;
   /** All Jira status names, for the status-section assignment UI. */
   listStatuses(): Promise<{ ok: boolean; statuses?: string[]; message?: string }>;
+  /** The site's user-valued fields (+ Watcher) for the my-ticket-fields picker. */
+  listOwnerFields(): Promise<{ ok: boolean; fields?: { clause: string; label: string }[]; message?: string }>;
   /** The shareable config subset (identity stripped; token never in config). */
   exportSettings(): Promise<{ ok: boolean; settings?: Record<string, unknown>; message?: string }>;
   /** Merge a teammate's shared settings over local config, keeping identity. */

@@ -272,3 +272,49 @@ describe('tab counts setting', () => {
     expect((junk.ui as { tabCounts?: string }).tabCounts).toBeUndefined();
   });
 });
+
+describe('owner fields (the "Dev Resource" abstraction)', () => {
+  it('round-trips through the editable form, sanitizing entries', () => {
+    const editable = toEditable({
+      ...DEFAULT_CONFIG,
+      jira: {
+        ...DEFAULT_CONFIG.jira,
+        ownerFields: [{ clause: 'cf[10123]', label: 'Dev Resource' }],
+      },
+    });
+    expect(editable.ownerFields).toEqual([{ clause: 'cf[10123]', label: 'Dev Resource' }]);
+
+    const raw = applyEditable({}, {
+      ...editable,
+      ownerFields: [
+        { clause: ' assignee ', label: ' Assignee ' },
+        { clause: '', label: 'dropped' },
+        { clause: 'cf[10123]', label: '' }, // label falls back to the clause
+      ],
+    });
+    expect((raw.jira as { ownerFields: unknown }).ownerFields).toEqual([
+      { clause: 'assignee', label: 'Assignee' },
+      { clause: 'cf[10123]', label: 'cf[10123]' },
+    ]);
+  });
+
+  it('an all-blank payload keeps the existing config value (old UI shells)', () => {
+    const raw = applyEditable(
+      { jira: { ownerFields: [{ clause: 'assignee', label: 'Assignee' }] } },
+      { ...toEditable(DEFAULT_CONFIG), ownerFields: [{ clause: ' ', label: '' }] },
+    );
+    expect((raw.jira as { ownerFields: unknown }).ownerFields).toEqual([
+      { clause: 'assignee', label: 'Assignee' },
+    ]);
+  });
+
+  it('is part of the shareable team conventions', () => {
+    const shared = shareableSettings({
+      jira: { email: 'me@x.com', ownerFields: [{ clause: 'cf[1]', label: 'Dev Resource' }] },
+    });
+    expect((shared.jira as { ownerFields: unknown }).ownerFields).toEqual([
+      { clause: 'cf[1]', label: 'Dev Resource' },
+    ]);
+    expect((shared.jira as { email?: unknown }).email).toBeUndefined(); // identity stays out
+  });
+});

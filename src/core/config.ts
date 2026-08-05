@@ -107,7 +107,15 @@ export interface Config {
     email: string;
     /** Statuses that count as "actively in flight". Drives MR scope. */
     activeStatuses: string[];
-    /** Overrides activeStatuses when set. */
+    /**
+     * Which fields make a ticket "mine": each renders as `<clause> =
+     * currentUser()`, OR-ed together. Defaults to assignee + watcher; orgs
+     * that designate the developer via a custom user-picker (e.g. a "Dev
+     * Resource" field) add it here — picked in Settings from the site's real
+     * user-valued fields, stored as rename-proof `cf[<id>]` clauses.
+     */
+    ownerFields: { clause: string; label: string }[];
+    /** Overrides activeStatuses AND ownerFields when set. */
     jql?: string;
     refreshMinutes: number;
   };
@@ -229,6 +237,10 @@ export const DEFAULT_CONFIG: Config = {
     baseUrl: '',
     email: '',
     activeStatuses: ['In Development', 'Code Review', 'Dev Complete'],
+    ownerFields: [
+      { clause: 'assignee', label: 'Assignee' },
+      { clause: 'watcher', label: 'Watcher' },
+    ],
     refreshMinutes: 10,
   },
   poll: {
@@ -374,6 +386,16 @@ const validate = (cfg: Config, path: string): void => {
   if (cfg.jira.activeStatuses.length === 0 && !cfg.jira.jql) {
     problems.push('jira.activeStatuses must not be empty unless jira.jql is set');
   }
+  // Empty ownership would silently collapse scope to nothing — same guard as
+  // activeStatuses, same jql-override exemption.
+  if (
+    !cfg.jira.jql &&
+    (!Array.isArray(cfg.jira.ownerFields) ||
+      cfg.jira.ownerFields.length === 0 ||
+      cfg.jira.ownerFields.some((f) => typeof f?.clause !== 'string' || !f.clause.trim()))
+  ) {
+    problems.push('jira.ownerFields must be a non-empty array of { clause, label } unless jira.jql is set');
+  }
   if (problems.length) {
     throw new Error(`invalid config at ${path}:\n  - ${problems.join('\n  - ')}`);
   }
@@ -419,14 +441,29 @@ export const writeRawConfig = (raw: Record<string, unknown>, path: string = CONF
  * this Jira workflow leaves `resolution` empty on Closed issues, so
  * `resolution = Unresolved` would happily return closed tickets.
  */
+// Backslash first, then quotes — a value ending in `\` must not be able to
+// escape the closing quote and change the query's meaning.
+const jqlQuote = (s: string): string => `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+
+/**
+ * The "this ticket is mine" half of the scope query: each configured owner
+ * field renders as `<clause> = currentUser()`, OR-ed. Simple JQL names
+ * (assignee, watcher) and `cf[123]` ids pass verbatim; anything else — e.g. a
+ * field addressed by display name — is quote-escaped like the statuses.
+ */
+export const ownerClause = (cfg: Config): string => {
+  const terms = cfg.jira.ownerFields
+    .map((f) => f.clause.trim())
+    .filter(Boolean)
+    .map((clause) => (/^[a-z][a-zA-Z0-9]*$/.test(clause) || /^cf\[\d+\]$/.test(clause) ? clause : jqlQuote(clause)))
+    .map((clause) => `${clause} = currentUser()`);
+  return `(${terms.join(' OR ')})`;
+};
+
 export const buildJql = (cfg: Config): string => {
   if (cfg.jira.jql) return cfg.jira.jql;
-  // Backslash first, then quotes — a status ending in `\` must not be able to
-  // escape the closing quote and change the query's meaning.
-  const statuses = cfg.jira.activeStatuses
-    .map((s) => `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`)
-    .join(', ');
-  // Assigned OR watched: an MR you're reviewing may be on a ticket you watch but
-  // don't own, and you still want it treated as active.
-  return `(assignee = currentUser() OR watcher = currentUser()) AND status IN (${statuses}) ORDER BY updated DESC`;
+  const statuses = cfg.jira.activeStatuses.map(jqlQuote).join(', ');
+  // Mine OR watched (by default): an MR you're reviewing may be on a ticket
+  // you watch but don't own, and you still want it treated as active.
+  return `${ownerClause(cfg)} AND status IN (${statuses}) ORDER BY updated DESC`;
 }
