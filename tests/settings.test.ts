@@ -175,7 +175,7 @@ describe('applyEditable', () => {
 
   it('round-trips theme + appearance, rejecting junk values', () => {
     const next = applyEditable({}, editable({ theme: 'pine', appearance: 'dark' }));
-    expect(next.ui).toEqual({ theme: 'pine', appearance: 'dark' });
+    expect(next.ui).toEqual({ theme: 'pine', appearance: 'dark', tabCounts: 'active' });
     const junk = applyEditable({}, editable({ theme: 'neon-vomit', appearance: 'dark' }));
     expect(junk.ui).toBeUndefined(); // unknown theme → not written
   });
