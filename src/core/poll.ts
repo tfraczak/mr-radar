@@ -356,7 +356,8 @@ const fetchJira = async (
   const { db, config, jira } = deps;
   const cached = db.cachedJiraTickets();
   const ttlMs = config.jira.refreshMinutes * 60_000;
-  const age = cached.fetchedAt ? Date.now() - new Date(cached.fetchedAt).getTime() : Infinity;
+  // Same injected-clock rule as the roles TTL below: never Date.now() here.
+  const age = cached.fetchedAt ? new Date(nowIso).getTime() - new Date(cached.fetchedAt).getTime() : Infinity;
 
   if (age < ttlMs) {
     return { tickets: cached.tickets, health: { ok: true, at: cached.fetchedAt ?? nowIso }, refreshed: false };
@@ -607,7 +608,9 @@ const resolveRoles = async (args: {
     const override = config.repos[project]?.testGate;
     const cached = db.getRepoRoles(project);
     const fresh =
-      cached && Date.now() - new Date(cached.detectedAt).getTime() < ROLE_DETECTION_TTL_MS;
+      // The injected clock, not Date.now(): freshness must follow the cycle's
+      // time source, or fixed-clock tests detonate when the calendar catches up.
+      cached && new Date(nowIso).getTime() - new Date(cached.detectedAt).getTime() < ROLE_DETECTION_TTL_MS;
     if (cached && (fresh || override)) {
       out.set(project, override ? { ...cached, testGate: override } : cached);
       continue;
