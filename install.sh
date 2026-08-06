@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One-and-done installer for MR Radar: installs missing prerequisites
-# (Homebrew, nvm + Node, glab), builds, and registers the menu bar app under
+# (Homebrew, nvm + Node, corepack/yarn, glab), builds, and registers the menu bar app under
 # launchd (starts at login, restarts on crash).
 #
 #   ./install.sh
@@ -82,6 +82,24 @@ ensure_node() {
   note "node $(node -v)"
 }
 
+# --- yarn (via corepack — package.json pins the exact version; no global install)
+ensure_yarn() {
+  # Corepack prompts before its first download of a pinned yarn; never let a
+  # scripted install hang on that.
+  export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+  if ! command -v corepack >/dev/null 2>&1; then
+    # Newer Node distributions no longer bundle corepack. npm (which node DOES
+    # bundle) installs it into the same nvm-managed prefix — no sudo needed.
+    note "installing corepack (this Node does not bundle it)…"
+    npm install -g corepack >/dev/null
+  fi
+  corepack enable >/dev/null 2>&1 \
+    || warn "corepack enable failed — yarn may resolve to a globally installed copy"
+  command -v yarn >/dev/null 2>&1 \
+    || fail "yarn is still unavailable after corepack enable — re-run ./install.sh in a new terminal, or check 'npm install -g corepack'"
+  note "yarn $(yarn --version)"
+}
+
 # --- glab (GitLab CLI — the app's only GitLab access path) --------------------
 ensure_glab() {
   if ! command -v glab >/dev/null 2>&1; then
@@ -114,13 +132,29 @@ offer_rwx() {
   fi
 }
 
+# --- terminal-notifier (optional — notification icon + click-to-open) ---------
+offer_terminal_notifier() {
+  if command -v terminal-notifier >/dev/null 2>&1; then
+    note "terminal-notifier found"
+    return 0
+  fi
+  if confirm "Install terminal-notifier? (optional: notification icon + click-to-open; some app-control software blocks it)"; then
+    ensure_brew
+    brew install terminal-notifier
+    note "pick it under Settings → Notifications → method when you want it"
+  else
+    note "skipping terminal-notifier — notifications fall back to osascript"
+  fi
+}
+
 step "Checking prerequisites (installing what's missing)"
 ensure_node
+ensure_yarn
 ensure_glab
 offer_rwx
+offer_terminal_notifier
 
 step "Installing dependencies"
-corepack enable >/dev/null 2>&1 || warn "corepack enable failed — trying yarn anyway"
 yarn install
 
 step "Building"

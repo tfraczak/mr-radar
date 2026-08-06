@@ -44,7 +44,8 @@ for the popover, then walk through the first-run setup below.
 If the script trips on something, the steps it automates are each one command:
 
 ```bash
-corepack enable   # provides Yarn 4, no global install
+corepack enable   # provides the pinned Yarn, no global install
+                  # (if corepack itself is missing: npm install -g corepack)
 yarn install
 yarn build
 yarn tray:install # register + start the launchd agent
