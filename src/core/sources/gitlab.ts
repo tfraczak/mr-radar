@@ -136,14 +136,9 @@ export class GitlabSource implements ForgeSource {
   async addReviewer(projectId: number, iid: number, userId: number): Promise<void> {
     const mr = await this.mrByProjectId(projectId, iid);
     const ids = reviewerIdsAfterAdding(mr, userId);
-    const fields = ids.flatMap((id) => ['-f', `reviewer_ids[]=${id}`]);
     await this.enqueue(() =>
       withRetries(() =>
-        runJson<unknown>(
-          this.glab,
-          ['api', '-X', 'PUT', `projects/${projectId}/merge_requests/${iid}`, ...fields],
-          { timeoutMs: 45_000 },
-        ),
+        runJson<unknown>(this.glab, updateReviewersArgs(projectId, iid, ids), { timeoutMs: 45_000 }),
       ),
     );
   }
@@ -204,6 +199,25 @@ export const enc = (projectPath: string): string => {
 export const reviewerIdsAfterAdding = (mr: ForgeMr, userId: number): number[] => {
   return [...new Set([...(mr.reviewers ?? []).map((r) => r.id), userId])];
 }
+
+/**
+ * The argv for replacing an MR's reviewer list.
+ *
+ * The ids MUST ride in the QUERY STRING, not in `-f` fields: glab's own docs
+ * say "Neither --field nor --raw-field parses JSON arrays or objects; those
+ * values are sent as strings", so `-f reviewer_ids[]=1` posts a JSON body
+ * carrying a literal `reviewer_ids[]` key. GitLab recognizes no parameter in
+ * that and answers 400 "…at least one parameter must be provided" — which is
+ * exactly how Become-reviewer failed. Repeated `reviewer_ids[]=` query params
+ * are the encoding the API actually parses.
+ *
+ * (The GitHub source's `-f reviewers[]=login` is NOT the same bug: gh does
+ * build JSON arrays from bracketed fields, and that endpoint needs a body.)
+ */
+export const updateReviewersArgs = (projectId: number, iid: number, ids: number[]): string[] => {
+  const query = ids.map((id) => `reviewer_ids[]=${id}`).join('&');
+  return ['api', '-X', 'PUT', `projects/${projectId}/merge_requests/${iid}?${query}`];
+};
 
 /** `acme/rocket!7576` — matches `references.full` and is our primary key. */
 export const mrKey = (projectPath: string, iid: number): string => {
