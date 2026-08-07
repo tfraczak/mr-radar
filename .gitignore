@@ -19,3 +19,6 @@ release/
 # stray compiled output must not live beside sources
 src/**/*.js
 src/**/*.js.map
+
+# Local org-identifier sweep patterns (real names must never be committed).
+.sweep-patterns

@@ -109,7 +109,7 @@ ignored row restores it (pinning that one MR visible if a rule ignores it).
 
 **Copy for Slack.** Rows that look ready to announce for code review — ticket in a
 ready status (Settings → **Slack**, default `Code Review`), every check
-green for the current head commit (repos without CI, like production-scripts, are exempt
+green for the current head commit (repos without CI — a scripts repo, say — are exempt
 via their `none` test gate; repos with RWX *and* a pipeline need both), no open review
 threads, not a draft, no conflicts — grow a **Copy for Slack** button. Clicking it
 re-fetches that one MR fresh (MR state, ticket status, discussions, CI) and either copies

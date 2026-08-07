@@ -94,7 +94,7 @@ describe('reviewReadiness', () => {
     expect(reviewReadiness(stale, READY).reasons.join(' ')).toMatch(/1 review thread is/);
   });
 
-  it("a 'none' gate (production-scripts) waives the CI requirement entirely", () => {
+  it("a 'none' gate (a repo with no CI) waives the CI requirement entirely", () => {
     const r = reviewReadiness(item({ testGate: { kind: 'none' }, checks: [] }), READY);
     expect(r.eligible).toBe(true);
   });
@@ -111,7 +111,7 @@ describe('reviewReadiness', () => {
     expect(never.reasons[0]).toContain('start an RWX run');
   });
 
-  it('the juno case: RWX gate green but the pipeline failed → blocked', () => {
+  it('mixed CI: RWX gate green but the riding pipeline failed → blocked', () => {
     const r = reviewReadiness(item({ checks: [check({ state: 'failed', name: 'rspec pipeline' })] }), READY);
     expect(r.eligible).toBe(false);
     expect(r.reasons[0]).toBe('rspec pipeline failed.');

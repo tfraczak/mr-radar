@@ -11,10 +11,10 @@ import type { WatchItem } from './types';
  * fresh single-MR re-check, and a refusal must always say exactly why.
  *
  * The CI requirement is per-repo without any new setting: a repo whose
- * detected/pinned test gate is 'none' (production-scripts) has nothing to
+ * detected/pinned test gate is 'none' (a scripts repo with no CI) has nothing to
  * pass; everywhere else the gate must be verified green for the CURRENT head
- * commit AND every current-head check must be green — which is what makes
- * juno require RWX *and* its pipeline, not just the pipeline.
+ * commit AND every current-head check must be green — which is what makes an
+ * RWX-gated repo require RWX *and* its pipeline, not just the pipeline.
  */
 export interface ReviewReadiness {
   eligible: boolean;
@@ -65,7 +65,7 @@ const ciReasons = (item: WatchItem): string[] => {
 
   switch (gate.kind) {
     case 'none':
-      break; // repo has no test CI (e.g. production-scripts) — nothing to pass
+      break; // repo has no test CI (e.g. an ops-scripts repo) — nothing to pass
     case 'verified':
       if (gate.result === 'failed') reasons.push(`Tests failed (${gate.name}).`);
       break;
@@ -82,11 +82,11 @@ const ciReasons = (item: WatchItem): string[] => {
   }
 
   // Beyond the gate, every SECONDARY suite that ran for the CURRENT head must
-  // be green (juno: the pipeline check is sha-filtered, so it is either for
-  // the head or absent — and a brand-new head is already caught by the gate
-  // going unverified). 'tests'-role suites are the gate's to judge, and a
-  // stale secondary run (older commit) is deliberately not blocking: a one-off
-  // definition that ran once months ago must not veto announcements forever.
+  // be green (a pipeline riding alongside an RWX gate is sha-filtered, so it
+  // is either for the head or absent — and a brand-new head is already caught
+  // by the gate going unverified). 'tests'-role suites are the gate's to judge,
+  // and a stale secondary run (older commit) is deliberately not blocking: a
+  // one-off definition that ran once months ago must not veto forever.
   for (const check of item.checks ?? []) {
     if (check.role === 'tests' || check.sha !== item.headSha) continue;
     if (check.state === 'failed') reasons.push(`${check.name} failed.`);
@@ -96,9 +96,10 @@ const ciReasons = (item: WatchItem): string[] => {
   }
 
   // Deliberately NO "side suite must exist for the head" rule. Live data
-  // killed two attempts at one: side suites can be conditional (juno's
-  // flow-client is path-filtered and legitimately absent for backend-only
-  // heads) and old pipelines scroll out of the API page — both false-block.
+  // killed two attempts at one: side suites can be conditional (a frontend
+  // suite is often path-filtered, so it is legitimately absent for a
+  // backend-only head) and old pipelines scroll out of the API page — either
+  // way, demanding one false-blocks.
   // Accepted edge: a canceled/[ci skip] pipeline that produced no judgeable
   // result does not block; the gate, thread, and status checks still must
   // pass, all verified fresh.

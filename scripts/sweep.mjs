@@ -6,11 +6,17 @@
  * tests, or docs. (A local config or DB holding real values is user data and
  * lives outside the repo; this guards only what ships.)
  *
- * Extend PATTERNS for your org before publishing a fork. Exit 1 on any hit,
- * so `set -e` chains and CI actually stop — a sweep that only prints is a
+ * Patterns come from, in order: `SWEEP_PATTERNS` (comma-separated), a
+ * gitignored `.sweep-patterns` file (one regex per line, `#` comments — the
+ * ergonomic spot for real org names, since writing them into THIS file would
+ * be the very leak it guards), then the empty built-in list. Exit 1 on any
+ * hit, so `set -e` chains and CI actually stop — a sweep that only prints is a
  * sweep that gets scrolled past (learned the hard way).
  */
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const PATTERNS = [
   // Example entries — replace with your org's real identifiers:
@@ -19,13 +25,44 @@ const PATTERNS = [
   // 'real\\.username',
 ];
 
-const patterns = process.env.SWEEP_PATTERNS
-  ? process.env.SWEEP_PATTERNS.split(',').map((s) => s.trim()).filter(Boolean)
-  : PATTERNS;
+/** Gitignored, so real org identifiers stay out of the committed tree. */
+const localPatterns = () => {
+  const file = join(dirname(dirname(fileURLToPath(import.meta.url))), '.sweep-patterns');
+  try {
+    return readFileSync(file, 'utf8')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith('#'));
+  } catch {
+    return [];
+  }
+};
+
+const fromEnv = (process.env.SWEEP_PATTERNS ?? '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+const patterns = fromEnv.length ? fromEnv : localPatterns().length ? localPatterns() : PATTERNS;
 
 if (patterns.length === 0) {
-  console.log('sweep: no patterns configured (set SWEEP_PATTERNS or edit scripts/sweep.mjs) — skipped');
+  console.log(
+    'sweep: no patterns configured — add them to .sweep-patterns (gitignored, one regex per line) or set SWEEP_PATTERNS; skipped',
+  );
   process.exit(0);
+}
+
+// A pattern that CANNOT match is worse than no pattern: it reports "clean"
+// while the identifier sits in the tree. `git grep -E` is POSIX ERE, where
+// \b, \d, \w and friends are not supported — reject them loudly instead of
+// sweeping past a silent no-op. (Yes, this guard exists because it happened.)
+const unsupported = patterns.filter((p) => /\\[bBdDwWsS]/.test(p));
+if (unsupported.length) {
+  console.error(
+    'sweep: these patterns use PCRE escapes that git grep -E cannot match, so they would never fire:\n' +
+      unsupported.map((p) => `  ${p}`).join('\n') +
+      '\nRewrite them in POSIX ERE: `widget` or `[^a-z]abc[^a-z]`, never `\\bwidget\\b`.',
+  );
+  process.exit(2);
 }
 
 try {
