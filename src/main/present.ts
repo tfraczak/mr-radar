@@ -1,6 +1,7 @@
 import { DEFAULT_CONFIG, type Config, type RuleField, type StatusRule } from '../core/config';
 import { FIELD_LABELS } from '../renderer/contract';
 import { unresolvedCount } from '../core/correlate';
+import { ticketsMissingMrs, type MissingMr } from '../core/no-mr';
 import { reviewReadiness } from '../core/review-ready';
 import { resolveRules } from '../core/rules';
 import { describePause } from '../core/schedule';
@@ -53,6 +54,7 @@ export const present = (
   rules: StatusRule[] = DEFAULT_CONFIG.statusRules,
   slack: Config['slack'] = DEFAULT_CONFIG.slack,
   tabCounts: Config['ui']['tabCounts'] = 'all',
+  noMr: Config['noMr'] = DEFAULT_CONFIG.noMr,
 ): UiSnapshot => {
   const active = new Set(activeStatuses.map((s) => s.toLowerCase()));
   const hidden = new Set(sections.hidden.map((s) => s.toLowerCase()));
@@ -64,6 +66,15 @@ export const present = (
 
   const { groups, needsGroups, verificationGroups, doneGroups, otherGroups, ignoredGroups } =
     groupItems(items, unreadKeys, active, now, updateStyle, sections, rules, slack);
+  // Tickets with no MR are computed from ALL known items, not the filtered
+  // `items` above: an MR hidden from view still means the ticket has one.
+  const missing = ticketsMissingMrs({
+    tickets: state.snapshot?.activeTickets ?? [],
+    items: state.snapshot?.items ?? [],
+    noMr,
+    sections,
+    now,
+  });
   return {
     at: state.snapshot?.at,
     lastPollAt: state.lastPollAt,
@@ -81,7 +92,9 @@ export const present = (
       stale: h.stale,
     })),
     highlight: state.highlight,
-    groups,
+    // No-MR rows join the active groups: same section, same sort, same tab —
+    // the ticket is part of the work in flight, it just has nothing to review.
+    groups: [...groups, ...missing.map(noMrGroup)],
     needsGroups,
     verificationGroups,
     doneGroups,
@@ -248,6 +261,33 @@ const groupItems = (
     doneGroups: [...done.values()],
     otherGroups: [...byStatus.values()],
     ignoredGroups: [...ignoredMap.values()],
+  };
+}
+
+/**
+ * A ticket with no merge request, shaped as a group the list can sort next to
+ * the real ones. The wording lives here like every other attention line:
+ * `expected` earns a warn and an urgent rank, because an MR should exist by
+ * now; otherwise it's a muted note that sinks to the bottom of the attention
+ * sort — visible without nagging about work you only just picked up.
+ */
+const noMrGroup = ({ ticket, expected }: MissingMr): UiGroup => {
+  return {
+    ticket: {
+      key: ticket.key,
+      status: ticket.status,
+      url: ticket.url,
+      statusRank: statusRank(ticket.status),
+    },
+    items: [],
+    noMr: {
+      summary: ticket.summary,
+      updated: ticket.updated,
+      expected,
+      attention: expected
+        ? { text: `No MR yet — expected at ${ticket.status}`, tone: 'warn', rank: 2 }
+        : { text: 'No MR yet', tone: 'muted', rank: 9 },
+    },
   };
 }
 

@@ -76,7 +76,7 @@ export const makeWebHandlers = (deps: WebHandlerDeps): WebHandlers => {
 
   return {
     getSnapshot: () =>
-      present(state, cfg().jira.activeStatuses, new Date(), cfg().git.updateStyle, cfg().statusSections, cfg().statusRules, cfg().slack, cfg().ui.tabCounts),
+      present(state, cfg().jira.activeStatuses, new Date(), cfg().git.updateStyle, cfg().statusSections, cfg().statusRules, cfg().slack, cfg().ui.tabCounts, cfg().noMr),
 
     getItemDetail: async (mrKey: string) => {
       const snapshot = state.snapshot;

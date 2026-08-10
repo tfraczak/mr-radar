@@ -78,6 +78,12 @@ const inTab = (item: UiItem, tab: Tab): boolean => {
   return item.reason === 'participating';
 };
 
+/**
+ * A ticket with no MR belongs to "My work": it's yours to push, and there is
+ * nothing on it to review or participate in.
+ */
+const NO_MR_TAB: Tab = 'work';
+
 interface Filters {
   unread: boolean;
   threads: boolean;
@@ -87,9 +93,11 @@ interface Filters {
   testsNotRun: boolean;
   conflict: boolean;
   overdue: boolean;
+  noMr: boolean;
 }
 
-const FILTER_DEFS: { key: keyof Filters; label: string; test: (i: UiItem) => boolean }[] = [
+/** Filters that ask something of an individual MR. */
+const ITEM_FILTERS: { key: keyof Filters; label: string; test: (i: UiItem) => boolean }[] = [
   { key: 'unread', label: 'Unread', test: (i) => i.unread },
   { key: 'threads', label: 'Open threads', test: (i) => i.unresolved > 0 },
   { key: 'review', label: 'Needs my review', test: (i) => i.reason === 'reviewer' },
@@ -98,6 +106,21 @@ const FILTER_DEFS: { key: keyof Filters; label: string; test: (i: UiItem) => boo
   { key: 'testsNotRun', label: 'Tests not run', test: (i) => i.ci.startable },
   { key: 'conflict', label: 'Merge conflict', test: (i) => i.hasConflicts },
   { key: 'overdue', label: 'Overdue', test: (i) => i.overdue },
+];
+
+/**
+ * Filters about the group rather than an MR in it. "No MR yet" selects a
+ * different population entirely — tickets, not merge requests — so it's
+ * mutually exclusive with the item filters (see buildFilterMenu): combining
+ * them could only ever yield an empty list.
+ */
+const GROUP_FILTERS: { key: keyof Filters; label: string; title: string }[] = [
+  { key: 'noMr', label: 'No MR yet', title: 'Only active tickets that have no merge request' },
+];
+
+const ALL_FILTERS: { key: keyof Filters; label: string; title?: string }[] = [
+  ...ITEM_FILTERS,
+  ...GROUP_FILTERS,
 ];
 
 const PREFS_KEY = 'mr-radar-prefs';
@@ -110,6 +133,7 @@ const emptyFilters = (): Filters => ({
   testsNotRun: false,
   conflict: false,
   overdue: false,
+  noMr: false,
 });
 
 const loadPrefs = (): { sort: SortMode; filters: Filters; tab: Tab } => {
@@ -177,7 +201,12 @@ const paintTabs = (s: UiSnapshot): void => {
       ? [...s.groups, ...(s.needsGroups ?? [])]
       : [...s.groups, ...(s.needsGroups ?? []), ...(s.verificationGroups ?? []), ...(s.doneGroups ?? []), ...s.otherGroups];
   const items = groups.flatMap((g) => g.items);
-  const count = (tab: Tab): number => items.filter((i) => inTab(i, tab)).length;
+  // No-MR rows carry no items, so they'd count as nothing — the one thing this
+  // feature exists to prevent. Counted under their tab in both modes: a ticket
+  // with no MR is active work by definition.
+  const noMrCount = s.groups.filter((g) => g.noMr).length;
+  const count = (tab: Tab): number =>
+    items.filter((i) => inTab(i, tab)).length + (tab === NO_MR_TAB ? noMrCount : 0);
   mainTabs.setLabel('work', `My work (${count('work')})`);
   mainTabs.setLabel('reviews', `My reviews (${count('reviews')})`);
   mainTabs.setLabel('participating', `Participating (${count('participating')})`);
@@ -186,18 +215,26 @@ const paintTabs = (s: UiSnapshot): void => {
 
 registerDropdown(filterBtn, filterMenu);
 
-const activeFilterCount = (): number => FILTER_DEFS.filter((f) => prefs.filters[f.key]).length;
+const activeFilterCount = (): number => ALL_FILTERS.filter((f) => prefs.filters[f.key]).length;
 
 const buildFilterMenu = (): void => {
   filterMenu.replaceChildren();
-  for (const def of FILTER_DEFS) {
+  for (const def of ALL_FILTERS) {
     const row = el('label', 'filter-row');
+    if (def.title) row.title = def.title;
     const cb = el('input', 'filter-cb');
     cb.type = 'checkbox';
     cb.checked = prefs.filters[def.key];
     cb.addEventListener('change', () => {
       prefs.filters[def.key] = cb.checked;
+      // Ticket-population and MR-population filters can't hold at once, so
+      // turning one on releases the other rather than emptying the list.
+      if (cb.checked) {
+        if (def.key === 'noMr') for (const f of ITEM_FILTERS) prefs.filters[f.key] = false;
+        else prefs.filters.noMr = false;
+      }
       savePrefs();
+      buildFilterMenu();
       updateFilterBtn();
       if (lastSnapshot) renderList(lastSnapshot);
     });
@@ -206,7 +243,7 @@ const buildFilterMenu = (): void => {
   }
   const clear = el('button', 'filter-clear', 'Clear filters');
   clear.addEventListener('click', () => {
-    for (const def of FILTER_DEFS) prefs.filters[def.key] = false;
+    for (const def of ALL_FILTERS) prefs.filters[def.key] = false;
     savePrefs();
     buildFilterMenu();
     updateFilterBtn();
@@ -262,10 +299,18 @@ const render = (snapshot: UiSnapshot): void => {
 
 /** Groups passing the active filters, with their items filtered too. */
 const filteredGroups = (groups: UiGroup[]): UiGroup[] => {
-  const active = FILTER_DEFS.filter((f) => prefs.filters[f.key]);
-  if (active.length === 0) return groups;
+  const active = ITEM_FILTERS.filter((f) => prefs.filters[f.key]);
+  const onlyNoMr = prefs.filters.noMr;
+  if (active.length === 0 && !onlyNoMr) return groups;
   const out: UiGroup[] = [];
   for (const g of groups) {
+    // A ticket with no MR can't satisfy an MR-level test, so any of those
+    // filters excludes it — and the No-MR filter keeps nothing else.
+    if (g.noMr) {
+      if (active.length === 0) out.push(g);
+      continue;
+    }
+    if (onlyNoMr) continue;
     const items = g.items.filter((i) => active.every((f) => f.test(i)));
     if (items.length) out.push({ ...g, items });
   }
@@ -280,6 +325,24 @@ const time = (iso: string): number => new Date(iso).getTime();
 
 /** A comparable key per group for the chosen sort (ascending compare). */
 const groupSortKey = (g: UiGroup, mode: SortMode): number => {
+  // A no-MR group has no items to measure. It stands in with the ticket's own
+  // updated time and its attention rank, so it sorts *among* the real groups
+  // rather than pinning to one end of every mode.
+  if (g.noMr) {
+    switch (mode) {
+      case 'oldest':
+        return time(g.noMr.updated);
+      case 'active':
+        return -time(g.noMr.updated);
+      case 'status':
+        return g.ticket ? g.ticket.statusRank : Number.MAX_SAFE_INTEGER;
+      case 'comments':
+        return 0; // no comments; MR groups sort negative by count, so this lands last
+      case 'attention':
+      default:
+        return g.noMr.attention.rank;
+    }
+  }
   switch (mode) {
     case 'oldest':
       return minBy(g.items, (i) => time(i.createdAt)); // oldest MR first
@@ -398,7 +461,10 @@ const renderStatus = (s: UiSnapshot): void => {
   // slice at the top of the list; "tracked" is everything the radar polls —
   // the exact number the tray menu shows. Both together kill the 8-vs-28
   // mystery.
-  const active = [...s.groups, ...(s.needsGroups ?? [])].reduce((n, g) => n + g.items.length, 0);
+  const active =
+    [...s.groups, ...(s.needsGroups ?? [])].reduce((n, g) => n + g.items.length, 0) +
+    // A ticket with no MR is one active thing, with zero items to add up.
+    s.groups.filter((g) => g.noMr).length;
   const tracked = s.trackedCount ?? active;
   parts.push(active === tracked ? `${active} active` : `${active} active · ${tracked} tracked`);
   statusEl.textContent = parts.join(' · ');
@@ -441,9 +507,10 @@ const renderList = (s: UiSnapshot): void => {
   }
 
   // The tab is the outermost cut: My work = authored, My reviews = the rest.
+  // No-MR groups have no items to test, so they're admitted by their own tab.
   const tabbed = s.groups
-    .map((g) => ({ ...g, items: g.items.filter((i) => inTab(i, prefs.tab)) }))
-    .filter((g) => g.items.length > 0);
+    .map((g) => (g.noMr ? g : { ...g, items: g.items.filter((i) => inTab(i, prefs.tab)) }))
+    .filter((g) => (g.noMr ? prefs.tab === NO_MR_TAB : g.items.length > 0));
   const tabbedNeeds = (s.needsGroups ?? [])
     .map((g) => ({ ...g, items: g.items.filter((i) => inTab(i, prefs.tab)) }))
     .filter((g) => g.items.length > 0);
@@ -503,7 +570,9 @@ const renderList = (s: UiSnapshot): void => {
 
 /** Filter + sort the non-active "Other" status groups the same way as active. */
 const otherView = (statusGroups: UiStatusGroup[]): UiStatusGroup[] => {
-  const active = FILTER_DEFS.filter((f) => prefs.filters[f.key]);
+  // These sections are MRs by construction — the No-MR filter empties them.
+  if (prefs.filters.noMr) return [];
+  const active = ITEM_FILTERS.filter((f) => prefs.filters[f.key]);
   const filtered = statusGroups
     .map((g) => ({ ...g, items: g.items.filter((i) => active.every((f) => f.test(i))) }))
     .filter((g) => g.items.length > 0);
@@ -547,7 +616,8 @@ const renderGroup = (group: UiGroup): HTMLElement => {
     head.append(key);
     head.append(el('span', 'ticket-status', group.ticket.status));
     if (group.ticket.needsField === 'fixVersions') head.append(fixVersionControl(group.ticket.key));
-    head.append(eyeControl(group.items, true)); // styles push it hard right
+    // Nothing to ignore when there's no MR — the eye would be a dead control.
+    if (!group.noMr) head.append(eyeControl(group.items, true)); // styles push it hard right
     wrap.append(head);
   } else {
     const head = el('div', 'group-head');
@@ -555,9 +625,42 @@ const renderGroup = (group: UiGroup): HTMLElement => {
     wrap.append(head);
   }
 
+  if (group.noMr) {
+    wrap.append(noMrRow(group.noMr, group.ticket?.url ?? ''));
+    return wrap;
+  }
   for (const item of group.items) wrap.append(renderRow(item, { eye: false }));
   return wrap;
 }
+
+/**
+ * The stand-in row for a ticket with no merge request. The Jira summary takes
+ * the title's place — it's the only content such a row has — and the attention
+ * line says whether that's expected. Clicking opens the ticket, since there is
+ * no MR to open.
+ */
+const noMrRow = (noMr: NonNullable<UiGroup['noMr']>, ticketUrl: string): HTMLElement => {
+  const row = createRow({
+    unread: false,
+    onClick: () => {
+      if (ticketUrl) void window.radar.openUrl(ticketUrl);
+    },
+  });
+  row.root.classList.add('row-no-mr');
+  row.main.append(el('div', 'row-title', noMr.summary));
+  row.main.append(el('div', `attention attention-${noMr.attention.tone}`, noMr.attention.text));
+  row.meta.append(
+    createBadge(
+      'no MR',
+      noMr.expected ? 'warn' : 'muted',
+      noMr.expected
+        ? 'No merge request is open for this ticket, and one is expected at this status'
+        : 'No merge request is open for this ticket yet',
+    ),
+  );
+  row.main.append(row.meta);
+  return row.root;
+};
 
 /** `.rwx/frontend-ci.yml` → `frontend` (mirrors present.ts). */
 const shortCheckName = (name: string): string =>

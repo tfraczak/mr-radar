@@ -1381,6 +1381,17 @@ button.link {
   background: var(--hover);
 }
 
+/* A ticket with no merge request. Dashed and dimmed: it's a placeholder for
+   work that hasn't been pushed, not a row you can review or merge. */
+.row-no-mr {
+  border: 1px dashed var(--sep);
+  border-radius: 6px;
+}
+
+.row-no-mr .row-title {
+  color: var(--fg-dim);
+}
+
 .unread-dot {
   grid-column: 1;
   align-self: stretch;

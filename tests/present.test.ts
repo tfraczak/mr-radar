@@ -554,3 +554,67 @@ describe('tabCounts pass-through', () => {
     ).toBe('active');
   });
 });
+
+describe('tickets with no MR', () => {
+  const stateWithTickets = (items: WatchItem[], tickets: JiraTicket[]): UiState => ({
+    ...initialUiState(),
+    snapshot: { at: NOW.toISOString(), items, activeTickets: tickets, sources: {} as never },
+  });
+  const t = (key: string, status: string, over: Partial<JiraTicket> = {}): JiraTicket => ({
+    ...ticket(status, over),
+    key,
+    summary: `${key} needs a branch`,
+    updated: NOW.toISOString(),
+  });
+  const presentWith = (items: WatchItem[], tickets: JiraTicket[], noMr = DEFAULT_CONFIG.noMr) =>
+    present(
+      stateWithTickets(items, tickets),
+      ACTIVE, NOW, 'rebase', DEFAULT_CONFIG.statusSections, [], DEFAULT_CONFIG.slack, 'active', noMr,
+    );
+
+  it('joins the active groups as an itemless group carrying the ticket', () => {
+    const snap = presentWith([], [t('ENG-9', 'In Development')]);
+    expect(snap.groups).toHaveLength(1);
+    const g = snap.groups[0];
+    expect(g?.items).toEqual([]);
+    expect(g?.ticket?.key).toBe('ENG-9');
+    expect(g?.noMr?.summary).toBe('ENG-9 needs a branch');
+    expect(g?.noMr?.attention).toEqual({ text: 'No MR yet', tone: 'muted', rank: 9 });
+  });
+
+  it('warns, urgently, at a status where an MR is expected', () => {
+    const snap = presentWith([], [t('ENG-9', 'Code Review')]);
+    expect(snap.groups[0]?.noMr?.expected).toBe(true);
+    expect(snap.groups[0]?.noMr?.attention).toEqual({
+      text: 'No MR yet — expected at Code Review',
+      tone: 'warn',
+      rank: 2,
+    });
+  });
+
+  it('stays quiet once the ticket has an MR', () => {
+    const jira = t('ENG-9', 'In Development');
+    const snap = presentWith([item({ ticket: jira })], [jira]);
+    expect(snap.groups).toHaveLength(1);
+    expect(snap.groups[0]?.noMr).toBeUndefined();
+    expect(snap.groups[0]?.items).toHaveLength(1);
+  });
+
+  it('adds nothing when the feature is off', () => {
+    const snap = presentWith([], [t('ENG-9', 'Code Review')], { ...DEFAULT_CONFIG.noMr, enabled: false });
+    expect(snap.groups).toEqual([]);
+  });
+
+  it('sees an MR the view filters out, so it never cries wolf', () => {
+    // A ticket whose only MR is hidden by an ignore rule still has an MR.
+    const jira = t('ENG-9', 'In Development');
+    const rules: StatusRule[] = [{ status: 'In Development', op: 'always', then: 'ignore' }];
+    const snap = present(
+      stateWithTickets([item({ ticket: jira })], [jira]),
+      ACTIVE, NOW, 'rebase', DEFAULT_CONFIG.statusSections, rules, DEFAULT_CONFIG.slack, 'active',
+      DEFAULT_CONFIG.noMr,
+    );
+    expect(snap.groups).toEqual([]);
+    expect(snap.ignoredGroups).toHaveLength(1);
+  });
+});

@@ -74,6 +74,22 @@ export interface UiGroup {
       }
     | undefined;
   items: UiItem[];
+  /**
+   * Set instead of `items` when this group is an active ticket with **no merge
+   * request at all** — the one state an MR-shaped list can't otherwise show.
+   * The group renders as the ticket header plus a single placeholder row.
+   */
+  noMr?:
+    | {
+        /** The Jira summary, which is all the content such a row has. */
+        summary: string;
+        /** Ticket `updated` — what the time-based sorts use, having no MR. */
+        updated: string;
+        /** An MR was expected by this status (or a rule said so): warn, not muted. */
+        expected: boolean;
+        attention: Attention;
+      }
+    | undefined;
 }
 
 /** The single most important thing to do for a row, and how urgent it is. */

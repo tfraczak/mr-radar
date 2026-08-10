@@ -31,6 +31,13 @@ export const RULE_TARGETS: readonly RuleTarget[] = [
   'next',
 ];
 
+/**
+ * Sentinel for the MR-expectation rule dropdown: matches a ticket in ANY
+ * status. Lets one rule exempt a whole issue type ("spikes never need an MR")
+ * instead of one rule per status.
+ */
+export const ANY_STATUS = '(any status)';
+
 export type RuleField = 'fixVersions' | 'issueType' | 'dueDate';
 export type RuleOp = 'always' | 'empty' | 'present' | 'matches' | 'past';
 
@@ -69,6 +76,34 @@ export interface StatusRule {
   then: RuleTarget;
   /** Absent = 'next': no else branch, fall through to later rules. */
   else?: RuleTarget;
+}
+
+/** What an MR-expectation rule decides about a ticket. 'next' = defer. */
+export type MrRuleTarget = 'expect' | 'exempt' | 'next';
+
+export const MR_RULE_TARGETS: readonly MrRuleTarget[] = ['expect', 'exempt', 'next'];
+
+/**
+ * One rule about whether a ticket is *supposed* to have a merge request:
+ * "for tickets in `status`, when `field` `op` (`value`), `then`, otherwise
+ * `else`". `expect` warns when no MR exists, `exempt` says never mention it,
+ * 'next' falls through to the following rule and finally to `noMr.expectStatuses`.
+ *
+ * Same field/op vocabulary as StatusRule — deliberately, so the rule builder and
+ * the predicate are shared. There's no repo scope: a ticket without an MR has no
+ * repo to scope by.
+ */
+export interface MrRule {
+  /** Ticket status, or ANY_STATUS to match every status. */
+  status: string;
+  /** Absent for op 'always'. */
+  field?: RuleField;
+  op: RuleOp;
+  value?: string;
+  also?: RuleCondition[];
+  then: MrRuleTarget;
+  /** Absent = 'next'. */
+  else?: MrRuleTarget;
 }
 
 export interface RepoOverride {
@@ -169,6 +204,21 @@ export interface Config {
    * reproduce the built-in Dev Complete behavior — edit rather than fight them.
    */
   statusRules: StatusRule[];
+  /**
+   * Active tickets with **no merge request at all**.
+   *
+   * The radar is MR-shaped: every row starts from a merge request, so the one
+   * state it structurally cannot show is "you haven't started". These settings
+   * put such a ticket on screen as a row of its own — quietly by default, and
+   * as a warning at the statuses where an MR is genuinely expected.
+   */
+  noMr: {
+    enabled: boolean;
+    /** Statuses where a missing MR is a problem, not just a fact (warn tone). */
+    expectStatuses: string[];
+    /** Conditional expectations, evaluated before `expectStatuses`. */
+    rules: MrRule[];
+  };
   /** Include MRs updated within N days even if their ticket isn't active. */
   recentDaysFallback: number;
   /**
@@ -269,6 +319,10 @@ export const DEFAULT_CONFIG: Config = {
     // hands. Edit or add rules in Settings → Jira → Advanced.
     { status: 'Dev Complete', field: 'fixVersions', op: 'empty', then: 'needs-value', else: 'verification' },
   ],
+  // Every active ticket without an MR gets a row; only Code Review makes it a
+  // warning. Deliberately not Dev Complete — by then the MR has usually merged
+  // and merged MRs leave the radar, which would read as a missing MR.
+  noMr: { enabled: true, expectStatuses: ['Code Review'], rules: [] },
   recentDaysFallback: 0,
   ui: { theme: 'system', appearance: 'system', tabCounts: 'active' },
   web: { enabled: true, port: 8942 },
@@ -380,6 +434,28 @@ const validate = (cfg: Config, path: string): void => {
       if (c.connector !== 'and' && c.connector !== 'or') problems.push(`statusRules[${i}].also[${j}]: bad connector`);
       if (!RULE_FIELDS.includes(c.field)) problems.push(`statusRules[${i}].also[${j}]: bad field "${c.field}"`);
       if (!RULE_OPS.includes(c.op) || (c.op as RuleOp) === 'always') problems.push(`statusRules[${i}].also[${j}]: bad op "${c.op}"`);
+    }
+  }
+  if (typeof cfg.noMr.enabled !== 'boolean') problems.push('noMr.enabled must be a boolean');
+  if (!Array.isArray(cfg.noMr.expectStatuses) || cfg.noMr.expectStatuses.some((s) => typeof s !== 'string')) {
+    problems.push('noMr.expectStatuses must be an array of status names');
+  }
+  if (!Array.isArray(cfg.noMr.rules)) problems.push('noMr.rules must be an array');
+  else {
+    for (const [i, rule] of cfg.noMr.rules.entries()) {
+      if (!rule.status?.trim()) problems.push(`noMr.rules[${i}]: status is required`);
+      if (rule.op !== 'always' && !RULE_FIELDS.includes(rule.field as RuleField)) {
+        problems.push(`noMr.rules[${i}]: bad field "${rule.field}"`);
+      }
+      if (!RULE_OPS.includes(rule.op)) problems.push(`noMr.rules[${i}]: bad op "${rule.op}"`);
+      if (!MR_RULE_TARGETS.includes(rule.then) || (rule.else !== undefined && !MR_RULE_TARGETS.includes(rule.else))) {
+        problems.push(`noMr.rules[${i}]: then/else must be one of ${MR_RULE_TARGETS.join(', ')}`);
+      }
+      for (const [j, c] of (rule.also ?? []).entries()) {
+        if (c.connector !== 'and' && c.connector !== 'or') problems.push(`noMr.rules[${i}].also[${j}]: bad connector`);
+        if (!RULE_FIELDS.includes(c.field)) problems.push(`noMr.rules[${i}].also[${j}]: bad field "${c.field}"`);
+        if (!RULE_OPS.includes(c.op) || (c.op as RuleOp) === 'always') problems.push(`noMr.rules[${i}].also[${j}]: bad op "${c.op}"`);
+      }
     }
   }
   if (!cfg.poll.backoffSeconds.length) problems.push('poll.backoffSeconds must not be empty');

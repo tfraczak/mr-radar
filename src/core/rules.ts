@@ -1,5 +1,13 @@
-import { NO_TICKET_STATUS, type RuleField, type RuleTarget, type StatusRule } from './config';
-import type { WatchItem } from './types';
+import {
+  ANY_STATUS,
+  NO_TICKET_STATUS,
+  type MrRule,
+  type MrRuleTarget,
+  type RuleField,
+  type RuleTarget,
+  type StatusRule,
+} from './config';
+import type { JiraTicket, WatchItem } from './types';
 
 /**
  * Advanced status-rule evaluation, shared by the presentation layer (section
@@ -50,7 +58,10 @@ const testCondition = (
   }
 };
 
-const rulePredicate = (rule: StatusRule, t: NonNullable<WatchItem['ticket']>, now: Date): boolean => {
+/** The testable half of a rule — shared by routing rules and MR expectations. */
+type Conditional = Pick<StatusRule, 'field' | 'op' | 'value' | 'also'>;
+
+const rulePredicate = (rule: Conditional, t: NonNullable<WatchItem['ticket']>, now: Date): boolean => {
   if (rule.op === 'always') return true;
   // The chain folds left to right, data_set_filter style: each extra
   // condition combines with the running result via its own connector.
@@ -110,6 +121,29 @@ export const ruleTarget = (
   now: Date,
   projectPath: string,
 ): Exclude<RuleTarget, 'next'> | undefined => resolveRules(rules, t, now, projectPath).target;
+
+/**
+ * Walk the MR-expectation rules for a ticket that has no merge request.
+ * Same top-to-bottom, 'next'-falls-through semantics as resolveRules; undefined
+ * means no rule decided, so the caller falls back to `noMr.expectStatuses`.
+ *
+ * ANY_STATUS matches every status, which is how a whole issue type gets exempted
+ * in one rule ("issueType matches spike → exempt").
+ */
+export const resolveMrRules = (
+  rules: MrRule[],
+  t: JiraTicket,
+  now: Date,
+): Exclude<MrRuleTarget, 'next'> | undefined => {
+  for (const rule of rules) {
+    if (rule.status !== ANY_STATUS && rule.status.toLowerCase() !== t.status.toLowerCase()) continue;
+    const hit = rule.op === 'always' ? true : rulePredicate(rule, t, now);
+    const target = hit ? rule.then : (rule.else ?? 'next');
+    if (target === 'next') continue;
+    return target;
+  }
+  return undefined;
+};
 
 export type IgnoredBy = 'manual' | 'rule';
 
