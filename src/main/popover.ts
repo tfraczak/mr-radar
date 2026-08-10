@@ -26,6 +26,9 @@ export class Popover {
    */
   private pendingShowSettings = false;
 
+  /** True while an async row action is in flight; suppresses close-on-blur. */
+  private busy = false;
+
   consumePendingShowSettings(): boolean {
     const pending = this.pendingShowSettings;
     this.pendingShowSettings = false;
@@ -88,15 +91,31 @@ export class Popover {
       this.onReady();
     });
 
-    // Click-away dismisses, like a real menu bar popover.
-    this.win.on('blur', () => this.close());
+    // Click-away dismisses, like a real menu bar popover — unless a row action
+    // is mid-flight. A fresh review check takes seconds of API calls, and
+    // destroying the window under it takes the renderer's pending callbacks
+    // with it: the user got no "Copied ✓", no error, no explanation. Whatever
+    // steals focus in that window is not worth losing the result over.
+    this.win.on('blur', () => {
+      if (!this.busy) this.close();
+    });
     this.win.on('closed', () => {
       this.win = undefined;
       this.pendingShowSettings = false;
     });
   }
 
+  /**
+   * Hold the popover open across an async row action (the fresh review check).
+   * Set it around the await, never left on: a stuck flag makes the popover
+   * un-dismissable, which is worse than a lost message.
+   */
+  setBusy(busy: boolean): void {
+    this.busy = busy;
+  }
+
   close(): void {
+    this.busy = false;
     if (!this.win || this.win.isDestroyed()) {
       this.win = undefined;
       return;

@@ -232,7 +232,15 @@ export interface RadarApi {
    *  `message`/`messageHtml` are the composed announcement's two flavors. */
   checkReviewReady(
     mrKey: string,
-  ): Promise<{ ok: boolean; eligible?: boolean; reasons?: string[]; message?: string; messageHtml?: string }>;
+  ): Promise<{
+    ok: boolean;
+    eligible?: boolean;
+    reasons?: string[];
+    message?: string;
+    messageHtml?: string;
+    /** Tray only: the main process already put it on the clipboard (verified). */
+    copied?: boolean;
+  }>;
   /** Put text on the system clipboard; `html` adds a rich flavor so targets
    *  like Slack's composer paste named links as real hyperlinks. */
   copyText(text: string, html?: string): Promise<boolean>;

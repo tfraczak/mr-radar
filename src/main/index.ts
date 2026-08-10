@@ -468,16 +468,51 @@ const registerIpc = (): void => {
     return webHandlers?.setIgnored(mrKey, ignored) ?? { ok: false, message: 'Not ready yet.' };
   });
 
+  /**
+   * The check AND the copy, in one main-process round trip.
+   *
+   * The renderer used to do the copy after awaiting this: click → await a
+   * multi-second re-check → call back into `ui:copy-text`. The popover does not
+   * reliably survive that gap (it is destroyed on close, and the wait is long
+   * enough to lose focus), and when its JS context dies the pending promise
+   * dies with it — no copy, no error, and a clipboard still holding whatever
+   * was there before. Proven by the log: the refresh line appears, the
+   * copy-text line never does.
+   *
+   * Writing the pasteboard here removes the renderer from the critical path
+   * entirely: by the time this resolves the message IS copied, and the button
+   * only has to report it. `copied` is verified against a read-back, so the UI
+   * can never claim success over an unchanged clipboard.
+   */
   ipcMain.handle('ui:check-review-ready', async (_e, mrKey: unknown) => {
     if (typeof mrKey !== 'string') return { ok: false, message: 'Bad request.' };
-    return (await webHandlers?.checkReviewReady(mrKey)) ?? { ok: false, message: 'Not ready yet.' };
+    // Keep the popover alive across the check so its result is actually seen.
+    popover.setBusy(true);
+    const result = await (async () => {
+      try {
+        return (await webHandlers?.checkReviewReady(mrKey)) ?? { ok: false, message: 'Not ready yet.' };
+      } finally {
+        popover.setBusy(false);
+      }
+    })();
+    if (result.ok && result.eligible && result.message) {
+      const copied = writeClipboard(result.message, result.messageHtml);
+      log(`clipboard: ${copied ? 'copied' : 'FAILED to copy'} the ${mrKey} announcement (${result.message.length} chars)`);
+      return { ...result, copied };
+    }
+    return result;
   });
 
+  /**
+   * Write and then VERIFY. A copy that silently no-ops is worse than a failed
+   * one: the button says "Copied ✓" and the user pastes whatever was on the
+   * pasteboard before. So read the text flavor back, fall back to a plain
+   * write if the rich write did not stick, and report what actually happened
+   * — the button's success state is only as honest as this return value.
+   */
   ipcMain.handle('ui:copy-text', (_e, text: unknown, html: unknown) => {
-    if (typeof text !== 'string') return false;
-    if (typeof html === 'string' && html) clipboard.write({ text, html });
-    else clipboard.writeText(text);
-    return true;
+    if (typeof text !== 'string' || !text) return false;
+    return writeClipboard(text, typeof html === 'string' ? html : undefined);
   });
 
   ipcMain.handle('ui:become-reviewer', async (_e, mrKey: unknown) => {
@@ -561,6 +596,27 @@ const registerIpc = (): void => {
     }
   });
 }
+
+/**
+ * Write and then VERIFY. A copy that silently no-ops is worse than a failed
+ * one: the button says "Copied ✓" and the user pastes whatever was on the
+ * pasteboard before. Read the text flavor back, fall back to a plain write if
+ * the rich one did not stick, and return what actually happened.
+ */
+const writeClipboard = (text: string, html?: string): boolean => {
+  try {
+    if (html) clipboard.write({ text, html });
+    else clipboard.writeText(text);
+    if (clipboard.readText() === text) return true;
+    clipboard.writeText(text); // rich write did not land — plain beats nothing
+    const ok = clipboard.readText() === text;
+    if (!ok) log('clipboard: neither rich nor plain write stuck');
+    return ok;
+  } catch (err) {
+    log(`clipboard: write failed: ${msg(err)}`);
+    return false;
+  }
+};
 
 const msg = (err: unknown): string => {
   return err instanceof Error ? err.message : String(err);

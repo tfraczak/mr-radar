@@ -771,7 +771,10 @@ const slackButton = (item: UiItem): HTMLElement => {
       if (r.ok && r.eligible && r.message) {
         const message = r.message;
         const messageHtml = r.messageHtml;
-        const copied = await window.radar.copyText(message, messageHtml);
+        // The tray copies in the main process before resolving — the popover
+        // may not survive the re-check, so the write cannot live here. Only
+        // the web page (no main process) still copies from the renderer.
+        const copied = r.copied ?? (await window.radar.copyText(message, messageHtml));
         btn.title = message; // hover shows exactly what will be / was copied
         if (copied) {
           btn.textContent = 'Copied ✓';
