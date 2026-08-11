@@ -18,6 +18,18 @@ export interface RunOptions {
   /** Output cap. `glab api` on a busy MR returns ~150KB; 32MB is plenty. */
   maxBuffer?: number;
   env?: Record<string, string>;
+  /**
+   * Accept a non-zero exit when the command still printed a payload.
+   *
+   * `rwx runs show` mirrors the RUN's verdict in its own exit status: a failed
+   * run exits 1 while writing a perfectly good 1.7MB of JSON to stdout. Judging
+   * by the status alone therefore makes exactly the results you most need — the
+   * failures — indistinguishable from a broken lookup, and they vanish.
+   *
+   * Empty stdout, a timeout, a signal, or a missing binary still reject: those
+   * produce no payload to work with, so there is nothing to salvage.
+   */
+  allowNonZeroExit?: boolean;
 }
 
 /**
@@ -44,6 +56,11 @@ export const run = (cmd: string, args: string[], opts: RunOptions = {}): Promise
           // execFile's `code` is the exit status when numeric, but an errno
           // string (ENOENT) when the binary is missing.
           const code = typeof err.code === 'number' ? err.code : null;
+          // A real exit status plus a real payload = a result, not a failure.
+          if (opts.allowNonZeroExit && !killed && code !== null && stdout.trim() !== '') {
+            resolve(stdout);
+            return;
+          }
           reject(new ExecError(`${cmd} ${args[0] ?? ''}: ${why}`, cmd, code, stderr));
           return;
         }

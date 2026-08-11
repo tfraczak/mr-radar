@@ -95,7 +95,14 @@ export class RwxSource {
     const hit = this.showCache.get(id);
     if (hit) return hit;
     const d = await withRetries(() =>
-      runJson<RwxShowResponse>(this.rwx, ['runs', 'show', id, '--json'], { timeoutMs: 45_000 }),
+      runJson<RwxShowResponse>(this.rwx, ['runs', 'show', id, '--json'], {
+        timeoutMs: 45_000,
+        // `runs show` exits 1 when the run it describes FAILED, payload and
+        // all. Without this, the app can only ever learn about runs that
+        // passed: a failed run threw here, its watched row was never resolved,
+        // and the gate stayed "RWX running" forever.
+        allowNonZeroExit: true,
+      }),
     );
     const org = (d.RepositorySlug ?? '').split('/')[0];
     const run: RwxRun = {
@@ -105,7 +112,10 @@ export class RwxSource {
       CommitSha: d.CommitSha ?? d.Init?.['Commit-sha'] ?? '',
       DefinitionPath: d.DefinitionPath ?? '',
       RepositoryName: d.RepositoryName ?? '',
-      RunUrl: org ? `https://cloud.rwx.com/mint/${org}/runs/${id}` : '',
+      // `runs show` carries no RunUrl, so synthesize one in the format RWX's own
+      // list payload uses — `https://cloud.rwx.com/<org>/runs/<id>`. The old
+      // `/mint/<org>/` path is from before the Mint→RWX rename and 404s now.
+      RunUrl: org ? `https://cloud.rwx.com/${org}/runs/${id}` : '',
       Title: d.Title ?? '',
       Trigger: d.Trigger ?? '',
       CreatedAt: d.StartedAt ?? d.CompletedAt ?? '',

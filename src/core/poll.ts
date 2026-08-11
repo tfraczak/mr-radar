@@ -1010,8 +1010,12 @@ const checkWatchedRuns = async (
       let run: RwxRun | undefined;
       try {
         run = await rwx.showRun(watched.run_id);
-      } catch {
-        run = undefined; // transient failure or a deleted run — see expiry below
+      } catch (err) {
+        // Transient failure or a deleted run — see the expiry below. Logged:
+        // swallowing this silently is how a permanently unresolvable run (every
+        // FAILED run, before allowNonZeroExit) hid behind a stuck "RWX running".
+        run = undefined;
+        log(`watched run ${watched.run_id} lookup failed: ${msg(err)}`);
       }
 
       if (run && !isTerminal(run)) {
@@ -1054,7 +1058,9 @@ const checkWatchedRuns = async (
           role: 'tests',
           name: watched.definition,
           checkId: watched.run_id,
-          ciUrl: run.RunUrl || watched.url,
+          // The URL captured when we triggered the run is the authoritative
+          // one; showRun has to synthesize its own, so it is the fallback.
+          ciUrl: watched.url || run.RunUrl,
         });
       }
       log(`watched run ${watched.run_id} finished: ${run.Status.Result}`);
