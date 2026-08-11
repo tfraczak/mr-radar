@@ -562,7 +562,6 @@ const renderGroup = (group: UiGroup): HTMLElement => {
     key.addEventListener('click', () => void window.radar.openUrl(url));
     head.append(key);
     head.append(el('span', 'ticket-status', group.ticket.status));
-    if (group.ticket.needsField === 'fixVersions') head.append(fixVersionControl(group.ticket.key));
     // Nothing to ignore when there's no MR — the eye would be a dead control.
     if (!group.noMr) head.append(eyeControl(group.items, true)); // styles push it hard right
     wrap.append(head);
@@ -576,7 +575,19 @@ const renderGroup = (group: UiGroup): HTMLElement => {
     wrap.append(noMrRow(group.noMr, group.ticket?.url ?? ''));
     return wrap;
   }
-  for (const item of group.items) wrap.append(renderRow(item, { eye: false }));
+  // The fix-version picker is a *ticket*-level action, so it rides the first
+  // row rather than repeating on each of the ticket's MRs — in the side column
+  // under the CI chip, with the other actions, instead of wedged into the
+  // header between the status and the eye.
+  const needsFixVersion = group.ticket?.needsField === 'fixVersions' ? group.ticket.key : undefined;
+  group.items.forEach((item, i) => {
+    wrap.append(
+      renderRow(item, {
+        eye: false,
+        ...(i === 0 && needsFixVersion ? { sideExtra: fixVersionControl(needsFixVersion) } : {}),
+      }),
+    );
+  });
   return wrap;
 }
 
@@ -690,7 +701,10 @@ const fixVersionControl = (ticketKey: string): HTMLElement => {
   return wrap;
 };
 
-const renderRow = (item: UiItem, opts: { eye?: boolean } = {}): HTMLElement => {
+const renderRow = (
+  item: UiItem,
+  opts: { eye?: boolean; sideExtra?: HTMLElement } = {},
+): HTMLElement => {
   // Clicking the row opens the MR and clears its unread mark. Buttons and chips
   // inside stop propagation so they don't also trigger this.
   const row = createRow({
@@ -759,6 +773,9 @@ const renderRow = (item: UiItem, opts: { eye?: boolean } = {}): HTMLElement => {
   if (item.ci.detail) row.side.append(el('span', 'chip-detail', item.ci.detail));
   const runControl = rwxRunControl(item);
   if (runControl) row.side.append(runControl);
+  // A ticket-level action handed down by the group (the fix-version picker),
+  // stacked under the CI chip like every other action on the row.
+  if (opts.sideExtra) row.side.append(opts.sideExtra);
   if (item.reason === 'participating' && !item.ignored) row.side.append(becomeReviewerButton(item));
   if (item.slackReady && !item.ignored) row.side.append(slackButton(item));
   if (opts.eye !== false) row.side.append(eyeControl([item], !item.ignored));

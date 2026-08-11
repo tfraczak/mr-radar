@@ -1652,10 +1652,14 @@ button.link {
   border-top: 1px solid var(--sep);
 }
 
+/* Lives in the row's side column (under the CI chip), which is already
+   right-aligned — so no margin-left:auto, and the expanded select + Assign
+   wrap instead of forcing the column wider. */
 .fixversion {
   display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 4px;
-  margin-left: auto;
   align-items: center;
 }
 
