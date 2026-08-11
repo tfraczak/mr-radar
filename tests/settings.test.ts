@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config';
 import {
   applyEditable,
+  knownStatuses,
   mergeSharedSettings,
   shareableSettings,
   toEditable,
@@ -316,5 +317,85 @@ describe('owner fields (the "Dev Resource" abstraction)', () => {
       { clause: 'cf[1]', label: 'Dev Resource' },
     ]);
     expect((shared.jira as { email?: unknown }).email).toBeUndefined(); // identity stays out
+  });
+});
+
+describe('no-MR settings', () => {
+  it('projects the config section into the form', () => {
+    const e = toEditable(DEFAULT_CONFIG);
+    expect(e.noMrEnabled).toBe(true);
+    expect(e.noMrExpectStatuses).toEqual(DEFAULT_CONFIG.noMr.expectStatuses);
+    expect(e.mrRuleTargetChoices).toEqual(['expect', 'exempt', 'next']);
+  });
+
+  it('round-trips the switch, the expect statuses, and the rules', () => {
+    const next = applyEditable(
+      {},
+      editable({
+        noMrEnabled: true,
+        noMrExpectStatuses: [' Code Review ', '', 'Dev Complete'],
+        noMrRules: [
+          { status: '(any status)', field: 'issueType', op: 'matches', value: ' spike ', also: [], then: 'exempt', else: 'next' },
+        ],
+      }),
+    );
+    const noMr = next.noMr as Record<string, unknown>;
+    expect(noMr.enabled).toBe(true);
+    expect(noMr.expectStatuses).toEqual(['Code Review', 'Dev Complete']); // trimmed, blanks dropped
+    expect(noMr.rules).toEqual([
+      { status: '(any status)', op: 'matches', value: 'spike', field: 'issueType', then: 'exempt' },
+    ]); // 'next' else is absent, not stored
+  });
+
+  it('turns the feature off without losing the configured statuses', () => {
+    const next = applyEditable(
+      { noMr: { enabled: true, expectStatuses: ['Code Review'], rules: [] } },
+      editable({ noMrEnabled: false, noMrExpectStatuses: ['Code Review'], noMrRules: [] }),
+    );
+    expect(next.noMr).toEqual({ enabled: false, expectStatuses: ['Code Review'], rules: [] });
+  });
+
+  it('drops a half-edited rule rather than writing a broken one', () => {
+    const next = applyEditable(
+      {},
+      editable({
+        noMrRules: [
+          { status: '', field: 'issueType', op: 'matches', value: 'x', also: [], then: 'exempt', else: 'next' },
+          { status: 'Code Review', field: 'issueType', op: 'matches', value: 'x', also: [], then: 'active', else: 'next' },
+          { status: 'Code Review', field: 'issueType', op: 'matches', value: 'x', also: [], then: 'expect', else: 'next' },
+        ],
+      }),
+    );
+    // No status, and a section-routing target that means nothing here.
+    expect((next.noMr as Record<string, unknown>).rules).toHaveLength(1);
+  });
+
+  it('leaves the section alone when an older shell omits the fields', () => {
+    const stale = editable();
+    delete (stale as Partial<EditableSettings>).noMrEnabled;
+    delete (stale as Partial<EditableSettings>).noMrExpectStatuses;
+    const next = applyEditable({ noMr: { enabled: false, expectStatuses: [], rules: [] } }, stale);
+    expect(next.noMr).toEqual({ enabled: false, expectStatuses: [], rules: [] });
+  });
+
+  it('is a team convention: shared on export', () => {
+    const shared = shareableSettings({ noMr: { enabled: true, expectStatuses: ['Code Review'], rules: [] } });
+    expect(shared.noMr).toEqual({ enabled: true, expectStatuses: ['Code Review'], rules: [] });
+  });
+
+  it('offers statuses only named by the no-MR settings in the pickers', () => {
+    const cfg = {
+      ...DEFAULT_CONFIG,
+      noMr: {
+        enabled: true,
+        expectStatuses: ['Peer Review'],
+        rules: [{ status: 'Blocked', field: 'issueType' as const, op: 'matches' as const, value: 'x', then: 'exempt' as const }],
+      },
+    };
+    const db = { seenStatuses: () => [], seenRepos: () => [] } as unknown as Parameters<typeof knownStatuses>[0];
+    const names = knownStatuses(db, cfg);
+    expect(names).toContain('Peer Review');
+    expect(names).toContain('Blocked');
+    expect(names).not.toContain('(any status)'); // the sentinel is not a status
   });
 });

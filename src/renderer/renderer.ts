@@ -1,4 +1,4 @@
-import type { EditableSettings, RadarApi, StatusSection, UiGroup, UiItem, UiSnapshot, UiStatusGroup } from './contract';
+import type { EditableRule, RadarApi, StatusSection, UiGroup, UiItem, UiSnapshot, UiStatusGroup } from './contract';
 import { FIELD_LABELS } from './contract.js';
 import {
   createSelect,
@@ -1065,8 +1065,9 @@ const openSettings = async (): Promise<void> => {
   const assignments = new Map<string, { status: string; section: StatusSection }>();
   const knownStatusNames = new Map<string, string>(); // lowercase → display casing
   const NO_TICKET = '(no ticket)'; // mirrors NO_TICKET_STATUS in core config
+  const ANY_STATUS = '(any status)'; // mirrors ANY_STATUS in core config
   const learnStatus = (status: string): void => {
-    if (status === NO_TICKET) return; // sentinel, not a Jira status
+    if (status === NO_TICKET || status === ANY_STATUS) return; // sentinels, not Jira statuses
 
     if (status && !knownStatusNames.has(status.toLowerCase())) {
       knownStatusNames.set(status.toLowerCase(), status);
@@ -1191,22 +1192,99 @@ const openSettings = async (): Promise<void> => {
     repaintAll();
   });
 
-  // Advanced: conditional routing rules — "for <status>, when <field> <op>
-  // (<value>) → <then section> else <else section>". Evaluated before the
-  // section mapping; 'next' defers to later rules. Collapsed by default.
+  /**
+   * A plain chip multi-select over the known statuses, for settings that name
+   * statuses independently of the section assignments — an MR can be
+   * announceable, or expected, whichever section its status renders in.
+   * `selected` is keyed by lowercase status, valued by display casing.
+   */
+  const statusChipField = (
+    label: string,
+    selected: Map<string, string>,
+    removeTitle: (status: string) => string,
+  ): HTMLElement => {
+    const wrap = el('div', 'field msf');
+    wrap.append(el('span', 'field-label', label));
+    const box = el('div', 'msf-box');
+    const panel = el('div', 'msf-panel');
+    registerDropdown(box, panel);
+    const paint = (): void => {
+      box.replaceChildren();
+      if (selected.size === 0) box.append(el('span', 'msf-placeholder', 'Click to choose statuses…'));
+      for (const status of selected.values()) {
+        box.append(
+          createRemovableChip(status, {
+            removeTitle: removeTitle(status),
+            onRemove: (e) => {
+              e.stopPropagation();
+              selected.delete(status.toLowerCase());
+              paint();
+            },
+          }),
+        );
+      }
+      panel.replaceChildren();
+      for (const name of [...knownStatusNames.values()].sort((a, b) => a.localeCompare(b))) {
+        const row = el('div', 'msf-row');
+        row.append(el('span', undefined, name));
+        if (selected.has(name.toLowerCase())) row.append(el('span', 'msf-row-check', '✓'));
+        row.addEventListener('click', () => {
+          if (selected.has(name.toLowerCase())) selected.delete(name.toLowerCase());
+          else selected.set(name.toLowerCase(), name);
+          paint();
+        });
+        panel.append(row);
+      }
+    };
+    // Statuses arrive asynchronously (listStatuses); repaint when they land.
+    repaints.push(paint);
+    paint();
+    wrap.append(box, panel);
+    return wrap;
+  };
+
+  // The advanced rule builder, in one place for both rule kinds: "for <status>
+  // [in <repo>], when <field> <op> (<value>) → <target>, else <target>".
+  // Section routing (statusRules) and MR expectations (noMr.rules) share the
+  // whole card — they differ only in their target vocabulary, whether a repo
+  // scope applies, and what the special entry atop the status list means.
+  const mkSelect = (options: string[], value: string): ReturnType<typeof createSelect> =>
+    createSelect(options, value);
+
+  interface RuleListOpts {
+    /** Collapsed-header text; the rule count is appended. */
+    label: string;
+    title: string;
+    rules: EditableRule[];
+    /**
+     * The non-status entry offered first. `bare` marks it as inherently
+     * unconditional — '(no ticket)' has no ticket fields to test, while
+     * '(any status)' is just a wildcard and stays fully conditional.
+     */
+    sentinel: { value: string; bare: boolean };
+    /** Repos offered as a scope; omitted = the rule has no repo line at all. */
+    repoChoices?: string[];
+    /** Targets for then/else, given the rule's effective op. */
+    targets: (op: string) => string[];
+    /** The rule a fresh "Add rule" click starts from. */
+    blank: () => EditableRule;
+  }
+
+  const buildRuleList = (opts: RuleListOpts): { block: HTMLElement; collect: () => EditableRule[] } => {
   const rulesBlock = el('div', 'status-sections');
   const rulesHead = el('button', 'other-header');
   rulesHead.type = 'button';
+  rulesHead.title = opts.title;
   const rulesBody = el('div');
   const ruleRowsWrap = el('div', 'rule-rows');
   let rulesCollapsed = true;
   interface RuleRow {
     root: HTMLElement;
-    get: () => EditableSettings['statusRules'][number];
+    get: () => EditableRule;
   }
   const ruleRows: RuleRow[] = [];
   const paintRulesHead = (): void => {
-    rulesHead.textContent = `${rulesCollapsed ? '▸' : '▾'}  Advanced: conditional rules (${ruleRows.length})`;
+    rulesHead.textContent = `${rulesCollapsed ? '▸' : '▾'}  ${opts.label} (${ruleRows.length})`;
     rulesBody.hidden = rulesCollapsed;
   };
   rulesHead.addEventListener('click', () => {
@@ -1214,27 +1292,27 @@ const openSettings = async (): Promise<void> => {
     paintRulesHead();
   });
 
-  const mkSelect = (options: string[], value: string): ReturnType<typeof createSelect> =>
-    createSelect(options, value);
-
-  const addRuleRow = (r: EditableSettings['statusRules'][number], after?: HTMLElement): void => {
+  const addRuleRow = (r: EditableRule, after?: HTMLElement): void => {
     learnStatus(r.status);
     const root = el('div', 'rule-row');
-    // '(no ticket)' leads the list: it routes MRs that have no Jira ticket,
-    // and such rules are unconditional (nothing to test on a missing ticket).
+    // The sentinel leads the list, then every known status.
     const status = createSelect(
-      [NO_TICKET, ...[...knownStatusNames.values()].sort((a, b) => a.localeCompare(b))],
+      [opts.sentinel.value, ...[...knownStatusNames.values()].sort((a, b) => a.localeCompare(b))],
       r.status,
     );
+    /** True when this rule can't be conditional (see RuleListOpts.sentinel). */
+    const sentinelBare = (): boolean => opts.sentinel.bare && status.select.value === opts.sentinel.value;
     // Repo scope: '' = any repo; the list is what the radar actually tracks.
-    const repoChoices = [...new Set([...(s.ruleRepoChoices ?? []), ...(r.repo ? [r.repo] : [])])];
-    const repo = createSelect(
-      [
-        { value: '', label: 'any repo' },
-        ...repoChoices.map((path) => ({ value: path, label: shortProject(path), title: path })),
-      ],
-      r.repo ?? '',
-    );
+    const repoChoices = [...new Set([...(opts.repoChoices ?? []), ...(r.repo ? [r.repo] : [])])];
+    const repo = opts.repoChoices
+      ? createSelect(
+          [
+            { value: '', label: 'any repo' },
+            ...repoChoices.map((path) => ({ value: path, label: shortProject(path), title: path })),
+          ],
+          r.repo ?? '',
+        )
+      : undefined;
     const field = mkSelect(s.ruleFieldChoices, r.field);
     // 'always' is not an op you pick — it's the state of a rule whose whole
     // when-clause has been removed (× on the when line brings it here).
@@ -1247,12 +1325,8 @@ const openSettings = async (): Promise<void> => {
     value.value = r.value ?? '';
     value.placeholder = 'regex';
     value.title = "Case-insensitive regular expression — e.g. 'data ?fix' matches DataFix and Data Fix";
-    // 'needs-value' only means something for an empty-check; other ops hide
-    // it, and a target holding it falls back to 'next'.
-    const targetChoices = (opValue: string): string[] =>
-      opValue === 'empty' ? s.ruleTargetChoices : s.ruleTargetChoices.filter((c) => c !== 'needs-value');
-    const thenSel = mkSelect(targetChoices(r.op), r.then);
-    const elseSel = mkSelect(targetChoices(r.op), r.else || 'next');
+    const thenSel = mkSelect(opts.targets(r.op), r.then);
+    const elseSel = mkSelect(opts.targets(r.op), r.else || 'next');
 
     // Chained extra conditions, data_set_filter style: each line carries its
     // own and/or connector and folds onto the when-check left to right.
@@ -1303,21 +1377,24 @@ const openSettings = async (): Promise<void> => {
 
     const syncValue = (): void => {
       value.hidden = op.select.value !== 'matches';
+      const allowed = opts.targets(effectiveOp());
       for (const sel of [thenSel, elseSel]) {
-        if (effectiveOp() !== 'empty' && sel.select.value === 'needs-value') {
+        // A target the current op no longer offers (e.g. 'needs-value' outside
+        // an empty-check) falls back to 'next' rather than silently persisting.
+        if (!allowed.includes(sel.select.value)) {
           sel.select.value = 'next';
           sel.select.dispatchEvent(new Event('change'));
         }
-        sel.setOptions(targetChoices(effectiveOp()));
+        sel.setOptions(allowed);
       }
     };
     op.select.addEventListener('change', syncValue);
     syncValue();
-    const snapshotRule = (): EditableSettings['statusRules'][number] => ({
+    const snapshotRule = (): EditableRule => ({
       status: status.select.value,
-      repo: repo.select.value,
-      field: whenRemoved || status.select.value === NO_TICKET ? '' : field.select.value,
-      op: status.select.value === NO_TICKET ? 'always' : effectiveOp(),
+      repo: repo?.select.value ?? '',
+      field: whenRemoved || sentinelBare() ? '' : field.select.value,
+      op: sentinelBare() ? 'always' : effectiveOp(),
       value: value.value,
       also:
         whenRemoved
@@ -1429,7 +1506,7 @@ const openSettings = async (): Promise<void> => {
     const addElseLine = el('div', 'rule-line');
     addElseLine.append(addElse);
     controls.append(
-      line('', status.root, 'in', repo.root),
+      repo ? line('', status.root, 'in', repo.root) : line('', status.root),
       whenLine,
       addWhenLine,
       alsoWrap,
@@ -1443,11 +1520,10 @@ const openSettings = async (): Promise<void> => {
     // no field, no conditions, no else — only the op select stays as the way
     // back. For conditional rules, the else block only renders when one exists.
     const syncStructure = (): void => {
-      const noTicket = status.select.value === NO_TICKET;
-      const bare = whenRemoved || noTicket;
+      const bare = whenRemoved || sentinelBare();
       const hasElse = elseSel.select.value !== 'next';
       whenLine.hidden = bare;
-      addWhenLine.hidden = !whenRemoved || noTicket;
+      addWhenLine.hidden = !whenRemoved || sentinelBare();
       alsoWrap.hidden = bare;
       addCondLine.hidden = bare;
       elseWordLine.hidden = bare || !hasElse;
@@ -1463,12 +1539,38 @@ const openSettings = async (): Promise<void> => {
     ruleRows.push({ root, get: snapshotRule });
     paintRulesHead();
   };
-  for (const r of s.statusRules) addRuleRow(r);
+  for (const r of opts.rules) addRuleRow(r);
   const addRuleBtn = el('button', undefined, 'Add rule');
   addRuleBtn.type = 'button';
   addRuleBtn.addEventListener('click', () => {
     rulesCollapsed = false;
-    addRuleRow({
+    addRuleRow(opts.blank());
+  });
+  rulesBody.append(ruleRowsWrap, addRuleBtn);
+  rulesBlock.append(rulesHead, rulesBody);
+  paintRulesHead();
+  // Saved order = on-screen order: rows may have been drag-reordered, so the
+  // DOM is the source of truth, not insertion order.
+  const collect = (): EditableRule[] =>
+    [...ruleRowsWrap.children]
+      .map((rowEl) => ruleRows.find((x) => x.root === rowEl))
+      .filter((x): x is RuleRow => x !== undefined)
+      .map((x) => x.get());
+  return { block: rulesBlock, collect };
+  };
+
+  const routingRules = buildRuleList({
+    label: 'Advanced: conditional rules',
+    title:
+      'Route a status conditionally, before the plain section mapping. Rules run top to bottom; ' +
+      "'next' falls through to the next rule.",
+    rules: s.statusRules,
+    sentinel: { value: NO_TICKET, bare: true },
+    repoChoices: s.ruleRepoChoices ?? [],
+    // 'needs-value' only means something for an empty-check; other ops hide it.
+    targets: (op) =>
+      op === 'empty' ? s.ruleTargetChoices : s.ruleTargetChoices.filter((c) => c !== 'needs-value'),
+    blank: () => ({
       status: [...knownStatusNames.values()][0] ?? '',
       field: 'fixVersions',
       op: 'empty',
@@ -1476,11 +1578,55 @@ const openSettings = async (): Promise<void> => {
       also: [],
       then: 'active',
       else: 'next',
-    });
+    }),
   });
-  rulesBody.append(ruleRowsWrap, addRuleBtn);
-  rulesBlock.append(rulesHead, rulesBody);
-  paintRulesHead();
+
+  // Tickets with no MR at all: the switch, the statuses where that's a problem
+  // rather than a fact, and the rules that decide it case by case.
+  const noMrEnabled = checkboxField('Show active tickets that have no MR', s.noMrEnabled !== false);
+  noMrEnabled.wrap.title =
+    'Every row in this app starts from an MR, so a ticket you have not pushed a branch for is otherwise invisible.';
+  const expectSet = new Map<string, string>(); // lowercase → display casing
+  for (const st of s.noMrExpectStatuses ?? []) {
+    learnStatus(st);
+    expectSet.set(st.toLowerCase(), st);
+  }
+  const expectWrap = statusChipField(
+    'Statuses where an MR is expected',
+    expectSet,
+    (st) => `A missing MR at ${st} becomes a plain note again, not a warning`,
+  );
+  expectWrap.title =
+    'At these statuses a missing MR is a warning. Everywhere else it is a muted note — visible, not nagging.';
+  const noMrRules = buildRuleList({
+    label: 'Advanced: which tickets need an MR',
+    title:
+      "Decide per ticket whether an MR is expected. 'exempt' drops the row entirely (spikes, research), " +
+      "'expect' warns even at a status not listed above.",
+    rules: s.noMrRules ?? [],
+    // '(any status)' is a wildcard, not a bare rule: the conditions still apply.
+    sentinel: { value: ANY_STATUS, bare: false },
+    targets: () => s.mrRuleTargetChoices ?? ['expect', 'exempt', 'next'],
+    blank: () => ({
+      status: ANY_STATUS,
+      field: 'issueType',
+      op: 'matches',
+      value: '',
+      also: [],
+      then: 'exempt',
+      else: 'next',
+    }),
+  });
+  const noMrBlock = el('div', 'status-sections');
+  noMrBlock.append(el('div', 'field-label', 'Tickets without an MR'), noMrEnabled.wrap);
+  const noMrBody = el('div', 'settings-sub');
+  noMrBody.append(expectWrap, noMrRules.block);
+  noMrBlock.append(noMrBody);
+  const syncNoMr = (): void => {
+    noMrBody.style.display = noMrEnabled.input.checked ? '' : 'none';
+  };
+  noMrEnabled.input.addEventListener('change', syncNoMr);
+  syncNoMr();
   const recent = numberField('Also watch MRs updated within N days (0 = active tickets only)', s.recentDaysFallback);
   const pollSecs = numberField('Poll every N seconds', s.pollBaseSeconds);
 
@@ -1559,43 +1705,11 @@ const openSettings = async (): Promise<void> => {
   for (const st of s.slackReadyStatuses) readySet.set(st.toLowerCase(), st);
   const slackBlock = el('div', 'status-sections');
   slackBlock.append(el('div', 'field-label', 'Copy for Slack'));
-  const readyWrap = el('div', 'field msf');
-  readyWrap.append(el('span', 'field-label', 'Ready-for-review statuses'));
-  const readyBox = el('div', 'msf-box');
-  const readyPanel = el('div', 'msf-panel');
-  registerDropdown(readyBox, readyPanel);
-  const paintReady = (): void => {
-    readyBox.replaceChildren();
-    if (readySet.size === 0) readyBox.append(el('span', 'msf-placeholder', 'Click to choose statuses…'));
-    for (const status of readySet.values()) {
-      readyBox.append(
-        createRemovableChip(status, {
-          removeTitle: `Stop offering Copy for Slack on ${status}`,
-          onRemove: (e) => {
-            e.stopPropagation();
-            readySet.delete(status.toLowerCase());
-            paintReady();
-          },
-        }),
-      );
-    }
-    readyPanel.replaceChildren();
-    const names = [...knownStatusNames.values()].sort((a, b) => a.localeCompare(b));
-    for (const name of names) {
-      const row = el('div', 'msf-row');
-      row.append(el('span', undefined, name));
-      if (readySet.has(name.toLowerCase())) row.append(el('span', 'msf-row-check', '✓'));
-      row.addEventListener('click', () => {
-        if (readySet.has(name.toLowerCase())) readySet.delete(name.toLowerCase());
-        else readySet.set(name.toLowerCase(), name);
-        paintReady();
-      });
-      readyPanel.append(row);
-    }
-  };
-  repaints.push(paintReady);
-  paintReady();
-  readyWrap.append(readyBox, readyPanel);
+  const readyWrap = statusChipField(
+    'Ready-for-review statuses',
+    readySet,
+    (status) => `Stop offering Copy for Slack on ${status}`,
+  );
   const slackTemplateField = textField(
     'Message template',
     s.slackTemplate,
@@ -1727,15 +1841,15 @@ const openSettings = async (): Promise<void> => {
         .map((a) => a.status),
       statusAssignments: [...assignments.values()],
       sectionChoices: s.sectionChoices,
-      // Saved order = on-screen order (rows may have been drag-reordered).
-      statusRules: [...ruleRowsWrap.children]
-        .map((rowEl) => ruleRows.find((r) => r.root === rowEl))
-        .filter((r): r is (typeof ruleRows)[number] => r !== undefined)
-        .map((r) => r.get()),
+      statusRules: routingRules.collect(),
       ruleFieldChoices: s.ruleFieldChoices,
       ruleOpChoices: s.ruleOpChoices,
       ruleTargetChoices: s.ruleTargetChoices,
       ruleRepoChoices: s.ruleRepoChoices,
+      noMrEnabled: noMrEnabled.input.checked,
+      noMrExpectStatuses: [...expectSet.values()],
+      noMrRules: noMrRules.collect(),
+      mrRuleTargetChoices: s.mrRuleTargetChoices,
       recentDaysFallback: Number(recent.input.value),
       notificationsEnabled: notify.input.checked,
       notificationSound: sound.select.value,
@@ -1791,7 +1905,7 @@ const openSettings = async (): Promise<void> => {
   const settingsPanes: Record<string, HTMLElement> = {
     General: paneOf([updateStyle.wrap, login.wrap]),
     Git: paneOf([forgeSel.wrap, rwxEnabled.wrap, ...repoFields.map((f) => f.row)]),
-    Jira: paneOf([atlassianUrl.wrap, email.wrap, ownerWrap, statusBlock, rulesBlock]),
+    Jira: paneOf([atlassianUrl.wrap, email.wrap, ownerWrap, statusBlock, routingRules.block, noMrBlock]),
     Polling: paneOf([pollSecs.wrap, recent.wrap, hoursEnabled.wrap, hoursBlock]),
     Slack: paneOf([slackBlock]),
     Notifications: paneOf([notify.wrap, sound.wrap, method.wrap]),

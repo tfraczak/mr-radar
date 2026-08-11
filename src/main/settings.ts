@@ -1,10 +1,13 @@
 import {
+  ANY_STATUS,
   FORGES,
+  MR_RULE_TARGETS,
+  type MrRule,
   type RuleCondition,
   type RuleField, APPEARANCES, NOTIFICATION_METHODS, NOTIFICATION_SOUNDS, RULE_FIELDS, RULE_OPS, RULE_TARGETS, THEMES, type Config, type StatusRule } from '../core/config';
 import type { Db } from '../core/db';
 import { isPinnedHttpsOrigin } from '../core/sources/jira';
-import type { EditableSettings } from '../renderer/contract';
+import type { EditableRule, EditableSettings } from '../renderer/contract';
 
 /**
  * Every status the section picker should offer: statuses ever seen on tracked
@@ -21,6 +24,9 @@ export const knownStatuses = (db: Db, config: Config): string[] => {
   for (const s of config.statusSections.hidden) add(s);
   for (const s of config.statusSections.verification) add(s);
   for (const s of config.statusSections.done) add(s);
+  // Statuses only named by the no-MR settings still belong in the pickers.
+  for (const s of config.noMr.expectStatuses) add(s);
+  for (const r of config.noMr.rules) if (r.status !== ANY_STATUS) add(r.status);
   return [...out.values()].sort((a, b) => a.localeCompare(b));
 }
 
@@ -53,6 +59,19 @@ export const knownRepos = (db: Db, config: Config): string[] => {
   return [...out].sort((a, b) => a.localeCompare(b));
 }
 
+/**
+ * Config rule → form row: every field a string, `else` always present as 'next'
+ * so the builder can render a rule with no else branch without special cases.
+ */
+const toEditableRule = (r: StatusRule | MrRule): EditableRule => ({
+  ...r,
+  field: r.field ?? '',
+  repo: 'repo' in r ? (r.repo ?? '') : '',
+  value: r.value ?? '',
+  else: r.else ?? 'next',
+  also: (r.also ?? []).map((c) => ({ connector: c.connector, field: c.field, op: c.op, value: c.value ?? '' })),
+});
+
 export const toEditable = (config: Config, repoChoices: string[] = [], activeForge: 'gitlab' | 'github' = 'gitlab'): EditableSettings => {
   const h = config.poll.activeHours;
   return {
@@ -62,18 +81,15 @@ export const toEditable = (config: Config, repoChoices: string[] = [], activeFor
     ownerFields: config.jira.ownerFields,
     statusAssignments: toAssignments(config),
     sectionChoices: ['active', 'verification', 'done', 'ignore', 'other'],
-    statusRules: config.statusRules.map((r) => ({
-      ...r,
-      field: r.field ?? '',
-      repo: r.repo ?? '',
-      value: r.value ?? '',
-      else: r.else ?? 'next',
-      also: (r.also ?? []).map((c) => ({ connector: c.connector, field: c.field, op: c.op, value: c.value ?? '' })),
-    })),
+    statusRules: config.statusRules.map(toEditableRule),
     ruleRepoChoices: repoChoices.length ? repoChoices : Object.keys(config.repos).sort(),
     ruleFieldChoices: [...RULE_FIELDS],
     ruleOpChoices: [...RULE_OPS],
     ruleTargetChoices: [...RULE_TARGETS],
+    noMrEnabled: config.noMr.enabled,
+    noMrExpectStatuses: config.noMr.expectStatuses,
+    noMrRules: config.noMr.rules.map(toEditableRule),
+    mrRuleTargetChoices: [...MR_RULE_TARGETS],
     recentDaysFallback: config.recentDaysFallback,
     notificationsEnabled: config.notifications.enabled,
     notificationSound: config.notifications.sound,
@@ -144,6 +160,57 @@ export const validateEditable = (s: EditableSettings): string | undefined => {
 }
 
 /**
+ * Form row → config rule, or undefined for a row that isn't coherent — a
+ * half-edited card must not brick the config. `targets` is what makes this
+ * shared: section routing and MR expectations differ only in their vocabulary.
+ */
+const sanitizeRule = <Target extends string>(
+  r: EditableRule,
+  targets: readonly Target[],
+  opts: { repo?: boolean } = {},
+): {
+  status: string;
+  repo?: string;
+  field?: RuleField;
+  op: StatusRule['op'];
+  value?: string;
+  also?: RuleCondition[];
+  then: Target;
+  else?: Target;
+} | undefined => {
+  const status = r.status?.trim();
+  if (!status) return undefined;
+  // Unconditional ('always') rules have no field; every other op needs one.
+  if (r.op !== 'always' && !(RULE_FIELDS as readonly string[]).includes(r.field)) return undefined;
+  if (!(RULE_OPS as readonly string[]).includes(r.op)) return undefined;
+  if (!(targets as readonly string[]).includes(r.then)) return undefined;
+  if (r.else && r.else !== 'next' && !(targets as readonly string[]).includes(r.else)) return undefined;
+
+  const also = (r.also ?? []).flatMap((c): RuleCondition[] => {
+    if (c.connector !== 'and' && c.connector !== 'or') return [];
+    if (!(RULE_FIELDS as readonly string[]).includes(c.field)) return [];
+    if (!(RULE_OPS as readonly string[]).includes(c.op) || c.op === 'always') return [];
+    return [{
+      connector: c.connector,
+      field: c.field as RuleField,
+      op: c.op as RuleCondition['op'],
+      ...(c.value?.trim() ? { value: c.value.trim() } : {}),
+    }];
+  });
+
+  return {
+    status,
+    ...(opts.repo && r.repo?.trim() ? { repo: r.repo.trim() } : {}),
+    op: r.op as StatusRule['op'],
+    ...(r.value?.trim() ? { value: r.value.trim() } : {}),
+    ...(r.op !== 'always' ? { field: r.field as RuleField } : {}),
+    ...(r.op !== 'always' && also.length ? { also } : {}),
+    then: r.then as Target,
+    ...(r.else && r.else !== 'next' ? { else: r.else as Target } : {}),
+  };
+};
+
+/**
  * Fold the edited settings into the raw config object, preserving unknown keys.
  * Returns the new raw object to persist.
  */
@@ -195,38 +262,27 @@ export const applyEditable = (
   }
 
   if (Array.isArray(s.statusRules)) {
-    // Keep only well-formed rules; a half-edited row must not brick the config.
     next.statusRules = s.statusRules.flatMap((r): StatusRule[] => {
-      const status = r.status?.trim();
-      if (!status) return [];
-      // Unconditional ('always') rules have no field; every other op needs one.
-      if (r.op !== 'always' && !(RULE_FIELDS as readonly string[]).includes(r.field)) return [];
-      if (!(RULE_OPS as readonly string[]).includes(r.op)) return [];
-      if (!(RULE_TARGETS as readonly string[]).includes(r.then)) return [];
-      if (r.else && r.else !== 'next' && !(RULE_TARGETS as readonly string[]).includes(r.else)) return [];
-      const rule: StatusRule = {
-        status,
-        ...(r.repo?.trim() ? { repo: r.repo.trim() } : {}),
-        op: r.op as StatusRule['op'],
-        ...(r.value?.trim() ? { value: r.value.trim() } : {}),
-        then: r.then as StatusRule['then'],
-      };
-      if (r.else && r.else !== 'next') rule.else = r.else as StatusRule['then'];
-      if (r.op !== 'always') rule.field = r.field as RuleField;
-      const also = (r.also ?? []).flatMap((c): RuleCondition[] => {
-        if (c.connector !== 'and' && c.connector !== 'or') return [];
-        if (!(RULE_FIELDS as readonly string[]).includes(c.field)) return [];
-        if (!(RULE_OPS as readonly string[]).includes(c.op) || c.op === 'always') return [];
-        return [{
-          connector: c.connector,
-          field: c.field as RuleField,
-          op: c.op as RuleCondition['op'],
-          ...(c.value?.trim() ? { value: c.value.trim() } : {}),
-        }];
-      });
-      if (r.op !== 'always' && also.length) rule.also = also;
-      return [rule];
+      const rule = sanitizeRule(r, RULE_TARGETS, { repo: true });
+      return rule ? [rule] : [];
     });
+  }
+
+  // The no-MR section. Written whole (like slack) but only when the shell sent
+  // it, so an older UI can't silently switch the feature off.
+  if (typeof s.noMrEnabled === 'boolean' || Array.isArray(s.noMrExpectStatuses)) {
+    const noMr = { ...(asObject(next.noMr) ?? {}) };
+    if (typeof s.noMrEnabled === 'boolean') noMr.enabled = s.noMrEnabled;
+    if (Array.isArray(s.noMrExpectStatuses)) {
+      noMr.expectStatuses = s.noMrExpectStatuses.map((v) => String(v).trim()).filter(Boolean);
+    }
+    if (Array.isArray(s.noMrRules)) {
+      noMr.rules = s.noMrRules.flatMap((r): MrRule[] => {
+        const rule = sanitizeRule(r, MR_RULE_TARGETS);
+        return rule ? [rule] : [];
+      });
+    }
+    next.noMr = noMr;
   }
 
   next.recentDaysFallback = s.recentDaysFallback;
@@ -303,6 +359,7 @@ const asObject = (v: unknown): Record<string, unknown> | undefined => {
 const SHAREABLE_KEYS = [
   'statusSections',
   'statusRules',
+  'noMr',
   'ui',
   'poll',
   'notifications',

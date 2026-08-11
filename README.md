@@ -101,6 +101,18 @@ Dev Complete ticket with *no fix version* to its own "needs a fix version" secti
 in-app picker) and versioned ones to Verification. Rules support per-repo scoping, issue-type
 regexes, due dates, clone/remove, and fall-through.
 
+**Tickets with no MR.** The radar is MR-shaped, so the one state it can't show from the
+GitLab side is *you haven't started*: a ticket assigned to you, in flight, with no branch
+pushed. Those tickets now appear inline among the active groups as a dashed placeholder row
+carrying the Jira summary and a **No MR yet** line — muted by default, and a warning at the
+statuses where an MR really is expected (Settings → **Jira** → *Tickets without an MR*,
+default `Code Review`). **Advanced: which tickets need an MR** decides case by case with the
+same rule builder: `(any status)` when *issueType* matches `spike|research` → **exempt**
+drops the row entirely, **expect** promotes it to a warning. Statuses mapped to
+Verification/Done/Hide are skipped — a ticket gets there *after* its MR merged, and merged
+MRs leave the radar. The rows sort among the real ones, count toward **My work**, and have
+their own **No MR yet** filter.
+
 **Ignoring MRs.** Two paths, one destination: a status rule with the `ignore` target
 (e.g. the `(no ticket)` sentinel), or the eye control on any ticket header/row. Either way
 the MR moves to a collapsed **Ignored** section at the very bottom and goes fully silent —
@@ -217,8 +229,11 @@ Within each tab, MRs are grouped by Jira ticket. Each row carries:
   page. Runs you start are watched to completion and notify their result even if they scroll
   out of RWX's recent-runs window.
 
+A ticket with no merge request at all gets one dashed row of its own instead (see *Tickets
+without an MR* above), so work you haven't pushed can't hide behind the absence of an MR.
+
 Clicking a row opens the MR; clicking a CI chip opens the run or pipeline; clicking a ticket
-opens Jira. The footer shows per-source health and the last poll time.
+opens Jira (a no-MR row opens its ticket — there's nothing else to open). The footer shows per-source health and the last poll time.
 
 ## Scope: why it's not just "all my MRs"
 

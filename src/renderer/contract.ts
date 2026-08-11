@@ -151,6 +151,26 @@ export interface UiItem {
 /** Where a Jira status renders. 'other' = the default unmapped bucket. */
 export type StatusSection = 'active' | 'verification' | 'done' | 'ignore' | 'other';
 
+/**
+ * One row of the rule builder, in the loose shape the form round-trips: every
+ * field a string, `else` always present as 'next' when there's no branch.
+ * Shared by section-routing rules and MR expectations so both get the same
+ * builder — `repo` is routing-only (a ticket with no MR has no repo).
+ */
+export interface EditableRule {
+  status: string;
+  /** Project path scope; '' = any repo. */
+  repo?: string | undefined;
+  field: string;
+  op: string;
+  value?: string | undefined;
+  /** Extra chained conditions ('and'/'or' connector each). */
+  also: { connector: string; field: string; op: string; value: string }[];
+  then: string;
+  /** 'next' = no else branch (fall through). */
+  else: string;
+}
+
 export interface EditableSettings {
   jiraEmail: string;
   jiraBaseUrl: string;
@@ -164,24 +184,20 @@ export interface EditableSettings {
   statusAssignments: { status: string; section: StatusSection }[];
   sectionChoices: StatusSection[];
   /** Advanced conditional routing rules, evaluated before the section map. */
-  statusRules: {
-    status: string;
-    /** Project path scope; '' = any repo. */
-    repo?: string | undefined;
-    field: string;
-    op: string;
-    value?: string | undefined;
-    /** Extra chained conditions ('and'/'or' connector each). */
-    also: { connector: string; field: string; op: string; value: string }[];
-    then: string;
-    /** 'next' = no else branch (fall through). */
-    else: string;
-  }[];
+  statusRules: EditableRule[];
   ruleFieldChoices: string[];
   ruleOpChoices: string[];
   ruleTargetChoices: string[];
   /** Repos the radar tracks (observed ∪ configured), for rule scoping. */
   ruleRepoChoices: string[];
+  /** Show a row for active tickets that have no merge request at all. */
+  noMrEnabled: boolean;
+  /** Statuses where a missing MR is a warning rather than a note. */
+  noMrExpectStatuses: string[];
+  /** Advanced expectations/exemptions, evaluated before the status list. */
+  noMrRules: EditableRule[];
+  /** Targets for the MR-expectation rules: expect / exempt / next. */
+  mrRuleTargetChoices: string[];
   recentDaysFallback: number;
   notificationsEnabled: boolean;
   notificationSound: string;
