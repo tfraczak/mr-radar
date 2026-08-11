@@ -152,6 +152,12 @@ export const diff = (input: DiffInput): DiffResult => {
           ticket_key: item.ticket?.key ?? (stillClaims(item, prev?.ticket_key) ? prev!.ticket_key : null),
           ticket_status:
             item.ticket?.status ?? (stillClaims(item, prev?.ticket_key) ? (prev?.ticket_status ?? null) : null),
+          // The whole ticket, not just its status: the next cadence miss
+          // rebuilds from this, and a ticket missing fixVersions/issueType
+          // reads as UNKNOWN, which silently flips every `empty` rule.
+          ticket_json: item.ticket
+            ? JSON.stringify(item.ticket)
+            : (stillClaims(item, prev?.ticket_key) ? (prev?.ticket_json ?? null) : null),
           unverified_count: item.unverifiedCache ? String(item.unverifiedCache.count) : null,
           unverified_sha: item.unverifiedCache?.sha ?? null,
         },

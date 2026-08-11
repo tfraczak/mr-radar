@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Db } from '../src/core/db';
 import { DEFAULT_CONFIG, type Config } from '../src/core/config';
+import { ruleTarget } from '../src/core/rules';
 import { pollOnce, refreshItem, type PollDeps } from '../src/core/poll';
 import type { ForgeMr, JiraTicket, RwxRun } from '../src/core/types';
 
@@ -550,5 +551,135 @@ describe('refreshItem (the Copy-for-Slack freshness pass)', () => {
     expect(item.draft).toBe(false);
     expect((item as { threads?: unknown[] }).threads).toEqual([]); // forced fetch
     expect((item as { testGate?: { kind: string } }).testGate?.kind).toBe('none');
+  });
+});
+
+describe('non-active tickets between Jira refreshes', () => {
+  // An authored MR in scope via recentDaysFallback, whose ticket is NOT in an
+  // active status — so its ticket comes from the by-key harvest, which only
+  // runs on a Jira refresh. On the cycles in between, the ticket is rebuilt
+  // from the MR row; if that rebuild is status-only, fixVersions reads as
+  // UNKNOWN and every `empty` rule quietly takes its else branch.
+  const mr = (): ForgeMr =>
+    ({
+      id: 1,
+      iid: 7690,
+      project_id: 1,
+      title: 'ENG-121: Capture callback timeouts',
+      state: 'opened',
+      sha: 'abc',
+      source_branch: 'ENG-121',
+      target_branch: 'main',
+      web_url: '#',
+      updated_at: '2026-07-30T11:00:00Z',
+      created_at: '2026-07-29T11:00:00Z',
+      user_notes_count: 0,
+      draft: false,
+      has_conflicts: false,
+      author: { id: 1, username: 'me', name: 'Me' },
+      references: { full: 'acme/rocket!7690' },
+    }) as ForgeMr;
+
+  const devComplete: JiraTicket = {
+    key: 'ENG-121',
+    summary: 'Capture callback timeouts',
+    status: 'Dev Complete',
+    updated: '2026-07-30T10:00:00Z',
+    url: '#',
+    issueType: 'Story',
+    fixVersions: [], // known-empty: the ticket has none assigned
+  };
+  // One genuinely active ticket, so the cached set is non-empty and the next
+  // cycle is a real cadence miss rather than another refresh.
+  const active: JiraTicket = { key: 'ENG-1', summary: '', status: 'Code Review', updated: '', url: '#' };
+
+  const cfg = (): Config => ({
+    ...config(),
+    recentDaysFallback: 14, // what puts an MR with no active ticket in scope
+  });
+
+  const jira = (over: Partial<Record<string, unknown>> = {}) => ({
+    configured: true,
+    search: async () => [active],
+    searchByKeys: async () => [devComplete],
+    ...over,
+  });
+
+  const ticketOf = (result: Awaited<ReturnType<typeof pollOnce>>) =>
+    result.snapshot.items.find((i) => i.iid === 7690)?.ticket;
+
+  it('carries the full ticket on the refreshing cycle', async () => {
+    const forge = fakeForge({ authoredMrs: async () => [mr()] });
+    const result = await pollOnce(deps({ db, forge: forge as never, jira: jira() as never, config: cfg() }), {});
+    expect(ticketOf(result)?.status).toBe('Dev Complete');
+    expect(ticketOf(result)?.fixVersions).toEqual([]);
+  });
+
+  it('still knows fixVersions is empty on the next cycle, without asking Jira', async () => {
+    const forge = fakeForge({ authoredMrs: async () => [mr()] });
+    await pollOnce(deps({ db, forge: forge as never, jira: jira() as never, config: cfg() }), {});
+    // Same clock → inside refreshMinutes → no Jira refresh, no harvest. A
+    // searchByKeys call here is a bug in its own right, so make it fatal.
+    const offline = jira({
+      search: async () => {
+        throw new Error('should not refresh inside the TTL');
+      },
+      searchByKeys: async () => {
+        throw new Error('should not harvest on a cadence miss');
+      },
+    });
+    const second = await pollOnce(deps({ db, forge: forge as never, jira: offline as never, config: cfg() }), {});
+    const ticket = ticketOf(second);
+    expect(ticket?.status).toBe('Dev Complete'); // grouping preserved, as before
+    expect(ticket?.fixVersions).toEqual([]); // ...and the field is KNOWN-empty
+    expect(ticket?.issueType).toBe('Story'); // the other rule fields survive too
+    // The symptom this fixes: the default Dev Complete rule must reach its
+    // needs-value branch on a miss cycle, not fall through to Verification.
+    expect(ruleTarget(DEFAULT_CONFIG.statusRules, ticket, new Date('2026-07-30T12:00:00Z'), 'acme/rocket'))
+      .toBe('needs-value');
+  });
+
+  it('falls back to status-only for a row written before this column existed', async () => {
+    const at = '2026-07-30T12:00:00Z';
+    // An upgraded install: a cached active set (so the cycle is a miss) and an
+    // MR row carrying only the ticket's status, exactly as older builds wrote it.
+    db.replaceJiraTickets([active], at);
+    db.upsertMr(
+      {
+        key: 'acme/rocket!7690',
+        project_path: 'acme/rocket',
+        project_id: 1,
+        iid: 7690,
+        branch: 'ENG-121',
+        title: 'ENG-121: Capture callback timeouts',
+        head_sha: 'abc',
+        web_url: '#',
+        updated_at: '2026-07-30T11:00:00Z',
+        user_notes_count: 0,
+        unresolved: 0,
+        approvals_left: null,
+        approvals_required: null,
+        approvals_by: null,
+        has_conflicts: 0,
+        in_scope: 1,
+        reason: 'authored',
+        ticket_key: 'ENG-121',
+        ticket_status: 'Dev Complete',
+        ticket_json: null, // the pre-migration state
+        unverified_count: null,
+        unverified_sha: null,
+      },
+      at,
+    );
+    const forge = fakeForge({ authoredMrs: async () => [mr()] });
+    const offline = jira({
+      searchByKeys: async () => {
+        throw new Error('should not harvest on a cadence miss');
+      },
+    });
+    const result = await pollOnce(deps({ db, forge: forge as never, jira: offline as never, config: cfg() }), {});
+    const ticket = ticketOf(result);
+    expect(ticket?.status).toBe('Dev Complete'); // still grouped by status
+    expect(ticket?.fixVersions).toBeUndefined(); // and honestly unknown, not []
   });
 });

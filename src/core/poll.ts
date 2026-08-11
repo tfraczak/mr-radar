@@ -11,7 +11,7 @@ import {
 } from './ci';
 import { buildJql, ownerClause, type Config } from './config';
 import { correlate, detailsChanged, summarizeThreads, unresolvedCount } from './correlate';
-import type { Db } from './db';
+import { cachedTicket, type Db } from './db';
 import { coalesce, diff } from './events';
 import { effectiveIgnore } from './rules';
 import type { ForgeSource } from './sources/forge';
@@ -203,7 +203,20 @@ export const pollOnce = async (deps: PollDeps, opts: { dryRun?: boolean } = {}):
     for (const item of needStatus) {
       const prev = db.getMr(item.key);
       const claimed = prev?.ticket_key && candidatesOf(item).some((c) => c.key === prev.ticket_key);
-      if (claimed && prev?.ticket_key && prev.ticket_status) {
+      if (!claimed || !prev?.ticket_key) continue;
+      // Prefer the WHOLE ticket the last harvest persisted. The status-only
+      // stand-in below leaves fixVersions and issueType unknown, and `empty`
+      // means KNOWN-empty — so a Dev Complete ticket with no fix version took
+      // its rule's else branch (Verification) on every cycle between Jira
+      // refreshes, and only looked right in the one cycle that refreshed.
+      const cached = cachedTicket(prev.ticket_json, prev.ticket_key);
+      if (cached) {
+        item.ticket = cached;
+        continue;
+      }
+      // No cached ticket yet (a row written before this column existed, or a
+      // first sighting): status-only, which still groups the MR correctly.
+      if (prev.ticket_status) {
         item.ticket = {
           key: prev.ticket_key,
           summary: '',

@@ -185,6 +185,12 @@ export class Db {
       // decide). Deliberately outside upsertMr's column list so it survives
       // every cycle, and dies with the row when the closed MR is pruned.
       'ALTER TABLE mrs ADD COLUMN ignore_override TEXT',
+      // The last-known FULL ticket for this MR, as JSON. ticket_status alone
+      // was not enough: rebuilding a ticket from it leaves fixVersions and
+      // issueType unknown, and an `empty` rule treats unknown as "not empty"
+      // — so between Jira refreshes a Dev Complete ticket with no fix version
+      // took its rule's else branch instead of the needs-value one.
+      'ALTER TABLE mrs ADD COLUMN ticket_json TEXT',
     ]) {
       try {
         this.db.exec(stmt);
@@ -249,8 +255,8 @@ export class Db {
            key, project_path, project_id, iid, branch, title, head_sha, web_url,
            updated_at, user_notes_count, unresolved, approvals_left, approvals_required,
            approvals_by, has_conflicts, in_scope, reason, ticket_key, ticket_status,
-           unverified_count, unverified_sha, first_seen_at, last_seen_at
-         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+           ticket_json, unverified_count, unverified_sha, first_seen_at, last_seen_at
+         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
          ON CONFLICT(key) DO UPDATE SET
            project_path = excluded.project_path,
            project_id = excluded.project_id,
@@ -270,6 +276,7 @@ export class Db {
            reason = excluded.reason,
            ticket_key = excluded.ticket_key,
            ticket_status = excluded.ticket_status,
+           ticket_json = excluded.ticket_json,
            unverified_count = excluded.unverified_count,
            unverified_sha = excluded.unverified_sha,
            last_seen_at = excluded.last_seen_at`,
@@ -294,6 +301,7 @@ export class Db {
         row.reason,
         row.ticket_key ?? null,
         row.ticket_status ?? null,
+        row.ticket_json ?? null,
         row.unverified_count ?? null,
         row.unverified_sha ?? null,
         at,
@@ -709,6 +717,8 @@ export interface MrRow {
   reason: string;
   ticket_key: string | null;
   ticket_status: string | null;
+  /** JSON JiraTicket — the last harvest's full ticket, not just its status. */
+  ticket_json: string | null;
   unverified_count: string | null;
   unverified_sha: string | null;
   ignore_override: string | null;
@@ -730,6 +740,41 @@ const parseFixVersions = (raw: string): { id: string; name: string }[] => {
   } catch {
     return [];
   }
+};
+
+/**
+ * The MR row's cached ticket, or undefined when there isn't a usable one.
+ *
+ * `expectedKey` guards against reviving a stranger's ticket: the caller has
+ * already decided which key this MR still claims, and anything else in the
+ * column — a retitled MR, a hand-edited DB — is ignored rather than trusted.
+ * Absent fields stay absent: an unknown `fixVersions` must keep reading as
+ * unknown, never as known-empty, or a stale row could invent an actionable state.
+ */
+export const cachedTicket = (raw: string | null, expectedKey: string): JiraTicket | undefined => {
+  if (!raw) return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return undefined;
+  const t = parsed as Record<string, unknown>;
+  if (t.key !== expectedKey || typeof t.status !== 'string' || !t.status) return undefined;
+  const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined);
+  return {
+    key: expectedKey,
+    summary: str(t.summary) ?? '',
+    status: t.status,
+    updated: str(t.updated) ?? '',
+    url: str(t.url) ?? '',
+    ...(str(t.dueDate) ? { dueDate: str(t.dueDate)! } : {}),
+    ...(str(t.statusCategory) ? { statusCategory: str(t.statusCategory)! } : {}),
+    ...(str(t.resolutionDate) ? { resolutionDate: str(t.resolutionDate)! } : {}),
+    ...(str(t.issueType) ? { issueType: str(t.issueType)! } : {}),
+    ...(Array.isArray(t.fixVersions) ? { fixVersions: parseFixVersions(JSON.stringify(t.fixVersions)) } : {}),
+  };
 };
 
 export interface CiRunRow {
