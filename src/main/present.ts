@@ -92,9 +92,11 @@ export const present = (
       stale: h.stale,
     })),
     highlight: state.highlight,
-    // No-MR rows join the active groups: same section, same sort, same tab —
-    // the ticket is part of the work in flight, it just has nothing to review.
-    groups: [...groups, ...missing.map(noMrGroup)],
+    groups,
+    // Their own section rather than mixed in with the MRs: on real data these
+    // outnumbered the actual merge requests, and a ticket you have not started
+    // is a different kind of thing from one waiting on review.
+    noMrGroups: missing.map(noMrGroup),
     needsGroups,
     verificationGroups,
     doneGroups,

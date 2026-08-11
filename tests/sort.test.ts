@@ -48,30 +48,17 @@ const noMrGroup = (key: string, rank: number, updated = T0): UiGroup => ({
 const order = (groups: UiGroup[], mode: SortMode): string[] =>
   sortedGroups(groups, mode).map((g) => g.ticket?.key ?? '(none)');
 
-describe("the 'MRs first' sort", () => {
-  it('puts every MR group above every ticket without one', () => {
-    // The MR is the *least* urgent thing here and the no-MR ticket the most:
-    // only the partition can explain the order, not the ranks.
-    const groups = [noMrGroup('ENG-2', 2), mrGroup('ENG-1', 10)];
-    expect(order(groups, 'hasMr')).toEqual(['ENG-1', 'ENG-2']);
-    // ...where the attention sort does the opposite, which is the point of
-    // having both.
-    expect(order(groups, 'attention')).toEqual(['ENG-2', 'ENG-1']);
-  });
-
-  it('keeps each half ordered by urgency', () => {
-    const groups = [
-      mrGroup('ENG-1', 8),
-      noMrGroup('ENG-4', 9),
-      mrGroup('ENG-2', 1),
-      noMrGroup('ENG-3', 2),
-    ];
-    expect(order(groups, 'hasMr')).toEqual(['ENG-2', 'ENG-1', 'ENG-3', 'ENG-4']);
+describe('no-MR groups within their own section', () => {
+  it('orders by urgency: an expected MR above a merely-absent one', () => {
+    // The section is homogeneous, so the default sort is what ranks it —
+    // "expected at this status" (warn) has to come before "not started yet".
+    const groups = [noMrGroup('ENG-9', 9), noMrGroup('ENG-3', 2), noMrGroup('ENG-8', 9)];
+    expect(order(groups, 'attention')).toEqual(['ENG-3', 'ENG-9', 'ENG-8']);
   });
 
   it('is stable for equal keys', () => {
     const groups = [noMrGroup('ENG-9', 9), noMrGroup('ENG-8', 9), noMrGroup('ENG-7', 9)];
-    expect(order(groups, 'hasMr')).toEqual(['ENG-9', 'ENG-8', 'ENG-7']);
+    expect(order(groups, 'attention')).toEqual(['ENG-9', 'ENG-8', 'ENG-7']);
   });
 });
 
@@ -92,20 +79,10 @@ describe('no-MR groups in the other sorts', () => {
     expect(order(groups, 'active')).toEqual(['ENG-new', 'ENG-old']);
   });
 
-  it('interleaves with MR groups by attention, its default', () => {
-    const groups = [mrGroup('ENG-1', 10), noMrGroup('ENG-2', 2), mrGroup('ENG-3', 3)];
-    expect(order(groups, 'attention')).toEqual(['ENG-2', 'ENG-3', 'ENG-1']);
-  });
-
-  it('sinks below any group with comments when sorting by comments', () => {
-    const groups = [noMrGroup('ENG-2', 2), mrGroup('ENG-1', 10, { commentCount: 4 })];
-    expect(order(groups, 'comments')).toEqual(['ENG-1', 'ENG-2']);
-  });
-
   it('sorts by workflow rank under the status sort, like any group', () => {
-    // Code Review (0) outranks In Development (3) whether or not an MR exists.
-    const groups = [mrGroup('ENG-1', 0), noMrGroup('ENG-2', 2)];
-    expect(order(groups, 'status')).toEqual(['ENG-2', 'ENG-1']);
+    // Code Review (0) outranks In Development (3).
+    const groups = [noMrGroup('ENG-1', 9), { ...noMrGroup('ENG-2', 9), ticket: { key: 'ENG-2', status: 'In Development', url: '#', statusRank: 3 } }];
+    expect(order(groups, 'status')).toEqual(['ENG-1', 'ENG-2']);
   });
 });
 

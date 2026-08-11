@@ -30,6 +30,9 @@ export interface UiSnapshot {
   sources: { name: string; ok: boolean; error?: string | undefined; stale?: boolean | undefined }[];
   /** Active-status ticket groups, shown expanded at the top. */
   groups: UiGroup[];
+  /** Active tickets with no merge request at all — their own collapsed section,
+   *  so a list of MRs stays a list of MRs. Every group here carries `noMr`. */
+  noMrGroups: UiGroup[];
   /** Dev Complete tickets still needing a fix version — actionable, own section.
    *  (Dev Complete WITH a version, or data fixes, land in otherGroups instead.) */
   needsGroups: UiGroup[];

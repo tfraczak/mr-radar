@@ -572,10 +572,11 @@ describe('tickets with no MR', () => {
       ACTIVE, NOW, 'rebase', DEFAULT_CONFIG.statusSections, [], DEFAULT_CONFIG.slack, 'active', noMr,
     );
 
-  it('joins the active groups as an itemless group carrying the ticket', () => {
+  it('lands in its own section as an itemless group carrying the ticket', () => {
     const snap = presentWith([], [t('ENG-9', 'In Development')]);
-    expect(snap.groups).toHaveLength(1);
-    const g = snap.groups[0];
+    expect(snap.groups).toHaveLength(0); // never mixed in with the MRs
+    expect(snap.noMrGroups).toHaveLength(1);
+    const g = snap.noMrGroups[0];
     expect(g?.items).toEqual([]);
     expect(g?.ticket?.key).toBe('ENG-9');
     expect(g?.noMr?.summary).toBe('ENG-9 needs a branch');
@@ -584,8 +585,8 @@ describe('tickets with no MR', () => {
 
   it('warns, urgently, at a status where an MR is expected', () => {
     const snap = presentWith([], [t('ENG-9', 'Code Review')]);
-    expect(snap.groups[0]?.noMr?.expected).toBe(true);
-    expect(snap.groups[0]?.noMr?.attention).toEqual({
+    expect(snap.noMrGroups[0]?.noMr?.expected).toBe(true);
+    expect(snap.noMrGroups[0]?.noMr?.attention).toEqual({
       text: 'No MR yet — expected at Code Review',
       tone: 'warn',
       rank: 2,
@@ -595,13 +596,14 @@ describe('tickets with no MR', () => {
   it('stays quiet once the ticket has an MR', () => {
     const jira = t('ENG-9', 'In Development');
     const snap = presentWith([item({ ticket: jira })], [jira]);
+    expect(snap.noMrGroups).toEqual([]);
     expect(snap.groups).toHaveLength(1);
-    expect(snap.groups[0]?.noMr).toBeUndefined();
     expect(snap.groups[0]?.items).toHaveLength(1);
   });
 
   it('adds nothing when the feature is off', () => {
     const snap = presentWith([], [t('ENG-9', 'Code Review')], { ...DEFAULT_CONFIG.noMr, enabled: false });
+    expect(snap.noMrGroups).toEqual([]);
     expect(snap.groups).toEqual([]);
   });
 
@@ -614,6 +616,7 @@ describe('tickets with no MR', () => {
       ACTIVE, NOW, 'rebase', DEFAULT_CONFIG.statusSections, rules, DEFAULT_CONFIG.slack, 'active',
       DEFAULT_CONFIG.noMr,
     );
+    expect(snap.noMrGroups).toEqual([]);
     expect(snap.groups).toEqual([]);
     expect(snap.ignoredGroups).toHaveLength(1);
   });

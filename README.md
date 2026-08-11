@@ -103,16 +103,15 @@ regexes, due dates, clone/remove, and fall-through.
 
 **Tickets with no MR.** The radar is MR-shaped, so the one state it can't show from the
 GitLab side is *you haven't started*: a ticket assigned to you, in flight, with no branch
-pushed. Those tickets now appear inline among the active groups as a dashed placeholder row
-carrying the Jira summary and a **No MR yet** line — muted by default, and a warning at the
-statuses where an MR really is expected (Settings → **Jira** → *Tickets without an MR*,
+pushed. Those tickets get a collapsed **No MR yet** section of their own, above Verification: one
+dashed placeholder row each, carrying the Jira summary and a **No MR yet** line — muted by
+default, and a warning at the statuses where an MR really is expected (Settings → **Jira** → *Tickets without an MR*,
 default `Code Review`). **Advanced: which tickets need an MR** decides case by case with the
 same rule builder: `(any status)` when *issueType* matches `spike|research` → **exempt**
 drops the row entirely, **expect** promotes it to a warning. Statuses mapped to
 Verification/Done/Hide are skipped — a ticket gets there *after* its MR merged, and merged
-MRs leave the radar. The rows sort among the real ones, count toward **My work**, and have
-their own **No MR yet** filter — or sort **MRs first** to push every MR-less ticket to the
-bottom in one move.
+MRs leave the radar. The rows still count toward **My work** so nothing goes missing, and
+the **No MR yet** filter narrows to just them (which opens the section).
 
 **Ignoring MRs.** Two paths, one destination: a status rule with the `ignore` target
 (e.g. the `(no ticket)` sentinel), or the eye control on any ticket header/row. Either way
@@ -230,8 +229,9 @@ Within each tab, MRs are grouped by Jira ticket. Each row carries:
   page. Runs you start are watched to completion and notify their result even if they scroll
   out of RWX's recent-runs window.
 
-A ticket with no merge request at all gets one dashed row of its own instead (see *Tickets
-without an MR* above), so work you haven't pushed can't hide behind the absence of an MR.
+A ticket with no merge request at all gets one dashed row in the collapsed **No MR yet**
+section instead (see *Tickets without an MR* above), so work you haven't pushed can't hide
+behind the absence of an MR.
 
 Clicking a row opens the MR; clicking a CI chip opens the run or pipeline; clicking a ticket
 opens Jira (a no-MR row opens its ticket — there's nothing else to open). The footer shows per-source health and the last poll time.

@@ -203,7 +203,7 @@ const paintTabs = (s: UiSnapshot): void => {
   // No-MR rows carry no items, so they'd count as nothing — the one thing this
   // feature exists to prevent. Counted under their tab in both modes: a ticket
   // with no MR is active work by definition.
-  const noMrCount = s.groups.filter((g) => g.noMr).length;
+  const noMrCount = (s.noMrGroups ?? []).length;
   const count = (tab: Tab): number =>
     items.filter((i) => inTab(i, tab)).length + (tab === NO_MR_TAB ? noMrCount : 0);
   mainTabs.setLabel('work', `My work (${count('work')})`);
@@ -411,7 +411,7 @@ const renderStatus = (s: UiSnapshot): void => {
   const active =
     [...s.groups, ...(s.needsGroups ?? [])].reduce((n, g) => n + g.items.length, 0) +
     // A ticket with no MR is one active thing, with zero items to add up.
-    s.groups.filter((g) => g.noMr).length;
+    (s.noMrGroups ?? []).length;
   const tracked = s.trackedCount ?? active;
   parts.push(active === tracked ? `${active} active` : `${active} active · ${tracked} tracked`);
   statusEl.textContent = parts.join(' · ');
@@ -454,10 +454,12 @@ const renderList = (s: UiSnapshot): void => {
   }
 
   // The tab is the outermost cut: My work = authored, My reviews = the rest.
-  // No-MR groups have no items to test, so they're admitted by their own tab.
   const tabbed = s.groups
-    .map((g) => (g.noMr ? g : { ...g, items: g.items.filter((i) => inTab(i, prefs.tab)) }))
-    .filter((g) => (g.noMr ? prefs.tab === NO_MR_TAB : g.items.length > 0));
+    .map((g) => ({ ...g, items: g.items.filter((i) => inTab(i, prefs.tab)) }))
+    .filter((g) => g.items.length > 0);
+  // No-MR groups carry no items to test, so their whole section belongs to one
+  // tab: they're yours to push, with nothing on them to review.
+  const tabbedNoMr = prefs.tab === NO_MR_TAB ? (s.noMrGroups ?? []) : [];
   const tabbedNeeds = (s.needsGroups ?? [])
     .map((g) => ({ ...g, items: g.items.filter((i) => inTab(i, prefs.tab)) }))
     .filter((g) => g.items.length > 0);
@@ -468,11 +470,15 @@ const renderList = (s: UiSnapshot): void => {
 
   const groups = sortedGroups(filteredGroups(tabbed), prefs.sort);
   const needs = sortedGroups(filteredGroups(tabbedNeeds), prefs.sort);
+  const noMr = sortedGroups(filteredGroups(tabbedNoMr), prefs.sort);
   const verification = otherView(tabStatusGroups(s.verificationGroups ?? []));
   const done = otherView(tabStatusGroups(s.doneGroups ?? []));
   const other = otherView(tabStatusGroups(s.otherGroups));
 
-  if (groups.length === 0 && needs.length === 0 && verification.length === 0 && done.length === 0 && other.length === 0) {
+  if (
+    groups.length === 0 && needs.length === 0 && noMr.length === 0 &&
+    verification.length === 0 && done.length === 0 && other.length === 0
+  ) {
     const emptyByTab: Record<Tab, string> = {
       work: 'No authored MRs in scope.',
       reviews: 'No reviews on your radar — nothing you approved or were asked to review.',
@@ -480,7 +486,7 @@ const renderList = (s: UiSnapshot): void => {
         'Nothing you commented on or were mentioned in (outside your own MRs and reviews).',
     };
     const anyInTab =
-      tabbed.length + tabbedNeeds.length + verification.length + done.length + other.length > 0;
+      tabbed.length + tabbedNeeds.length + tabbedNoMr.length + verification.length + done.length + other.length > 0;
     const msg = anyInTab ? 'No MRs match the current filters.' : emptyByTab[prefs.tab];
     listEl.append(el('p', 'empty', msg));
     return;
@@ -501,6 +507,9 @@ const renderList = (s: UiSnapshot): void => {
       for (const group of gs) listEl.append(renderGroup(group));
     }
   }
+  // Above Verification: not yet started is nearer to your hands than
+  // out-of-your-hands, but it is still not a merge request.
+  if (noMr.length > 0) listEl.append(renderNoMrSection(noMr, prefs.filters.noMr));
   if (verification.length > 0) {
     listEl.append(renderStatusSection('Verification', verification, 'mr-radar-verification-collapsed', true));
   }
@@ -546,6 +555,23 @@ const renderStatusSection = (
     section.body.append(el('div', 'other-status', `${g.status} · ${g.items.length}`));
     for (const item of g.items) section.body.append(renderRow(item));
   }
+  return section.root;
+};
+
+/**
+ * Tickets with no merge request, collapsed under one header. Ticket-headed
+ * groups rather than status ones, so each row keeps its key, status and summary
+ * — but out of the way of the MRs, which is where they were drowning.
+ */
+const renderNoMrSection = (groups: UiGroup[], forceOpen: boolean): HTMLElement => {
+  const section = createCollapsible({
+    label: () => `No MR yet (${groups.length})`,
+    // With the No-MR filter on, these rows ARE the request: open the section,
+    // and don't let a remembered "collapsed" hide the only thing on screen.
+    ...(forceOpen ? {} : { storageKey: 'mr-radar-no-mr-collapsed' }),
+    defaultCollapsed: !forceOpen,
+  });
+  for (const group of groups) section.body.append(renderGroup(group));
   return section.root;
 };
 

@@ -6,17 +6,9 @@ import type { UiGroup } from './contract';
  * Pure, DOM-free and separate from renderer.ts so the ordering can be tested
  * directly: a no-MR group has no items to measure, so every mode needs a
  * deliberate stand-in and getting one wrong (a -Infinity that pins tickets to
- * the top) is invisible until it's on screen.
+ * the top of its section) is invisible until it's on screen.
  */
-export type SortMode = 'attention' | 'oldest' | 'active' | 'status' | 'comments' | 'hasMr';
-
-/**
- * The 'hasMr' partition: everything with a merge request sorts above every
- * ticket without one. Attention ranks are 0–10, so this offset can't collide
- * with a real key — and adding the rank on top keeps each half ordered by
- * urgency rather than arbitrarily.
- */
-const NO_MR_SORT_OFFSET = 1000;
+export type SortMode = 'attention' | 'oldest' | 'active' | 'status' | 'comments';
 
 const minBy = <T>(xs: T[], f: (x: T) => number): number =>
   xs.reduce((m, x) => Math.min(m, f(x)), Infinity);
@@ -28,8 +20,7 @@ const time = (iso: string): number => new Date(iso).getTime();
 export const groupSortKey = (g: UiGroup, mode: SortMode): number => {
   // A no-MR group has no items to measure. It stands in with the ticket's own
   // updated time and its attention rank, so it sorts *among* the real groups
-  // rather than pinning to one end of every mode — except in 'hasMr', where
-  // sinking below every MR is the whole point.
+  // rather than pinning to one end of its section.
   if (g.noMr) {
     switch (mode) {
       case 'oldest':
@@ -40,8 +31,6 @@ export const groupSortKey = (g: UiGroup, mode: SortMode): number => {
         return g.ticket ? g.ticket.statusRank : Number.MAX_SAFE_INTEGER;
       case 'comments':
         return 0; // no comments; MR groups sort negative by count, so this lands last
-      case 'hasMr':
-        return NO_MR_SORT_OFFSET + g.noMr.attention.rank;
       case 'attention':
       default:
         return g.noMr.attention.rank;
@@ -56,7 +45,6 @@ export const groupSortKey = (g: UiGroup, mode: SortMode): number => {
       return g.ticket ? g.ticket.statusRank : Number.MAX_SAFE_INTEGER; // ungrouped last
     case 'comments':
       return -maxBy(g.items, (i) => i.commentCount); // most comments first
-    case 'hasMr': // has an MR: below the offset block, still urgent-first
     case 'attention':
     default:
       return minBy(g.items, (i) => i.attention.rank); // most urgent first
