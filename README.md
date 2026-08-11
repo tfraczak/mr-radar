@@ -111,7 +111,8 @@ same rule builder: `(any status)` when *issueType* matches `spike|research` → 
 drops the row entirely, **expect** promotes it to a warning. Statuses mapped to
 Verification/Done/Hide are skipped — a ticket gets there *after* its MR merged, and merged
 MRs leave the radar. The rows sort among the real ones, count toward **My work**, and have
-their own **No MR yet** filter.
+their own **No MR yet** filter — or sort **MRs first** to push every MR-less ticket to the
+bottom in one move.
 
 **Ignoring MRs.** Two paths, one destination: a status rule with the `ignore` target
 (e.g. the `(no ticket)` sentinel), or the eye control on any ticket header/row. Either way

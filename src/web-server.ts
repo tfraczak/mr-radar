@@ -132,7 +132,7 @@ export interface WebHandlers {
 
 export interface WebServerOptions {
   port: number;
-  /** dist/renderer — index.html, styles.css, renderer.js, contract.js, web-radar.js. */
+  /** dist/renderer — index.html plus the modules in STATIC_FILES below. */
   rendererDir: string;
   /** PNG used as the tab icon, if present. */
   iconPath?: string | undefined;
@@ -150,6 +150,7 @@ const STATIC_FILES: Record<string, string> = {
   '/contract.js': 'text/javascript',
   '/web-radar.js': 'text/javascript',
   '/ui.js': 'text/javascript',
+  '/sort.js': 'text/javascript',
 };
 
 /** Reject any Host header that isn't this machine talking to this port. */
