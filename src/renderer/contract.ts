@@ -8,6 +8,20 @@
  * these are a compile-time convenience, not a runtime guarantee.
  */
 
+export type ForgeName = 'gitlab' | 'github';
+
+/**
+ * What the active forge calls a change proposal: GitLab merges, GitHub pulls.
+ * Every user-visible string that names one goes through this, so a GitHub
+ * install never reads "MR". The app's own name stays MR Radar.
+ *
+ * Lives here rather than in core/ because the renderer compiles self-contained
+ * and cannot import from ../core — the main process imports it from here, the
+ * same way it already takes FIELD_LABELS.
+ */
+export const changeTerm = (forge: ForgeName | undefined): 'MR' | 'PR' =>
+  forge === 'github' ? 'PR' : 'MR';
+
 export type RuleFieldName = 'fixVersions' | 'issueType' | 'dueDate';
 
 /** Humanized field names for the "Needs <field>" affordances. */
@@ -50,6 +64,8 @@ export interface UiSnapshot {
   highlight?: { key: string; at: string } | undefined;
   /** What the tab labels count: active-scope sections, or everything shown. */
   tabCounts: 'active' | 'all';
+  /** The forge this install is watching — decides MR vs PR in every label. */
+  forge?: ForgeName | undefined;
   /** Every in-scope MR the radar polls — the tray menu's number, pre-filters. */
   trackedCount: number;
   /** Jira has no stored token yet, so the popover offers a connect field. */

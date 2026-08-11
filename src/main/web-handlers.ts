@@ -11,7 +11,7 @@ import { createForge, resolveForgeName, type ForgeSource } from '../core/sources
 import { JiraSource, type OwnerField } from '../core/sources/jira';
 import type { RwxSource } from '../core/sources/rwx';
 import { executeTrigger, inFlightRun, planTrigger } from '../core/trigger';
-import type { EditableSettings } from '../renderer/contract';
+import { changeTerm, type EditableSettings } from '../renderer/contract';
 import type { JiraTicket } from '../core/types';
 import type { EventView, HealthInfo, ItemDetail, WebHandlers } from '../web-server';
 import { present } from './present';
@@ -74,10 +74,14 @@ export const makeWebHandlers = (deps: WebHandlerDeps): WebHandlers => {
   const { state, db, rwx, log } = deps;
   const cfg = deps.getConfig;
   const version = appVersion();
+  // Messages here surface in the popover, the browser UI, the CLI and MCP, so
+  // they use the forge's own word. Read per call: the forge can change in
+  // Settings without restarting.
+  const mr = (): string => changeTerm(deps.getForge().name);
 
   return {
     getSnapshot: () =>
-      present(state, cfg().jira.activeStatuses, new Date(), cfg().git.updateStyle, cfg().statusSections, cfg().statusRules, cfg().slack, cfg().ui.tabCounts, cfg().noMr),
+      present(state, cfg().jira.activeStatuses, new Date(), cfg().git.updateStyle, cfg().statusSections, cfg().statusRules, cfg().slack, cfg().ui.tabCounts, cfg().noMr, deps.getForge().name),
 
     getItemDetail: async (mrKey: string) => {
       const snapshot = state.snapshot;
@@ -85,7 +89,7 @@ export const makeWebHandlers = (deps: WebHandlerDeps): WebHandlers => {
         return { ok: false, message: 'MR Radar has not completed a poll yet — try again shortly.' };
       }
       const item = snapshot.items.find((i) => i.key === mrKey);
-      if (!item) return { ok: false, message: 'That MR is no longer in scope.' };
+      if (!item) return { ok: false, message: `That ${mr()} is no longer in scope.` };
       // Cycles skip the discussions fetch for unchanged MRs (unresolvedFallback
       // keeps the count right), so thread bodies may be absent from memory.
       // An API client asking for one MR is worth one on-demand fetch; cache it
@@ -176,7 +180,7 @@ export const makeWebHandlers = (deps: WebHandlerDeps): WebHandlers => {
         return { ok: false, message: 'MR Radar has not completed a poll yet — try again shortly.' };
       }
       const item = snapshot.items.find((i) => i.key === mrKey);
-      if (!item) return { ok: false, message: 'That MR is no longer in scope.' };
+      if (!item) return { ok: false, message: `That ${mr()} is no longer in scope.` };
       // A minutes-old snapshot is not good enough to announce on: re-fetch
       // this one MR (row, ticket status, discussions, CI) before judging.
       let freshState: string;
@@ -189,11 +193,11 @@ export const makeWebHandlers = (deps: WebHandlerDeps): WebHandlers => {
       } catch (err) {
         return {
           ok: false,
-          message: `Could not re-check the MR: ${err instanceof Error ? err.message : String(err)}`,
+          message: `Could not re-check the ${mr()}: ${err instanceof Error ? err.message : String(err)}`,
         };
       }
       if (freshState !== 'opened') {
-        return { ok: true, eligible: false, reasons: [`The MR is already ${freshState}.`] };
+        return { ok: true, eligible: false, reasons: [`The ${mr()} is already ${freshState}.`] };
       }
       // Deliberately NO snapshot.at bump and NO push here: the refreshed item
       // rides the next natural cycle. Bumping `at` mid-check would rebuild the
@@ -226,7 +230,7 @@ export const makeWebHandlers = (deps: WebHandlerDeps): WebHandlers => {
         override = byRule ? 'shown' : null;
       }
       const persisted = db.setIgnoreOverride(mrKey, override);
-      if (!persisted && !item) return { ok: false, message: 'That MR is not tracked.' };
+      if (!persisted && !item) return { ok: false, message: `That ${mr()} is not tracked.` };
       if (item) {
         if (override) item.ignoreOverride = override;
         else delete item.ignoreOverride;
@@ -237,7 +241,7 @@ export const makeWebHandlers = (deps: WebHandlerDeps): WebHandlers => {
       deps.onStateChanged();
       return persisted
         ? { ok: true }
-        : { ok: true, message: 'Applied for now; persists after the next poll records this MR.' };
+        : { ok: true, message: `Applied for now; persists after the next poll records this ${mr()}.` };
     },
 
     focusItem: (mrKey?: string) => {
@@ -268,7 +272,7 @@ export const makeWebHandlers = (deps: WebHandlerDeps): WebHandlers => {
       // The caller (web page, CLI, or an agent's permission prompt) already
       // confirmed with the user; validate and execute.
       const item = state.snapshot?.items.find((i) => i.key === mrKey);
-      if (!item) return { started: false, message: 'That MR is no longer in scope.' };
+      if (!item) return { started: false, message: `That ${mr()} is no longer in scope.` };
       const plan = planTrigger(cfg(), item);
       if (typeof plan === 'string') return { started: false, message: plan };
       const inFlight = inFlightRun(db, item);
@@ -385,7 +389,7 @@ export const makeWebHandlers = (deps: WebHandlerDeps): WebHandlers => {
 
     becomeReviewer: async (mrKey: string) => {
       const item = state.snapshot?.items.find((i) => i.key === mrKey);
-      if (!item) return { ok: false, message: 'That MR is no longer in scope.' };
+      if (!item) return { ok: false, message: `That ${mr()} is no longer in scope.` };
       try {
         const userId = cfg().gitlab.userId ?? (await deps.getForge().currentUser()).id;
         await deps.getForge().addReviewer(item.projectId, item.iid, userId);

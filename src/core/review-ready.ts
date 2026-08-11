@@ -36,15 +36,15 @@ export const reviewReadiness = (item: WatchItem, readyStatuses: string[]): Revie
   }
 
   if (!item.ticket) {
-    reasons.push('No Jira ticket is bound to this MR.');
+    reasons.push('No Jira ticket is bound to this merge request.');
   } else if (!ready.has(item.ticket.status.toLowerCase())) {
     reasons.push(
       `${item.ticket.key} is '${item.ticket.status}', not ${readyStatuses.length === 1 ? `'${readyStatuses[0]}'` : `one of: ${readyStatuses.join(', ')}`}.`,
     );
   }
 
-  if (item.draft) reasons.push('The MR is still marked as a draft.');
-  if (item.hasConflicts) reasons.push('The MR has merge conflicts.');
+  if (item.draft) reasons.push('It is still marked as a draft.');
+  if (item.hasConflicts) reasons.push('It has merge conflicts.');
 
   const unresolved = item.threads ? unresolvedCount(item.threads) : (item.unresolvedFallback ?? 0);
   if (unresolved > 0) {

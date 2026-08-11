@@ -1,5 +1,5 @@
 import { DEFAULT_CONFIG, type Config, type RuleField, type StatusRule } from '../core/config';
-import { FIELD_LABELS } from '../renderer/contract';
+import { FIELD_LABELS, changeTerm, type ForgeName } from '../renderer/contract';
 import { unresolvedCount } from '../core/correlate';
 import { ticketsMissingMrs, type MissingMr } from '../core/no-mr';
 import { reviewReadiness } from '../core/review-ready';
@@ -55,6 +55,7 @@ export const present = (
   slack: Config['slack'] = DEFAULT_CONFIG.slack,
   tabCounts: Config['ui']['tabCounts'] = 'all',
   noMr: Config['noMr'] = DEFAULT_CONFIG.noMr,
+  forge: ForgeName = 'gitlab',
 ): UiSnapshot => {
   const active = new Set(activeStatuses.map((s) => s.toLowerCase()));
   const hidden = new Set(sections.hidden.map((s) => s.toLowerCase()));
@@ -96,13 +97,14 @@ export const present = (
     // Their own section rather than mixed in with the MRs: on real data these
     // outnumbered the actual merge requests, and a ticket you have not started
     // is a different kind of thing from one waiting on review.
-    noMrGroups: missing.map(noMrGroup),
+    noMrGroups: missing.map((m) => noMrGroup(m, changeTerm(forge))),
     needsGroups,
     verificationGroups,
     doneGroups,
     otherGroups,
     ignoredGroups,
     tabCounts,
+    forge,
     // Raw in-scope count, BEFORE the hidden/stale-closed filters — the same
     // population the tray menu counts, so "tracked" reads identically in both.
     trackedCount: (state.snapshot?.items ?? []).filter((i) => i.inScope).length,
@@ -273,7 +275,7 @@ const groupItems = (
  * now; otherwise it's a muted note that sinks to the bottom of the attention
  * sort — visible without nagging about work you only just picked up.
  */
-const noMrGroup = ({ ticket, expected }: MissingMr): UiGroup => {
+const noMrGroup = ({ ticket, expected }: MissingMr, term: 'MR' | 'PR'): UiGroup => {
   return {
     ticket: {
       key: ticket.key,
@@ -287,8 +289,8 @@ const noMrGroup = ({ ticket, expected }: MissingMr): UiGroup => {
       updated: ticket.updated,
       expected,
       attention: expected
-        ? { text: `No MR yet — expected at ${ticket.status}`, tone: 'warn', rank: 2 }
-        : { text: 'No MR yet', tone: 'muted', rank: 9 },
+        ? { text: `No ${term} yet — expected at ${ticket.status}`, tone: 'warn', rank: 2 }
+        : { text: `No ${term} yet`, tone: 'muted', rank: 9 },
     },
   };
 }

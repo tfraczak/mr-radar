@@ -1,5 +1,5 @@
 import type { EditableRule, RadarApi, StatusSection, UiGroup, UiItem, UiSnapshot, UiStatusGroup } from './contract';
-import { FIELD_LABELS } from './contract.js';
+import { FIELD_LABELS, changeTerm } from './contract.js';
 import { sortedGroups, type SortMode } from './sort.js';
 import {
   createSelect,
@@ -64,6 +64,15 @@ settingsBtn.addEventListener('click', () => void toggleSettings());
 window.radar.onShowSettings(() => void openSettings());
 
 // -- sort & filter preferences (client-side, persisted in localStorage) -------
+/**
+ * What this install's forge calls a change proposal — 'MR' on GitLab, 'PR' on
+ * GitHub. Every label that names one reads through `mr()`/`mrs()`, so a GitHub
+ * user never sees "MR"; the app's own name stays MR Radar. Snapshot-driven, so
+ * it is right from the first paint and follows a forge switch in Settings.
+ */
+let forgeTerm: 'MR' | 'PR' = 'MR';
+const mr = (): string => forgeTerm;
+const mrs = (): string => `${forgeTerm}s`;
 
 /**
  * 'work' = MRs I authored; 'reviews' = definitive reviewer signal (requested
@@ -113,13 +122,18 @@ const ITEM_FILTERS: { key: keyof Filters; label: string; test: (i: UiItem) => bo
  * mutually exclusive with the item filters (see buildFilterMenu): combining
  * them could only ever yield an empty list.
  */
-const GROUP_FILTERS: { key: keyof Filters; label: string; title: string }[] = [
-  { key: 'noMr', label: 'No MR yet', title: 'Only active tickets that have no merge request' },
+const groupFilters = (): { key: keyof Filters; label: string; title: string }[] => [
+  {
+    key: 'noMr',
+    label: `No ${mr()} yet`,
+    title: `Only active tickets that have no ${mr() === 'PR' ? 'pull' : 'merge'} request`,
+  },
 ];
 
-const ALL_FILTERS: { key: keyof Filters; label: string; title?: string }[] = [
+/** Built per call: the group filter's label carries the forge's own word. */
+const allFilters = (): { key: keyof Filters; label: string; title?: string }[] => [
   ...ITEM_FILTERS,
-  ...GROUP_FILTERS,
+  ...groupFilters(),
 ];
 
 const PREFS_KEY = 'mr-radar-prefs';
@@ -155,6 +169,7 @@ const loadPrefs = (): { sort: SortMode; filters: Filters; tab: Tab } => {
 const prefs = loadPrefs();
 let lastSnapshot: UiSnapshot | undefined;
 
+
 const savePrefs = (): void => {
   try {
     localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
@@ -186,7 +201,7 @@ const mainTabs = createTabBar<Tab>({
   ],
   active: prefs.tab,
   onSelect: selectTab,
-  ariaLabel: 'MR buckets',
+  ariaLabel: `${mr()} buckets`,
 });
 byId('tabs').replaceWith(mainTabs.root);
 
@@ -214,11 +229,11 @@ const paintTabs = (s: UiSnapshot): void => {
 
 registerDropdown(filterBtn, filterMenu);
 
-const activeFilterCount = (): number => ALL_FILTERS.filter((f) => prefs.filters[f.key]).length;
+const activeFilterCount = (): number => allFilters().filter((f) => prefs.filters[f.key]).length;
 
 const buildFilterMenu = (): void => {
   filterMenu.replaceChildren();
-  for (const def of ALL_FILTERS) {
+  for (const def of allFilters()) {
     const row = el('label', 'filter-row');
     if (def.title) row.title = def.title;
     const cb = el('input', 'filter-cb');
@@ -242,7 +257,7 @@ const buildFilterMenu = (): void => {
   }
   const clear = el('button', 'filter-clear', 'Clear filters');
   clear.addEventListener('click', () => {
-    for (const def of ALL_FILTERS) prefs.filters[def.key] = false;
+    for (const def of allFilters()) prefs.filters[def.key] = false;
     savePrefs();
     buildFilterMenu();
     updateFilterBtn();
@@ -275,6 +290,15 @@ let lastListKey: string | undefined;
 
 const render = (snapshot: UiSnapshot): void => {
   lastSnapshot = snapshot;
+  const term = changeTerm(snapshot.forge);
+  if (term !== forgeTerm) {
+    // Rebuild everything that bakes the word in at construction time.
+    forgeTerm = term;
+    buildFilterMenu();
+    updateFilterBtn();
+    mainTabs.root.setAttribute('aria-label', `${term} buckets`);
+    lastListKey = undefined; // force the list to re-render with the new wording
+  }
   renderStatus(snapshot);
   renderSources(snapshot);
   renderConnect(snapshot);
@@ -448,7 +472,7 @@ const renderList = (s: UiSnapshot): void => {
   if (s.groups.length === 0 && s.otherGroups.length === 0) {
     const why = s.sources.some((src) => src.name === 'jira' && !src.ok)
       ? 'Nothing in scope. Jira is unavailable, so no active tickets are known — run `yarn jira:token` to connect it.'
-      : 'Nothing in scope. No MRs match an active Jira ticket.';
+      : `Nothing in scope. No ${mrs()} match an active Jira ticket.`;
     listEl.append(el('p', 'empty', why));
     return;
   }
@@ -480,14 +504,14 @@ const renderList = (s: UiSnapshot): void => {
     verification.length === 0 && done.length === 0 && other.length === 0
   ) {
     const emptyByTab: Record<Tab, string> = {
-      work: 'No authored MRs in scope.',
+      work: `No authored ${mrs()} in scope.`,
       reviews: 'No reviews on your radar — nothing you approved or were asked to review.',
       participating:
-        'Nothing you commented on or were mentioned in (outside your own MRs and reviews).',
+        `Nothing you commented on or were mentioned in (outside your own ${mrs()} and reviews).`,
     };
     const anyInTab =
       tabbed.length + tabbedNeeds.length + tabbedNoMr.length + verification.length + done.length + other.length > 0;
-    const msg = anyInTab ? 'No MRs match the current filters.' : emptyByTab[prefs.tab];
+    const msg = anyInTab ? `No ${mrs()} match the current filters.` : emptyByTab[prefs.tab];
     listEl.append(el('p', 'empty', msg));
     return;
   }
@@ -565,7 +589,7 @@ const renderStatusSection = (
  */
 const renderNoMrSection = (groups: UiGroup[], forceOpen: boolean): HTMLElement => {
   const section = createCollapsible({
-    label: () => `No MR yet (${groups.length})`,
+    label: () => `No ${mr()} yet (${groups.length})`,
     // With the No-MR filter on, these rows ARE the request: open the section,
     // and don't let a remembered "collapsed" hide the only thing on screen.
     ...(forceOpen ? {} : { storageKey: 'mr-radar-no-mr-collapsed' }),
@@ -635,11 +659,11 @@ const noMrRow = (noMr: NonNullable<UiGroup['noMr']>, ticketUrl: string): HTMLEle
   row.main.append(el('div', `attention attention-${noMr.attention.tone}`, noMr.attention.text));
   row.meta.append(
     createBadge(
-      'no MR',
+      `no ${mr()}`,
       noMr.expected ? 'warn' : 'muted',
       noMr.expected
-        ? 'No merge request is open for this ticket, and one is expected at this status'
-        : 'No merge request is open for this ticket yet',
+        ? `No ${mr()} is open for this ticket, and one is expected at this status`
+        : `No ${mr()} is open for this ticket yet`,
     ),
   );
   row.main.append(row.meta);
@@ -775,7 +799,7 @@ const renderRow = (
   }
   if (!isMainline(item.targetBranch)) {
     row.meta.append(
-      createBadge(`→ ${item.targetBranch}`, 'warn', `This MR targets ${item.targetBranch}, not main`),
+      createBadge(`→ ${item.targetBranch}`, 'warn', `This ${mr()} targets ${item.targetBranch}, not main`),
     );
   }
   if (item.draft) row.meta.append(createBadge('draft', 'muted'));
@@ -837,11 +861,11 @@ const eyeControl = (
   const byRule = items.some((i) => i.ignored === 'rule');
   btn.title = ignore
     ? items.length > 1
-      ? `Ignore this ticket's ${items.length} MRs until they close — no notifications, no counts`
-      : 'Ignore this MR until it closes — no notifications, no counts'
+      ? `Ignore this ticket's ${items.length} ${mrs()} until they close — no notifications, no counts`
+      : `Ignore this ${mr()} until it closes — no notifications, no counts`
     : byRule
-      ? 'A status rule ignores this MR — pin it visible without editing the rule'
-      : 'Stop ignoring this MR';
+      ? `A status rule ignores this ${mr()} — pin it visible without editing the rule`
+      : `Stop ignoring this ${mr()}`;
   btn.append(eyeIcon(ignore)); // the eye shows the CURRENT state's affordance
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -865,7 +889,7 @@ const eyeControl = (
 const slackButton = (item: UiItem): HTMLElement => {
   const btn = createButton('Copy for Slack', {
     variant: 'action',
-    title: 'Re-check this MR fresh, then copy the review announcement',
+    title: `Re-check this ${mr()} fresh, then copy the review announcement`,
   });
   // The 'action' class is alarm-red for "Start run"; announcing is a calm,
   // positive act — recolor to the accent (and green once copied).
@@ -1587,23 +1611,23 @@ const openSettings = async (): Promise<void> => {
 
   // Tickets with no MR at all: the switch, the statuses where that's a problem
   // rather than a fact, and the rules that decide it case by case.
-  const noMrEnabled = checkboxField('Show active tickets that have no MR', s.noMrEnabled !== false);
+  const noMrEnabled = checkboxField(`Show active tickets that have no ${mr()}`, s.noMrEnabled !== false);
   noMrEnabled.wrap.title =
-    'Every row in this app starts from an MR, so a ticket you have not pushed a branch for is otherwise invisible.';
+    `Every row in this app starts from a ${mr()}, so a ticket you have not pushed a branch for is otherwise invisible.`;
   const expectSet = new Map<string, string>(); // lowercase → display casing
   for (const st of s.noMrExpectStatuses ?? []) {
     learnStatus(st);
     expectSet.set(st.toLowerCase(), st);
   }
   const expectWrap = statusChipField(
-    'Statuses where an MR is expected',
+    `Statuses where a ${mr()} is expected`,
     expectSet,
-    (st) => `A missing MR at ${st} becomes a plain note again, not a warning`,
+    (st) => `A missing ${mr()} at ${st} becomes a plain note again, not a warning`,
   );
   expectWrap.title =
-    'At these statuses a missing MR is a warning. Everywhere else it is a muted note — visible, not nagging.';
+    `At these statuses a missing ${mr()} is a warning. Everywhere else it is a muted note — visible, not nagging.`;
   const noMrRules = buildRuleList({
-    label: 'Advanced: which tickets need an MR',
+    label: `Advanced: which tickets need a ${mr()}`,
     title:
       "Decide per ticket whether an MR is expected. 'exempt' drops the row entirely (spikes, research), " +
       "'expect' warns even at a status not listed above.",
@@ -1622,7 +1646,7 @@ const openSettings = async (): Promise<void> => {
     }),
   });
   const noMrBlock = el('div', 'status-sections');
-  noMrBlock.append(el('div', 'field-label', 'Tickets without an MR'), noMrEnabled.wrap);
+  noMrBlock.append(el('div', 'field-label', `Tickets without a ${mr()}`), noMrEnabled.wrap);
   const noMrBody = el('div', 'settings-sub');
   noMrBody.append(expectWrap, noMrRules.block);
   noMrBlock.append(noMrBody);
@@ -1631,7 +1655,7 @@ const openSettings = async (): Promise<void> => {
   };
   noMrEnabled.input.addEventListener('change', syncNoMr);
   syncNoMr();
-  const recent = numberField('Also watch MRs updated within N days (0 = active tickets only)', s.recentDaysFallback);
+  const recent = numberField(`Also watch ${mrs()} updated within N days (0 = active tickets only)`, s.recentDaysFallback);
   const pollSecs = numberField('Poll every N seconds', s.pollBaseSeconds);
 
   const notify = checkboxField('Show notifications', s.notificationsEnabled);
@@ -1747,7 +1771,7 @@ const openSettings = async (): Promise<void> => {
     el('code', undefined, '{ticketUrl}'),
     el('span', undefined, ' Jira link · '),
     el('code', undefined, '{title}'),
-    el('span', undefined, ' MR subject line · '),
+    el('span', undefined, ` ${mr()} subject line · `),
     el('code', undefined, '{mrUrl}'),
     el('span', undefined, ' · links: '),
     el('code', undefined, '[text](url)'),

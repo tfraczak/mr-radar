@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   NO_TICKET_STATUS, DEFAULT_CONFIG, type StatusRule } from '../src/core/config';
 import { present } from '../src/main/present';
+import { changeTerm } from '../src/renderer/contract';
 import { initialUiState, type UiState } from '../src/main/state';
 import type { JiraTicket, TestGate, WatchItem } from '../src/core/types';
 
@@ -619,5 +620,45 @@ describe('tickets with no MR', () => {
     expect(snap.noMrGroups).toEqual([]);
     expect(snap.groups).toEqual([]);
     expect(snap.ignoredGroups).toHaveLength(1);
+  });
+});
+
+describe('MR vs PR wording', () => {
+  const stateWithTickets = (tickets: JiraTicket[]): UiState => ({
+    ...initialUiState(),
+    snapshot: { at: NOW.toISOString(), items: [], activeTickets: tickets, sources: {} as never },
+  });
+  const ticketNoMr = (status: string): JiraTicket => ({
+    key: 'ENG-9', summary: 's', status, updated: NOW.toISOString(), url: '#',
+  });
+  const snapFor = (forge: 'gitlab' | 'github', status = 'In Development') =>
+    present(
+      stateWithTickets([ticketNoMr(status)]),
+      ACTIVE, NOW, 'rebase', DEFAULT_CONFIG.statusSections, [], DEFAULT_CONFIG.slack, 'active',
+      DEFAULT_CONFIG.noMr, forge,
+    );
+
+  it('says MR on GitLab and PR on GitHub', () => {
+    expect(snapFor('gitlab').noMrGroups[0]?.noMr?.attention.text).toBe('No MR yet');
+    expect(snapFor('github').noMrGroups[0]?.noMr?.attention.text).toBe('No PR yet');
+  });
+
+  it('carries the term into the expected-at warning too', () => {
+    expect(snapFor('github', 'Code Review').noMrGroups[0]?.noMr?.attention.text).toBe(
+      'No PR yet — expected at Code Review',
+    );
+  });
+
+  it('reports the forge so the renderer can label everything else', () => {
+    expect(snapFor('github').forge).toBe('github');
+    expect(present(stateWithTickets([]), ACTIVE, NOW).forge).toBe('gitlab'); // default
+  });
+});
+
+describe('changeTerm', () => {
+  it('maps the forge to its own word, defaulting to MR', () => {
+    expect(changeTerm('github')).toBe('PR');
+    expect(changeTerm('gitlab')).toBe('MR');
+    expect(changeTerm(undefined)).toBe('MR'); // pre-forge snapshots keep reading MR
   });
 });

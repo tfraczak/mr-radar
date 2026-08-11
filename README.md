@@ -101,7 +101,8 @@ Dev Complete ticket with *no fix version* to its own "needs a fix version" secti
 in-app picker) and versioned ones to Verification. Rules support per-repo scoping, issue-type
 regexes, due dates, clone/remove, and fall-through.
 
-**Tickets with no MR.** The radar is MR-shaped, so the one state it can't show from the
+**Tickets with no MR.** (On a GitHub install every label below reads *PR* — the wording
+follows the resolved forge; only the app's own name stays MR Radar.) The radar is MR-shaped, so the one state it can't show from the
 GitLab side is *you haven't started*: a ticket assigned to you, in flight, with no branch
 pushed. Those tickets get a collapsed **No MR yet** section of their own, above Verification: one
 dashed placeholder row each, carrying the Jira summary and a **No MR yet** line — muted by
