@@ -915,7 +915,14 @@ const enrich = async (args: {
   // so the button reads "Current run" immediately. Keyed to the head sha, so a
   // new push (head advances) no longer matches → the gate falls back to
   // startable and the button correctly reverts to "Start run".
-  if (gate.kind === 'unverified' && gate.startable) {
+  // Also covers a re-run of a FAILED suite: without this the next cycle recomputes
+  // the gate from RWX's (eventually consistent) list, sees the old failure still
+  // as the newest result for this head, and flips the row back to "RWX failed"
+  // with a Re-run button — inviting a second, duplicate run.
+  const awaitingRun =
+    (gate.kind === 'unverified' && gate.startable) ||
+    (gate.kind === 'verified' && gate.result === 'failed');
+  if (awaitingRun) {
     const watched = db
       .openWatchedRuns()
       .find((w) => w.branch === item.branch && w.sha === item.headSha);

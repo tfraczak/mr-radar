@@ -728,3 +728,81 @@ describe('a hand-pressed poll refreshes Jira', () => {
     expect(db.cachedJiraTickets().tickets[0]?.status).toBe('Code Review');
   });
 });
+
+describe('re-running a failed suite (the in-flight bridge)', () => {
+  // A branch whose newest RWX result for the head commit is a FAILURE, plus a
+  // watched run we just started for that same commit. RWX's list is eventually
+  // consistent, so it still reports only the old failure for a cycle or two.
+  const HEAD = 'abc1234000000000';
+  const mr = (): ForgeMr =>
+    ({
+      id: 3,
+      iid: 7812,
+      project_id: 1,
+      title: 'ENG-140: Something',
+      state: 'opened',
+      sha: HEAD,
+      source_branch: 'ENG-140',
+      target_branch: 'main',
+      web_url: '#',
+      updated_at: '2026-07-30T11:00:00Z',
+      created_at: '2026-07-29T11:00:00Z',
+      user_notes_count: 0,
+      draft: false,
+      has_conflicts: false,
+      author: { id: 1, username: 'me', name: 'Me' },
+      references: { full: 'acme/rocket!7812' },
+    }) as ForgeMr;
+
+  const failedRun = (): RwxRun => ({
+    ID: 'failed-run',
+    Branch: 'ENG-140',
+    CommitSha: HEAD,
+    DefinitionPath: '.rwx/ci.yml',
+    RepositoryName: 'rocket',
+    RunUrl: 'https://cloud.rwx.com/acme/runs/failed-run',
+    Title: 'ENG-140',
+    Trigger: 'push',
+    CreatedAt: '2026-07-30T10:00:00Z',
+    StartedAt: '2026-07-30T10:00:00Z',
+    CompletedAt: '2026-07-30T10:20:00Z',
+    Status: { Execution: 'finished', Result: 'failed' },
+  });
+
+  const gateFor = async (withWatchedRun: boolean) => {
+    const forge = fakeForge({ authoredMrs: async () => [mr()] });
+    const rwx = fakeRwx({ recentRuns: async () => [failedRun()] });
+    if (withWatchedRun) {
+      db.addWatchedRun({
+        run_id: 'fresh-run',
+        provider: 'rwx',
+        mr_key: 'acme/rocket!7812',
+        branch: 'ENG-140',
+        sha: HEAD,
+        definition: '.rwx/ci.yml',
+        url: 'https://cloud.rwx.com/acme/runs/fresh-run',
+        started_at: '2026-07-30T11:59:00Z',
+        terminal: 0,
+        result: null,
+      });
+    }
+    // recentDaysFallback puts the MR in scope without needing Jira at all.
+    const cfg: Config = { ...config(), recentDaysFallback: 3650 };
+    const result = await pollOnce(deps({ db, forge: forge as never, rwx: rwx as never, config: cfg }), {});
+    return result.snapshot.items.find((i) => i.iid === 7812)?.testGate;
+  };
+
+  it('reports the failure when nothing is in flight', async () => {
+    expect(await gateFor(false)).toMatchObject({ kind: 'verified', result: 'failed' });
+  });
+
+  it('shows the re-run as in flight instead of the old failure', async () => {
+    // Without this the next cycle re-serves the stale failure, the row offers
+    // Re-run again, and a second duplicate run is one click away.
+    expect(await gateFor(true)).toMatchObject({
+      kind: 'in_progress',
+      provider: 'rwx',
+      url: 'https://cloud.rwx.com/acme/runs/fresh-run',
+    });
+  });
+});

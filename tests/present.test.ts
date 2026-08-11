@@ -662,3 +662,37 @@ describe('changeTerm', () => {
     expect(changeTerm(undefined)).toBe('MR'); // pre-forge snapshots keep reading MR
   });
 });
+
+describe('re-running a failed suite', () => {
+  const chipOf = (i: WatchItem) => {
+    const snap = present(stateWith([i]), ACTIVE, NOW);
+    return [...snap.groups, ...snap.otherGroups].flatMap((g) => g.items)[0]?.ci;
+  };
+  const failed = (provider: 'rwx' | 'gitlab'): TestGate => ({
+    kind: 'verified', provider, result: 'failed', url: 'https://ci.example/run/1', name: '.rwx/ci.yml',
+  });
+
+  it('offers a re-run on a failed RWX suite', () => {
+    const ci = chipOf(item({ testGate: failed('rwx') }));
+    expect(ci?.label).toBe('RWX failed');
+    expect(ci?.rerunnable).toBe(true);
+    expect(ci?.url).toBe('https://ci.example/run/1'); // the failing run stays one click away
+  });
+
+  it('does not claim the suite never ran', () => {
+    // `startable` drives "Tests never run" and the Tests-not-run filter. A
+    // failure is a result, so it must stay false or a failed row would be
+    // filed as one that never ran.
+    expect(chipOf(item({ testGate: failed('rwx') }))?.startable).toBe(false);
+  });
+
+  it("offers nothing on a forge pipeline — it isn't ours to start", () => {
+    expect(chipOf(item({ testGate: failed('gitlab') }))?.rerunnable).toBeUndefined();
+  });
+
+  it('offers nothing when the suite passed', () => {
+    const ci = chipOf(item({ testGate: gate({ kind: 'verified' }) }));
+    expect(ci?.label).toBe('RWX passed');
+    expect(ci?.rerunnable).toBeUndefined();
+  });
+});

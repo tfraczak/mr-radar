@@ -491,6 +491,9 @@ export const ciChip = (
             provider,
             url: gate.url,
             startable: false,
+            // A failed suite is the result you most want to retry, and RWX runs
+            // are ours to start (forge pipelines are not).
+            ...(provider === 'rwx' ? { rerunnable: true } : {}),
             detail: gate.name,
           };
     case 'in_progress':

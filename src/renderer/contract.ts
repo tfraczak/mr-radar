@@ -157,6 +157,13 @@ export interface UiItem {
     provider?: string | undefined;
     url?: string | undefined;
     startable: boolean;
+    /**
+     * The suite ran and FAILED, and starting a fresh run is ours to do — the
+     * row offers "Re-run". Deliberately not `startable`, which means "no result
+     * for this commit yet": that drives different attention text and the
+     * "Tests not run" filter, and a failure is neither of those.
+     */
+    rerunnable?: boolean | undefined;
     detail?: string | undefined;
   };
   checks: { provider: string; role: string; name: string; state: string; url: string; stale: boolean }[];

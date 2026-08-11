@@ -976,6 +976,8 @@ const ciChip = (item: UiItem): HTMLElement => {
 const rwxRunControl = (item: UiItem): HTMLElement | null => {
   if (item.ci.provider !== 'rwx') return null;
   if (item.ci.startable) return startButton(item);
+  // Failed: same trigger, different word — you are retrying, not starting.
+  if (item.ci.rerunnable) return startButton(item, 'Re-run');
   if (item.ci.tone === 'busy' && item.ci.url) return currentRunButton(item.ci.url);
   return null;
 }
@@ -997,10 +999,10 @@ const currentRunButton = (url: string): HTMLElement => {
  * also reads "Current run" — so there's no flicker back to "Start run" while the
  * run is live.
  */
-const startButton = (item: UiItem): HTMLElement => {
-  const btn = createButton('Start run', {
+const startButton = (item: UiItem, label = 'Start run'): HTMLElement => {
+  const btn = createButton(label, {
     variant: 'action',
-    title: `Start a run for ${item.branch} @ ${item.headSha.slice(0, 8)} (asks first)`,
+    title: `${label === 'Start run' ? 'Start' : 'Start a fresh'} run for ${item.branch} @ ${item.headSha.slice(0, 8)} (asks first)`,
   });
   let runUrl: string | undefined;
 
@@ -1029,7 +1031,7 @@ const startButton = (item: UiItem): HTMLElement => {
         btn.title = result.message;
         btn.disabled = true;
       } else {
-        btn.textContent = 'Start run';
+        btn.textContent = label; // back to whichever word this row started with
         btn.disabled = false;
         if (result.message !== 'Cancelled.') btn.title = result.message;
       }
