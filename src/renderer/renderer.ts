@@ -653,10 +653,15 @@ const becomeReviewerButton = (item: UiItem): HTMLElement => {
 };
 
 /**
- * "Set fix version" on a Dev Complete group head: click loads the project's
+ * "Set fix version" on a row that needs one: click loads the project's
  * unreleased versions into an inline select; picking one + Assign writes it to
- * Jira (the app's only Jira write) and the ticket leaves this section on the
- * next cycle.
+ * Jira (the app's only Jira write).
+ *
+ * On success the picker collapses to a green confirmation rather than sitting
+ * there as a spent select next to a disabled button — and the main process has
+ * already re-read the ticket, so the pushed snapshot removes this control (and
+ * the "needs a fix version" line) within the same beat. The confirmation only
+ * has to survive until that arrives.
  */
 const fixVersionControl = (ticketKey: string): HTMLElement => {
   const wrap = el('span', 'fixversion');
@@ -690,9 +695,18 @@ const fixVersionControl = (ticketKey: string): HTMLElement => {
         assign.disabled = true;
         assign.textContent = 'Assigning…';
         void window.radar.setFixVersion(ticketKey, select.value).then((r) => {
-          assign.textContent = r.ok ? 'Assigned ✓' : 'Failed';
-          assign.title = r.message;
-          if (!r.ok) assign.disabled = false;
+          if (!r.ok) {
+            assign.textContent = 'Failed';
+            assign.title = r.message;
+            assign.disabled = false;
+            return;
+          }
+          // Done: drop the select, and confirm in green — the assignment
+          // succeeded, so nothing here should still read as an alarm.
+          const done = el('span', 'fixversion-done', 'Assigned ✓');
+          done.title = r.message;
+          select.remove();
+          assign.replaceWith(done);
         });
       });
       btn.replaceWith(select, assign);

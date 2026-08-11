@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG, type Config } from '../src/core/config';
-import { Db } from '../src/core/db';
+import { Db, cachedTicket } from '../src/core/db';
 import type { ForgeSource } from '../src/core/sources/forge';
 import type { RwxSource } from '../src/core/sources/rwx';
-import type { AppEvent, TestGate, ThreadSummary, WatchItem } from '../src/core/types';
+import type { AppEvent, JiraTicket, TestGate, ThreadSummary, WatchItem } from '../src/core/types';
 import { makeWebHandlers, type WebHandlerDeps } from '../src/main/web-handlers';
 import { initialUiState, type UiState } from '../src/main/state';
 
@@ -470,5 +470,112 @@ describe('listOwnerFields', () => {
 
     const off = makeWebHandlers(deps());
     expect(await off.listOwnerFields()).toEqual({ ok: false, message: 'Jira is not connected.' });
+  });
+});
+
+describe('setFixVersion', () => {
+  const assigned: JiraTicket = {
+    key: 'ENG-9',
+    summary: 'A thing',
+    status: 'Dev Complete',
+    updated: NOW.toISOString(),
+    url: '#',
+    issueType: 'Story',
+    fixVersions: [{ id: '77', name: '2026.31' }],
+  };
+  const before: JiraTicket = { ...assigned, fixVersions: [] };
+
+  const jira = (over: Partial<Record<string, unknown>> = {}) => ({
+    configured: true,
+    setFixVersion: async () => {},
+    searchByKeys: async () => [assigned],
+    ...over,
+  });
+
+  it('folds the re-read ticket into the live snapshot instead of waiting for a poll', async () => {
+    const state = stateWith([item({ ticket: before })]);
+    let cycles = 0;
+    let repaints = 0;
+    const h = makeWebHandlers(
+      deps({ state, getJira: () => jira() as never, requestCycle: () => { cycles += 1; }, onStateChanged: () => { repaints += 1; } }),
+    );
+    const at = state.snapshot?.at;
+    const res = await h.setFixVersion('ENG-9', '77');
+    expect(res.ok).toBe(true);
+    expect(res.message).toContain('2026.31'); // confirms WHAT was assigned
+    // The whole point: the rule now sees a non-empty fixVersions immediately.
+    expect(state.snapshot?.items[0]?.ticket?.fixVersions).toEqual([{ id: '77', name: '2026.31' }]);
+    expect(state.snapshot?.at).not.toBe(at); // or the renderer skips the rebuild
+    expect(repaints).toBe(1);
+    expect(cycles).toBe(0); // one targeted re-read, not a whole cycle
+  });
+
+  it('persists the change so the next cycle does not serve the stale ticket', async () => {
+    const db = new Db(':memory:');
+    // An MR row carrying the pre-assignment ticket, as a poll would have left it.
+    db.upsertMr(
+      {
+        key: 'acme/rocket!1', project_path: 'acme/rocket', project_id: 1, iid: 1, branch: 'ENG-9',
+        title: 'ENG-9: thing', head_sha: 'abc', web_url: '#', updated_at: NOW.toISOString(),
+        user_notes_count: 0, unresolved: 0, approvals_left: null, approvals_required: null,
+        approvals_by: null, has_conflicts: 0, in_scope: 1, reason: 'authored',
+        ticket_key: 'ENG-9', ticket_status: 'Dev Complete', ticket_json: JSON.stringify(before),
+        unverified_count: null, unverified_sha: null,
+      },
+      NOW.toISOString(),
+    );
+    const h = makeWebHandlers(deps({ state: stateWith([]), db, getJira: () => jira() as never }));
+    await h.setFixVersion('ENG-9', '77');
+    expect(cachedTicket(db.getMr('acme/rocket!1')?.ticket_json ?? null, 'ENG-9')?.fixVersions).toEqual([
+      { id: '77', name: '2026.31' },
+    ]);
+  });
+
+  it('never inserts a non-active ticket into the active-set cache', async () => {
+    const db = new Db(':memory:');
+    db.replaceJiraTickets([{ key: 'ENG-1', summary: '', status: 'Code Review', updated: '', url: '#' }], NOW.toISOString());
+    const h = makeWebHandlers(deps({ state: stateWith([]), db, getJira: () => jira() as never }));
+    await h.setFixVersion('ENG-9', '77'); // ENG-9 is Dev Complete: not active
+    expect(db.cachedJiraTickets().tickets.map((t) => t.key)).toEqual(['ENG-1']);
+  });
+
+  it('updates the active-set cache when the ticket IS in it', async () => {
+    const db = new Db(':memory:');
+    db.replaceJiraTickets([before], NOW.toISOString());
+    const h = makeWebHandlers(deps({ state: stateWith([]), db, getJira: () => jira() as never }));
+    await h.setFixVersion('ENG-9', '77');
+    expect(db.cachedJiraTickets().tickets[0]?.fixVersions).toEqual([{ id: '77', name: '2026.31' }]);
+  });
+
+  it('falls back to the poll cadence — and says so — when the re-read fails', async () => {
+    const state = stateWith([item({ ticket: before })]);
+    let cycles = 0;
+    const h = makeWebHandlers(
+      deps({
+        state,
+        getJira: () => jira({ searchByKeys: async () => { throw new Error('jira flaked'); } }) as never,
+        requestCycle: () => { cycles += 1; },
+      }),
+    );
+    const res = await h.setFixVersion('ENG-9', '77');
+    expect(res.ok).toBe(true); // the write DID land
+    expect(res.message).toMatch(/catch up/);
+    expect(cycles).toBe(1);
+    expect(state.snapshot?.items[0]?.ticket?.fixVersions).toEqual([]); // unchanged, not guessed
+  });
+
+  it('reports the write failing without touching any cache', async () => {
+    const state = stateWith([item({ ticket: before })]);
+    const h = makeWebHandlers(
+      deps({ state, getJira: () => jira({ setFixVersion: async () => { throw new Error('403 forbidden'); } }) as never }),
+    );
+    const res = await h.setFixVersion('ENG-9', '77');
+    expect(res).toEqual({ ok: false, message: '403 forbidden' });
+    expect(state.snapshot?.items[0]?.ticket?.fixVersions).toEqual([]);
+  });
+
+  it('refuses when Jira is not connected', async () => {
+    const h = makeWebHandlers(deps({ state: stateWith([]) }));
+    expect(await h.setFixVersion('ENG-9', '77')).toEqual({ ok: false, message: 'Jira is not connected.' });
   });
 });

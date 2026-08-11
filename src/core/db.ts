@@ -564,6 +564,44 @@ export class Db {
     }
   }
 
+  /**
+   * Fold a ticket we just changed into both caches.
+   *
+   * Two of them hold tickets, and each refreshes on its own cadence: the active
+   * set (jira_tickets) and the per-MR last-known ticket (mrs.ticket_json).
+   * Until their cadence comes round, the pre-change copy is what every rule
+   * sees — so the one Jira write this app makes (assigning a fix version) would
+   * otherwise leave the ticket sitting in "needs a fix version" for minutes
+   * after Jira accepted it.
+   *
+   * jira_tickets is UPDATEd, never inserted: that table is the *active* set, and
+   * adding a non-active ticket to it would invent active work.
+   */
+  updateCachedTicket(ticket: JiraTicket): void {
+    this.db
+      .prepare('UPDATE mrs SET ticket_status = ?, ticket_json = ? WHERE ticket_key = ?')
+      .run(ticket.status, JSON.stringify(ticket), ticket.key);
+    this.db
+      .prepare(
+        `UPDATE jira_tickets SET
+           summary = ?, status = ?, updated = ?, url = ?, due_date = ?,
+           status_category = ?, resolution_date = ?, issue_type = ?, fix_versions = ?
+         WHERE key = ?`,
+      )
+      .run(
+        ticket.summary,
+        ticket.status,
+        ticket.updated,
+        ticket.url,
+        ticket.dueDate ?? null,
+        ticket.statusCategory ?? null,
+        ticket.resolutionDate ?? null,
+        ticket.issueType ?? null,
+        ticket.fixVersions ? JSON.stringify(ticket.fixVersions) : null,
+        ticket.key,
+      );
+  }
+
   cachedJiraTickets(): { tickets: JiraTicket[]; fetchedAt?: string } {
     const rows = this.db.prepare('SELECT * FROM jira_tickets').all() as unknown as {
       key: string;

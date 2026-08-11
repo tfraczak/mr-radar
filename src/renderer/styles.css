@@ -1668,6 +1668,15 @@ button.link {
   font-size: 11px;
 }
 
+/* The assignment landed — green, and not a button: there is nothing left to
+   press, and a spent disabled control reads as a failed one. */
+.fixversion-done {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--good);
+  white-space: nowrap;
+}
+
 /* Design-system badges: one component (`createBadge`), tone-driven color.
    Row badges, secondary-check badges, and future annotations all use these. */
 .badge-accent {

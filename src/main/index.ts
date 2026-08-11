@@ -449,16 +449,14 @@ const registerIpc = (): void => {
     if (typeof ticketKey !== 'string' || typeof versionId !== 'string') {
       return { ok: false, message: 'Bad request.' };
     }
-    if (!jira) return { ok: false, message: 'Jira is not connected.' };
-    try {
-      await jira.setFixVersion(ticketKey, versionId);
-      // Re-poll so the ticket moves out of its 'Needs fix version' section.
-      state.schedule = { ...state.schedule, quietCycles: 0 };
-      void runCycle('manual');
-      return { ok: true, message: `Fix version set on ${ticketKey}.` };
-    } catch (err) {
-      return { ok: false, message: msg(err) };
-    }
+    // Shared with the web API: it writes to Jira, re-reads that one ticket, and
+    // folds it into both caches so the row leaves its section straight away.
+    return (
+      (await webHandlers?.setFixVersion(ticketKey, versionId)) ?? {
+        ok: false,
+        message: 'Not ready yet.',
+      }
+    );
   });
 
   ipcMain.handle('ui:set-ignored', (_e, mrKey: unknown, ignored: unknown) => {

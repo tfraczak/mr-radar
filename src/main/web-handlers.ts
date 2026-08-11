@@ -12,6 +12,7 @@ import { JiraSource, type OwnerField } from '../core/sources/jira';
 import type { RwxSource } from '../core/sources/rwx';
 import { executeTrigger, inFlightRun, planTrigger } from '../core/trigger';
 import type { EditableSettings } from '../renderer/contract';
+import type { JiraTicket } from '../core/types';
 import type { EventView, HealthInfo, ItemDetail, WebHandlers } from '../web-server';
 import { present } from './present';
 import {
@@ -350,11 +351,36 @@ export const makeWebHandlers = (deps: WebHandlerDeps): WebHandlers => {
       if (!jira) return { ok: false, message: 'Jira is not connected.' };
       try {
         await jira.setFixVersion(ticketKey, versionId);
-        deps.requestCycle(); // move the ticket out of its 'Needs fix version' section
-        return { ok: true, message: `Fix version set on ${ticketKey}.` };
       } catch (err) {
         return { ok: false, message: err instanceof Error ? err.message : String(err) };
       }
+      // The write landed. Now re-read that ONE ticket and fold the result in,
+      // rather than requesting a cycle and hoping: the active set and the
+      // per-MR ticket cache each refresh on jira.refreshMinutes, so a plain
+      // re-poll re-serves the pre-assignment ticket and the row sits in
+      // "needs a fix version" for minutes after Jira accepted the change.
+      // One targeted call also beats the ~11 a full cycle costs.
+      let confirmed: JiraTicket | undefined;
+      try {
+        [confirmed] = await jira.searchByKeys([ticketKey]);
+      } catch (err) {
+        deps.log(`fix version set on ${ticketKey}, but re-reading it failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
+      if (!confirmed) {
+        // Jira has the change; we just can't prove it yet. Fall back to the
+        // cadence and say so rather than claiming the UI is up to date.
+        deps.requestCycle();
+        return { ok: true, message: `Fix version set on ${ticketKey}; the radar will catch up shortly.` };
+      }
+      db.updateCachedTicket(confirmed);
+      for (const item of state.snapshot?.items ?? []) {
+        if (item.ticket?.key === ticketKey) item.ticket = confirmed;
+      }
+      // `at` must move or the renderer's listKey guard skips the rebuild.
+      if (state.snapshot) state.snapshot.at = new Date().toISOString();
+      deps.onStateChanged();
+      const names = (confirmed.fixVersions ?? []).map((v) => v.name).join(', ');
+      return { ok: true, message: names ? `${ticketKey} → ${names}` : `Fix version set on ${ticketKey}.` };
     },
 
     becomeReviewer: async (mrKey: string) => {
