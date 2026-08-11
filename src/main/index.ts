@@ -217,14 +217,18 @@ const runCycle = async (reason: 'startup' | 'manual' | 'timer'): Promise<void> =
   pushToRenderer();
 
   try {
-    const result = await pollOnce({
-      db,
-      config,
-      forge,
-      rwx,
-      ...(jira ? { jira } : {}),
-      log: (m) => log(m),
-    });
+    const result = await pollOnce(
+      {
+        db,
+        config,
+        forge,
+        rwx,
+        ...(jira ? { jira } : {}),
+        log: (m) => log(m),
+      },
+      // A hand-pressed poll refreshes Jira too, cadence or not.
+      { forceJira: reason === 'manual' },
+    );
 
     state.snapshot = result.snapshot;
     state.lastPollAt = result.snapshot.at;

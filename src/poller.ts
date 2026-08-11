@@ -144,7 +144,7 @@ const deliver = (events: AppEvent[], config: Config): number => {
   return notifications.length;
 };
 
-const cycle = async (config: Config): Promise<void> => {
+const cycle = async (config: Config, opts: { manual?: boolean } = {}): Promise<void> => {
   const paused = pausedBecause(state.schedule, config, new Date());
   state.pausedReason = paused;
   if (paused) {
@@ -157,14 +157,18 @@ const cycle = async (config: Config): Promise<void> => {
 
   await refreshJira(config);
   try {
-    const result = await pollOnce({
-      db,
-      config,
-      forge,
-      rwx,
-      ...(jira ? { jira } : {}),
-      log,
-    });
+    const result = await pollOnce(
+      {
+        db,
+        config,
+        forge,
+        rwx,
+        ...(jira ? { jira } : {}),
+        log,
+      },
+      // A hand-pressed poll refreshes Jira too, cadence or not.
+      { forceJira: opts.manual ?? false },
+    );
     state.snapshot = result.snapshot;
     state.lastPollAt = result.snapshot.at;
     state.lastError = undefined;
@@ -201,16 +205,16 @@ const scheduleNext = (seconds: number | undefined, _config: Config): void => {
 };
 
 let config: Config;
-const tick = async (): Promise<void> => {
+const tick = async (opts: { manual?: boolean } = {}): Promise<void> => {
   config = currentConfig(config);
-  await cycle(config);
+  await cycle(config, opts);
 };
 
 /** A user action wants a cycle now (unless one is already running). */
 const requestCycle = (): void => {
   if (state.polling) return;
   state.schedule = { ...state.schedule, quietCycles: 0 };
-  void tick();
+  void tick({ manual: true }); // asked for by hand: refresh Jira too
 };
 
 // ---------------------------------------------------------------------------

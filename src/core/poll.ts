@@ -69,7 +69,16 @@ export interface PollResult {
  * failure specifically falls back to the cached ticket set, because collapsing
  * scope to empty would silently stop all notifications, the worst outcome here.
  */
-export const pollOnce = async (deps: PollDeps, opts: { dryRun?: boolean } = {}): Promise<PollResult> => {
+/**
+ * `forceJira` bypasses the Jira refresh cadence for this cycle. Set it for
+ * anything the user asked for by hand: "Poll now" that re-reads GitLab but
+ * serves a ten-minute-old ticket status is indistinguishable from a broken
+ * poll — you press it precisely because you just changed something in Jira.
+ */
+export const pollOnce = async (
+  deps: PollDeps,
+  opts: { dryRun?: boolean; forceJira?: boolean } = {},
+): Promise<PollResult> => {
   const { db, config, forge, rwx } = deps;
   // Optional-called so test fakes without the probe default to available.
   const rwxAvailable = (await rwx.available?.()) ?? true;
@@ -90,6 +99,7 @@ export const pollOnce = async (deps: PollDeps, opts: { dryRun?: boolean } = {}):
     deps,
     nowIso,
     log,
+    opts.forceJira ?? false,
   );
   sources.jira = jiraHealth;
 
@@ -365,6 +375,7 @@ const fetchJira = async (
   deps: PollDeps,
   nowIso: string,
   log: (m: string) => void,
+  force = false,
 ): Promise<{ tickets: JiraTicket[]; health: SourceHealth; refreshed: boolean }> => {
   const { db, config, jira } = deps;
   const cached = db.cachedJiraTickets();
@@ -372,7 +383,9 @@ const fetchJira = async (
   // Same injected-clock rule as the roles TTL below: never Date.now() here.
   const age = cached.fetchedAt ? new Date(nowIso).getTime() - new Date(cached.fetchedAt).getTime() : Infinity;
 
-  if (age < ttlMs) {
+  // `force` skips the cadence — and with it the whole by-key harvest gate, so a
+  // manual poll re-reads non-active tickets' statuses too.
+  if (!force && age < ttlMs) {
     return { tickets: cached.tickets, health: { ok: true, at: cached.fetchedAt ?? nowIso }, refreshed: false };
   }
   if (!jira?.configured) {

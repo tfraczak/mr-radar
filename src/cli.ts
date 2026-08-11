@@ -77,7 +77,7 @@ const main = async (): Promise<void> => {
       ...(jira ? { jira } : {}),
       log: (m) => console.log(dim(`  ${m}`)),
     },
-    { dryRun },
+    { dryRun, forceJira: true }, // a hand-run cycle should never serve stale tickets
   );
   const elapsed = ((Date.now() - started) / 1000).toFixed(1);
 

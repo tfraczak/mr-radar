@@ -683,3 +683,48 @@ describe('non-active tickets between Jira refreshes', () => {
     expect(ticket?.fixVersions).toBeUndefined(); // and honestly unknown, not []
   });
 });
+
+describe('a hand-pressed poll refreshes Jira', () => {
+  // "Poll now" that re-reads GitLab but serves a ten-minute-old ticket status
+  // is indistinguishable from a broken poll — you press it precisely because
+  // you just moved a ticket in Jira.
+  const inDev: JiraTicket = { key: 'ENG-1', summary: '', status: 'In Development', updated: '', url: '#' };
+  const inReview: JiraTicket = { ...inDev, status: 'Code Review' };
+  const at = '2026-07-30T11:59:00Z'; // one minute old: well inside refreshMinutes
+
+  // A refresh runs two queries: the scope query, plus the status-name harvest.
+  // Count the scope one so the assertions say what they mean.
+  const jira = () => {
+    const jqls: string[] = [];
+    return {
+      source: {
+        configured: true,
+        search: async (jql: string) => {
+          jqls.push(jql);
+          return [inReview];
+        },
+        searchByKeys: async () => [],
+      },
+      scopeQueries: () => jqls.filter((q) => q.includes('status IN')).length,
+    };
+  };
+
+  it('serves the cached status on a timer cycle', async () => {
+    db.replaceJiraTickets([inDev], at);
+    const j = jira();
+    const result = await pollOnce(deps({ db, jira: j.source as never }), {});
+    expect(result.snapshot.activeTickets[0]?.status).toBe('In Development');
+    expect(j.scopeQueries()).toBe(0); // the cadence is the point of the cadence
+  });
+
+  it('re-reads Jira when the cycle was requested by hand', async () => {
+    db.replaceJiraTickets([inDev], at);
+    const j = jira();
+    const result = await pollOnce(deps({ db, jira: j.source as never }), { forceJira: true });
+    expect(result.snapshot.activeTickets[0]?.status).toBe('Code Review');
+    expect(j.scopeQueries()).toBe(1);
+    // ...and the refreshed set replaces the cache, so the next timer cycle
+    // doesn't hand the stale status straight back.
+    expect(db.cachedJiraTickets().tickets[0]?.status).toBe('Code Review');
+  });
+});
