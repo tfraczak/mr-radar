@@ -51,7 +51,9 @@ yarn build
 yarn tray:install # register + start the launchd agent
 ```
 
-`yarn tray:uninstall` removes the agent again. For a one-off run without
+`yarn tray:status` reports whether the agent is running, whether `dist/` exists,
+and whether the app answers on its own port — the first thing to run if no icon
+appears. `yarn tray:uninstall` removes the agent again. For a one-off run without
 installing anything: `yarn install && yarn dev` (dies with the terminal).
 If Electron can't run on your machine at all, there's a headless poller with a
 web UI instead — see its section below (`yarn poller:install`). A normal
@@ -171,7 +173,7 @@ yarn tray:logs    # follow the running agent's log ("cycle ok · N api calls" is
 
 | Symptom | Fix |
 |---|---|
-| No radar icon | `yarn tray:logs` — a crash on startup logs there; `yarn tray:install` again after fixing. |
+| No radar icon | `yarn tray:status` — it separates the two causes. If it reports the app running and serving, the icon exists and your **menu bar is full**: macOS hides the overflow (behind the notch on laptops) with no indication — ⌘-drag to reorder, use an overflow manager (Ice/Bartender), or just open `http://127.0.0.1:8942`. Otherwise the startup crashed: `yarn tray:logs`, fix, `yarn tray:install`. |
 | Footer shows GitLab red | `glab auth status`, then `glab auth login`. |
 | "Set the Atlassian URL…" | Settings → Jira needs the URL *saved* before a token can be connected. |
 | Token rejected | It's verified against `/rest/api/3/myself` — check the email matches the token's account. |

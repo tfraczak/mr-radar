@@ -158,4 +158,8 @@ if (!pid) {
   process.exit(1);
 }
 console.log(`  ✓ menu bar app running under launchd (label ${LABEL}, pid ${pid})`);
+// Running is not the same as visible: a full menu bar hides new icons (behind
+// the notch on laptops) with no indication at all, which reads as a failed
+// install. Say so here, where someone is looking, rather than in the README.
+console.log("    can't see the radar icon? the menu bar may be full — run `yarn tray:status`");
 console.log(`    look for the radar icon in your menu bar · logs: tail -f ${logPath}`);

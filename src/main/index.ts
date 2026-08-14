@@ -83,6 +83,10 @@ const main = async (): Promise<void> => {
     () => presented(),
   );
   tray.init();
+  // Logged because "no icon" has two causes that look identical from outside:
+  // this line present means the icon exists and the menu bar is just out of
+  // room (macOS hides overflow silently); absent means startup died earlier.
+  log('menu bar icon created');
   webHandlers = makeWebHandlers({
     state,
     db,

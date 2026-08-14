@@ -26,6 +26,7 @@
     "tray:install": "yarn build && node scripts/install-tray.mjs",
     "tray:uninstall": "node scripts/install-tray.mjs --uninstall",
     "tray:restart": "node scripts/install-tray.mjs",
+    "tray:status": "node scripts/tray-status.mjs",
     "tray:logs": "tail -n 50 -f ~/.local/state/mr-radar/tray.log",
     "ui": "open http://127.0.0.1:8942",
     "jira:token": "yarn build && node --no-warnings dist/set-jira-token.js",
