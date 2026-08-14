@@ -2918,6 +2918,9 @@ __metadata:
     typescript: "npm:^5.7.0"
     typescript-eslint: "npm:^8.65.0"
     vitest: "npm:^3.0.0"
+  dependenciesMeta:
+    esbuild:
+      built: false
   languageName: unknown
   linkType: soft
 

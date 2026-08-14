@@ -155,10 +155,37 @@ offer_rwx
 offer_terminal_notifier
 
 step "Installing dependencies"
-yarn install
+# A killed dependency postinstall (SIGKILL, no output) is application-control
+# software, not a broken package — say so, because the raw yarn output points at
+# node internals and reads like a bug in the repo.
+if ! yarn install; then
+  warn "yarn install failed."
+  warn "If the output mentions a SIGKILL or a build.log under a temp xfs-* directory,"
+  warn "your endpoint security killed a dependency's native postinstall. Ask for that"
+  warn "binary to be approved, or install without postinstall scripts and rebuild the"
+  warn "one the app needs:"
+  warn "    YARN_ENABLE_SCRIPTS=false yarn install && yarn rebuild electron"
+  fail "dependencies are not installed"
+fi
 
 step "Building"
 yarn build
+
+# The installer sets up glab (and never gh), so a fresh install should watch
+# GitLab rather than letting 'auto' pick from whatever CLIs happen to be
+# authenticated on a work Mac. Only ever written when there is no config yet:
+# an existing install's choice is the user's, not ours.
+seed_config() {
+  local dir="$HOME/.config/mr-radar" file="$HOME/.config/mr-radar/config.json"
+  [ -e "$file" ] && { note "keeping your existing config ($file)"; return 0; }
+  mkdir -p "$dir"
+  printf '{\n  "forge": "gitlab"\n}\n' > "$file"
+  chmod 600 "$file"
+  note "wrote $file with forge: gitlab (change it in Settings → Git)"
+}
+
+step "Seeding config"
+seed_config
 
 step "Installing the menu bar app under launchd"
 node scripts/install-tray.mjs

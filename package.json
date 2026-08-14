@@ -56,6 +56,19 @@
     "typescript-eslint": "^8.65.0",
     "vitest": "^3.0.0"
   },
+  "//dependenciesMeta": [
+    "esbuild ships a native binary and validates it from a postinstall script.",
+    "On a Mac with application control (ThreatLocker et al) that exec is SIGKILLed,",
+    "which fails `yarn install` for everyone on the fleet — during an install of an",
+    "app that never uses esbuild at runtime: it arrives under vitest, via vite.",
+    "Disabling the build script skips the validation exec; the platform binary is",
+    "still installed as an optional dependency, and vitest works (verified)."
+  ],
+  "dependenciesMeta": {
+    "esbuild": {
+      "built": false
+    }
+  },
   "build": {
     "appId": "com.mr-radar.app",
     "productName": "MR Radar",

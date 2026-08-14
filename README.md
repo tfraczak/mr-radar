@@ -178,6 +178,8 @@ yarn tray:logs    # follow the running agent's log ("cycle ok · N api calls" is
 | No banners | Send a test notification; on `native`, check System Settings → Notifications → Electron. Fall back to `auto`. |
 | Stale UI after `yarn build` | The running agent keeps old code: `yarn tray:restart`. |
 | Start run refuses | The repo row in Settings → General needs a valid local checkout path. |
+| `yarn install` dies with `SIGKILL` / a temp `xfs-*/build.log` | Application-control software (ThreatLocker et al) killed a dependency's native postinstall — not a broken package. Ask for that binary to be approved, or: `YARN_ENABLE_SCRIPTS=false yarn install && yarn rebuild electron`. esbuild's postinstall is already disabled in `package.json` for exactly this reason. |
+| Watching the wrong forge | `./install.sh` seeds `forge: gitlab`; switch it in Settings → Git (`auto` detects from whichever CLI is authenticated). |
 
 ### Updating
 
