@@ -428,10 +428,19 @@ identity app-control software (ThreatLocker and similar) can allowlist
 permanently, instead of chasing ad-hoc hashes that change every build.
 
 Until then, the practical ask for a managed fleet is a **path** rule rather than
-a hash approval: `*/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron`.
-Measured on two Macs — the same Electron bytes run at that path and are blocked
-as "Unrecognized" when copied elsewhere, so the existing permission is
-path-scoped; a hash approval would also die at the next Electron bump.
+a hash approval — and the ask should be path-ONLY, with no hash clause, or every
+Electron bump needs re-approval:
+
+> ThreatLocker Application definition, match type **Full Path (wildcard)**:
+> `*/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron` — with a
+> **Permit** policy assigned to the developer computer group.
+
+Measured on two Macs: the same Electron bytes run at that path and are blocked as
+"Unrecognized" when copied elsewhere, so the permission that makes a dev machine
+work is path-scoped and does not travel to teammates. Treat this as a time-boxed
+stopgap — approving by path means anything dropped at that path runs, which is
+the opposite of verifiable distribution. The certificate rule above is the
+closeout.
 
 ## Development
 

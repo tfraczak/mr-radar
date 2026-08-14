@@ -72,6 +72,38 @@ if (typeof electron !== 'string' || !existsSync(electron)) {
   process.exit(1);
 }
 
+// Preflight: can this machine actually RUN Electron? Application control kills
+// it silently, and without this check we would write a launchd plist that fails
+// at every login — the failure a teammate saw three times, with no icon, no
+// error, and nothing in our log because our code never executed. One probe here
+// turns that into a diagnosis plus the exact ask, and points at the poller,
+// which needs no approval at all.
+//
+// The probe itself may raise the app-control dialog once. That is the point: it
+// is also how the user reaches "Send a request".
+if (!process.argv.includes('--force')) {
+  try {
+    execFileSync(electron, ['--version'], { stdio: 'ignore' });
+  } catch (err) {
+    const why = err?.signal ? `killed with ${err.signal}` : `exit ${err?.status ?? '?'}`;
+    console.error(`  ✗ Electron will not run on this machine (${why}):`);
+    console.error(`      ${electron}`);
+    console.error('    That is application-control software, not a broken install — our code');
+    console.error('    never gets to execute, which is why there is no icon and no log.');
+    console.error('');
+    console.error('    Nothing was registered. Two ways forward:');
+    console.error('      1. run the headless poller instead — plain node, no Electron, same');
+    console.error('         polling and notifications, same UI in a browser:');
+    console.error('             yarn poller:install   →   http://127.0.0.1:8942');
+    console.error('      2. ask security for a ThreatLocker Permit policy for the dev group,');
+    console.error('         matching by PATH (not hash — a hash needs re-approval on every');
+    console.error('         Electron bump):');
+    console.error('             any user\'s node_modules/electron/dist/Electron.app/Contents/MacOS/Electron');
+    console.error('         then re-run this. `--force` skips this check.');
+    process.exit(1);
+  }
+}
+
 const uid = userInfo().uid;
 const domain = `gui/${uid}`;
 const sh = (cmd, args) => execFileSync(cmd, args, { stdio: 'inherit' });
