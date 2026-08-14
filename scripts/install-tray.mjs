@@ -5,13 +5,19 @@
  *   node scripts/install-tray.mjs            build first: yarn build
  *   node scripts/install-tray.mjs --uninstall
  *
- * Why this works when the packaged .app is blocked: electron-builder re-signs
- * its output ad-hoc, making it an unrecognized binary that ThreatLocker
- * SIGKILLs. The Electron binary inside node_modules is the distributor-signed
- * one, which ThreatLocker allows (verified: `electron --version` exits 0 while
- * the packaged bundle dies with 137). Running `electron dist/main/index.js`
- * IS the full tray app — icon, popover, notifications — just not wrapped in
- * our own bundle.
+ * Why this can work when the packaged .app is blocked: it runs ONE binary
+ * instead of two. Both are ad-hoc signed — `codesign -dvv` on the node_modules
+ * Electron reports `Signature=adhoc`, `TeamIdentifier=not set`, same as
+ * electron-builder's re-signed output — so neither carries a certificate an
+ * app-control policy could trust. The difference is only that this one path can
+ * be approved once (by hash) and then reused, and on some machines already is,
+ * whereas each `yarn package` produces a fresh bundle to approve.
+ *
+ * Where Electron is blocked outright, the headless poller is the way in: its
+ * agent runs plain node and nothing in its import graph touches electron.
+ *
+ * Running `electron dist/main/index.js` IS the full tray app — icon, popover,
+ * notifications — just not wrapped in our own bundle.
  *
  * Mutually exclusive with the headless poller agent: both poll and notify, so
  * running both would double every banner. Installing one removes the other.

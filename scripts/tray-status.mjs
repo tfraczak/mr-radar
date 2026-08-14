@@ -86,7 +86,7 @@ try {
   if (typeof bin !== 'string' || !existsSync(bin)) throw new Error('unresolved');
   execFileSync(bin, ['--version'], { stdio: 'ignore' });
   electronOk = true;
-  line('electron', 'runs (distributor-signed binary in node_modules)');
+  line('electron', 'runs (node_modules binary is approved on this machine)');
 } catch (err) {
   electronOk = false;
   const why = err?.signal ? `killed with ${err.signal}` : `exit ${err?.status ?? '?'}`;

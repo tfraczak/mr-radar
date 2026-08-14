@@ -207,9 +207,9 @@ if electron_runs; then
 else
   warn "Electron will not run on this machine — it exited non-zero or was killed:"
   warn "    $ELECTRON_BIN"
-  warn "That is application-control software, not a broken install: this binary is"
-  warn "the distributor-signed Electron from node_modules, and our code never gets"
-  warn "to run. Ask for that path to be approved."
+  warn "That is application-control software, not a broken install — our code never"
+  warn "gets to run. Electron ships ad-hoc signed (no certificate to trust), so the"
+  warn "approval has to be for that path/hash; a version bump needs a new one."
   warn ""
   warn "The headless poller needs no Electron — same polling, same notifications,"
   warn "and the same UI in a browser at http://127.0.0.1:8942."
