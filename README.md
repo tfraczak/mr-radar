@@ -463,9 +463,26 @@ Until then, the practical ask for a managed fleet is a **path** rule rather than
 a hash approval — and the ask should be path-ONLY, with no hash clause, or every
 Electron bump needs re-approval:
 
-> ThreatLocker Application definition, match type **Full Path (wildcard)**:
-> `*/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron` — with a
-> **Permit** policy assigned to the developer computer group.
+> **Application definition** — name: `MR-Radar-Electron-Dev`; match type: **Full
+> Path (wildcard)**; path:
+> `*/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron`;
+> platform: macOS (arm64).
+>
+> **Policy** — action: **Permit**; application: `MR-Radar-Electron-Dev`; applies
+> to: the developer computer group.
+>
+> *Justification:* npm-distributed Electron (currently 43.2.0), the runtime for an
+> internal developer tool that runs entirely locally. No hash clause on purpose —
+> a hash needs re-approval on every Electron version bump.
+
+If the admin wants it tighter, two things to offer rather than argue about:
+an exact per-machine path instead of the leading wildcard
+(`/Users/<user>/…/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron`),
+and **Ringfencing** — the app needs outbound HTTPS to your forge, your Atlassian
+site and (optionally) your CI provider, loopback on its own web port, one
+Keychain item, and `~/.config/mr-radar` + `~/.local/state/mr-radar`. Nothing
+else. Volunteering those bounds turns "trust a developer's binary" into a
+scoped, auditable permit.
 
 Measured on two Macs: the same Electron bytes run at that path and are blocked as
 "Unrecognized" when copied elsewhere, so the permission that makes a dev machine
