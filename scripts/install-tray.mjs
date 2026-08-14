@@ -20,8 +20,8 @@
  * test, so the policy is aimed at .app bundles.
  *
  * Practical consequence for a rollout: ask for a path rule (a wildcard over
- * */node_modules/electron/dist/Electron.app/Contents/MacOS/Electron) rather than
- * a hash approval — a hash dies at the next Electron bump, a path survives it.
+ * any user's node_modules/electron/dist/Electron.app/Contents/MacOS/Electron)
+ * rather than a hash approval — a hash dies at the next Electron bump, a path survives it.
  * Until then the way in is the headless poller: its agent runs plain node, and
  * nothing in its import graph touches electron.
  *
