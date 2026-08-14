@@ -1,0 +1,13 @@
+#!/bin/sh
+# Refuse a commit message that names an internal ticket, org, host or teammate.
+#
+# The tree has been swept for those since day one; messages were not — and an
+# internal ticket id duly shipped in one, on a public repo, where a commit
+# message is exactly as public as the code it describes.
+#
+# Patterns live in the gitignored .sweep-patterns, so this hook is safe to
+# commit: it carries the enforcement, never the identifiers.
+#
+# Enable once per clone (hooks are not shared by git itself):
+#     git config core.hooksPath scripts/hooks
+exec node "$(dirname "$0")/../sweep.mjs" --message "$1"

@@ -466,6 +466,18 @@ Test fixtures under `tests/fixtures/` are sanitized, anonymized derivatives of r
 responses (`scripts/capture-fixtures.sh` + `scripts/sanitize-fixtures.mjs`); raw captures
 are gitignored and must never be committed.
 
+**Keeping employer-specific detail out of a public repo.** `yarn sweep` greps the
+committable tree for identifiers — internal hosts, org names, ticket prefixes,
+usernames — listed one regex per line in a **gitignored** `.sweep-patterns`, so the
+guard ships without the identifiers (POSIX ERE only: `git grep -E` silently never
+matches `\b`). Commit messages are just as public as the code and are not covered by a
+tree scan, so the same patterns run against the message via a hook — enable it once per
+clone:
+
+```bash
+git config core.hooksPath scripts/hooks   # runs scripts/sweep.mjs --message on commit-msg
+```
+
 ## Tech stack
 
 - **Electron + TypeScript** — the one Node/TS path that gives a tray icon, a popover, and

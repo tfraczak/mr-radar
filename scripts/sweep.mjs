@@ -65,6 +65,38 @@ if (unsupported.length) {
   process.exit(2);
 }
 
+// `--message <file>` scans a commit message instead of the tree. Commit
+// messages are part of a public repo just as much as its files, and scanning
+// only the tree let an internal ticket id ship in one — the tree was clean, the
+// message was not. Wired to a commit-msg hook (scripts/hooks/commit-msg), which
+// is why this lives here rather than in a second script with a second copy of
+// the pattern loading and the ERE guard.
+const msgFlag = process.argv.indexOf('--message');
+if (msgFlag !== -1) {
+  const file = process.argv[msgFlag + 1];
+  if (!file) {
+    console.error('sweep: --message needs a file path');
+    process.exit(2);
+  }
+  const body = readFileSync(file, 'utf8');
+  // Comment lines are git's own commentary, not part of the message.
+  const lines = body.split('\n').filter((l) => !l.startsWith('#'));
+  const re = new RegExp(patterns.join('|'), 'i');
+  const hits = lines
+    .map((line, i) => ({ line, n: i + 1 }))
+    .filter(({ line }) => re.test(line));
+  if (hits.length) {
+    console.error(
+      'sweep: org-specific identifiers in the commit message:\n' +
+        hits.map(({ line, n }) => `  ${n}: ${line}`).join('\n') +
+        '\nRewrite the message — a public commit message is as public as the code.',
+    );
+    process.exit(1);
+  }
+  console.log('sweep: commit message clean');
+  process.exit(0);
+}
+
 try {
   const out = execFileSync(
     'git',
