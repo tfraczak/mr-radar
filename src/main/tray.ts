@@ -1,6 +1,7 @@
 import { Menu, Tray, nativeImage, nativeTheme } from 'electron';
 import { join } from 'node:path';
 import { describePause } from '../core/schedule';
+import type { UiSnapshot, UiTab } from '../renderer/contract';
 import type { UiState } from './state';
 
 /**
@@ -17,7 +18,8 @@ import type { UiState } from './state';
 export interface TrayCallbacks {
   onToggle: () => void;
   onPollNow: () => void;
-  onOpen: () => void;
+  /** Open the popover on one bucket — the menu's three main entries. */
+  onOpenTab: (tab: UiTab) => void;
   onSettings: () => void;
   onRevealConfig: () => void;
   onMarkAllRead: () => void;
@@ -31,7 +33,15 @@ const ASSETS = join(__dirname, '..', '..', 'assets');
 export class TrayController {
   private tray: Tray | undefined;
 
-  constructor(private readonly cb: TrayCallbacks) {}
+  /**
+   * `presented` hands back the same snapshot the popover renders, so the menu's
+   * bucket counts are the popover's own numbers rather than a second, subtly
+   * different tally of the same work.
+   */
+  constructor(
+    private readonly cb: TrayCallbacks,
+    private readonly presented: () => UiSnapshot | undefined = () => undefined,
+  ) {}
 
   init(): void {
     this.tray = new Tray(templateIcon('radar-idle'));
@@ -69,12 +79,25 @@ export class TrayController {
     const failing = items.filter((i) => i.testGate?.kind === 'verified' && i.testGate.result === 'failed');
     const unverified = items.filter((i) => i.testGate?.kind === 'unverified' && i.testGate.startable);
 
+    // One entry per bucket, so the menu can open the app *where you were
+    // headed* rather than wherever it happened to be left. Counts come from the
+    // presented snapshot — the popover's own numbers.
+    const totals = state ? this.presented()?.tabTotals : undefined;
+    const term = state ? changeTermFor(this.presented()) : 'MR';
+    const buckets: { tab: UiTab; label: string }[] = [
+      { tab: 'work', label: 'My work' },
+      { tab: 'reviews', label: 'My reviews' },
+      { tab: 'participating', label: 'Participating' },
+    ];
+
     return Menu.buildFromTemplate([
       { label: state ? tooltip(state) : 'MR Radar — starting…', enabled: false },
       { type: 'separator' },
-      // "tracked" = the whole polling universe; the popover header shows the
-      // narrower "active" slice — two words, so the two counts can't collide.
-      { label: `Open (${items.length} tracked)`, click: () => this.cb.onOpen() },
+      ...buckets.map((b) => ({
+        label: totals ? `${b.label} (${totals[b.tab]})` : b.label,
+        click: () => this.cb.onOpenTab(b.tab),
+      })),
+      { type: 'separator' },
       {
         label: byUser ? 'Resume polling' : 'Pause polling',
         click: () => this.cb.onToggle(),
@@ -88,6 +111,9 @@ export class TrayController {
         enabled: Boolean(state?.unread.length),
       },
       { type: 'separator' },
+      // "tracked" = the whole polling universe; the buckets above count the
+      // narrower slice the popover shows. Two words, so they can't be confused.
+      { label: `${items.length} ${term}s tracked`, enabled: false },
       {
         label: failing.length ? `${failing.length} with failing tests` : 'No failing tests',
         enabled: false,
@@ -117,6 +143,10 @@ export class TrayController {
     this.tray = undefined;
   }
 }
+
+/** MR/PR for the tray's own wording; 'MR' until the first snapshot lands. */
+const changeTermFor = (snapshot: UiSnapshot | undefined): 'MR' | 'PR' =>
+  snapshot?.forge === 'github' ? 'PR' : 'MR';
 
 const tooltip = (state: UiState): string => {
   if (state.pausedReason) return `MR Radar — ${describePause(state.pausedReason)}`;

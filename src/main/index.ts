@@ -67,17 +67,21 @@ const main = async (): Promise<void> => {
   await refreshJira();
 
   popover = new Popover(() => pushToRenderer());
-  tray = new TrayController({
-    onToggle: togglePause,
-    onPollNow: () => void runCycle('manual'),
-    onOpen: () => popover.open(trayHandle()),
-    onSettings: () => popover.open(trayHandle(), { showSettings: true }),
-    onRevealConfig: () => shell.showItemInFolder(CONFIG_PATH),
-    onMarkAllRead: markAllRead,
-    onTestNotification: testNotification,
-    onNotificationSettings: openNotificationSettings,
-    onQuit: () => app.quit(),
-  });
+  tray = new TrayController(
+    {
+      onToggle: togglePause,
+      onPollNow: () => void runCycle('manual'),
+      onOpenTab: (tab) => popover.open(trayHandle(), { showTab: tab }),
+      onSettings: () => popover.open(trayHandle(), { showSettings: true }),
+      onRevealConfig: () => shell.showItemInFolder(CONFIG_PATH),
+      onMarkAllRead: markAllRead,
+      onTestNotification: testNotification,
+      onNotificationSettings: openNotificationSettings,
+      onQuit: () => app.quit(),
+    },
+    // Same snapshot the popover renders, so the menu's counts are its counts.
+    () => presented(),
+  );
   tray.init();
   webHandlers = makeWebHandlers({
     state,
@@ -308,8 +312,23 @@ const markAllRead = (): void => {
 }
 
 const pushToRenderer = (): void => {
-  popover?.send('ui:snapshot', present(state, config.jira.activeStatuses, new Date(), config.git.updateStyle, config.statusSections, config.statusRules, config.slack, config.ui.tabCounts, config.noMr, forge.name));
+  popover?.send('ui:snapshot', presented());
 }
+
+/** The view-model, built the same way for every consumer (popover and tray). */
+const presented = () =>
+  present(
+    state,
+    config.jira.activeStatuses,
+    new Date(),
+    config.git.updateStyle,
+    config.statusSections,
+    config.statusRules,
+    config.slack,
+    config.ui.tabCounts,
+    config.noMr,
+    forge.name,
+  );
 
 /**
  * The popover only needs the icon's rectangle to position itself, not the Tray
@@ -365,6 +384,8 @@ const registerIpc = (): void => {
     // The renderer requesting its snapshot is the proof its listeners exist —
     // the safe moment to deliver a settings intent from the tray menu.
     if (popover.consumePendingShowSettings()) popover.send('ui:show-settings', undefined);
+    const tab = popover.consumePendingTab();
+    if (tab) popover.send('ui:show-tab', tab);
     return present(state, config.jira.activeStatuses, new Date(), config.git.updateStyle, config.statusSections, config.statusRules, config.slack, config.ui.tabCounts, config.noMr, forge.name);
   });
   ipcMain.handle('ui:poll-now', () => void runCycle('manual'));

@@ -1,4 +1,4 @@
-import type { EditableRule, RadarApi, StatusSection, UiGroup, UiItem, UiSnapshot, UiStatusGroup } from './contract';
+import type { EditableRule, RadarApi, StatusSection, UiGroup, UiItem, UiSnapshot, UiStatusGroup, UiTab } from './contract';
 import { FIELD_LABELS, changeTerm } from './contract.js';
 import { sortedGroups, type SortMode } from './sort.js';
 import {
@@ -62,6 +62,11 @@ pauseBtn.addEventListener('click', () => void window.radar.togglePause());
 markReadBtn.addEventListener('click', () => void window.radar.markAllRead());
 settingsBtn.addEventListener('click', () => void toggleSettings());
 window.radar.onShowSettings(() => void openSettings());
+// A tray bucket entry: switch tabs, and make sure the list is on screen.
+window.radar.onShowTab((tab) => {
+  if (!settingsEl.hidden) closeSettings();
+  selectTab(tab);
+});
 
 // -- sort & filter preferences (client-side, persisted in localStorage) -------
 /**
@@ -74,11 +79,8 @@ let forgeTerm: 'MR' | 'PR' = 'MR';
 const mr = (): string => forgeTerm;
 const mrs = (): string => `${forgeTerm}s`;
 
-/**
- * 'work' = MRs I authored; 'reviews' = definitive reviewer signal (requested
- * or approved); 'participating' = looser — commented on or mentioned.
- */
-type Tab = 'work' | 'reviews' | 'participating';
+/** The shared bucket vocabulary (see UiTab): the tray opens these by name. */
+type Tab = UiTab;
 
 const inTab = (item: UiItem, tab: Tab): boolean => {
   if (tab === 'work') return item.reason === 'authored';
@@ -205,25 +207,18 @@ const mainTabs = createTabBar<Tab>({
 });
 byId('tabs').replaceWith(mainTabs.root);
 
-/** Tab labels carry live counts; the active tab is marked for the CSS. */
+/**
+ * Tab labels carry live counts; the active tab is marked for the CSS.
+ *
+ * The numbers come from the snapshot (present() computes them, honouring
+ * `tabCounts`) rather than being recounted here — the tray menu shows the same
+ * three counts, and two tallies of one thing eventually disagree.
+ */
 const paintTabs = (s: UiSnapshot): void => {
-  // 'active' counts what needs doing (active + needs-value sections), so the
-  // labels agree with the header's "N in scope"; 'all' counts every section
-  // shown (Verification/Done/Other too — never Ignored).
-  const groups =
-    (s.tabCounts ?? 'all') === 'active'
-      ? [...s.groups, ...(s.needsGroups ?? [])]
-      : [...s.groups, ...(s.needsGroups ?? []), ...(s.verificationGroups ?? []), ...(s.doneGroups ?? []), ...s.otherGroups];
-  const items = groups.flatMap((g) => g.items);
-  // No-MR rows carry no items, so they'd count as nothing — the one thing this
-  // feature exists to prevent. Counted under their tab in both modes: a ticket
-  // with no MR is active work by definition.
-  const noMrCount = (s.noMrGroups ?? []).length;
-  const count = (tab: Tab): number =>
-    items.filter((i) => inTab(i, tab)).length + (tab === NO_MR_TAB ? noMrCount : 0);
-  mainTabs.setLabel('work', `My work (${count('work')})`);
-  mainTabs.setLabel('reviews', `My reviews (${count('reviews')})`);
-  mainTabs.setLabel('participating', `Participating (${count('participating')})`);
+  const totals = s.tabTotals;
+  mainTabs.setLabel('work', `My work (${totals?.work ?? 0})`);
+  mainTabs.setLabel('reviews', `My reviews (${totals?.reviews ?? 0})`);
+  mainTabs.setLabel('participating', `Participating (${totals?.participating ?? 0})`);
   mainTabs.setActive(prefs.tab);
 };
 

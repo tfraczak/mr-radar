@@ -179,6 +179,8 @@ window.radar = {
     window.alert('Config lives at ~/.config/mr-radar/config.json');
   },
   onShowSettings: () => () => {},
+  // No tray in a browser tab, so nothing ever asks for a bucket.
+  onShowTab: () => () => {},
   close: async () => {
     window.close();
   },

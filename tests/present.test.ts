@@ -696,3 +696,50 @@ describe('re-running a failed suite', () => {
     expect(ci?.rerunnable).toBeUndefined();
   });
 });
+
+describe('tabTotals (shared by the popover tabs and the tray menu)', () => {
+  const t = (status: string): JiraTicket => ticket(status, { key: 'ENG-5' });
+  const authored = () => item({ reason: 'authored', ticket: t('In Development') });
+  const reviewing = () => item({ reason: 'reviewer', ticket: t('Code Review') });
+  const participating = () => item({ reason: 'participating', participation: 'commented', ticket: t('Code Review') });
+
+  it('counts each bucket by why the MR is tracked', () => {
+    const snap = present(stateWith([authored(), authored(), reviewing(), participating()]), ACTIVE, NOW);
+    expect(snap.tabTotals).toEqual({ work: 2, reviews: 1, participating: 1 });
+  });
+
+  it('counts a ticket with no MR as work — it has no items to count', () => {
+    const jira: JiraTicket = { key: 'ENG-9', summary: 's', status: 'In Development', updated: NOW.toISOString(), url: '#' };
+    const state: UiState = {
+      ...initialUiState(),
+      snapshot: { at: NOW.toISOString(), items: [authored()], activeTickets: [jira], sources: {} as never },
+    };
+    const snap = present(state, ACTIVE, NOW);
+    expect(snap.noMrGroups).toHaveLength(1);
+    expect(snap.tabTotals.work).toBe(2); // the MR plus the MR-less ticket
+  });
+
+  it("'active' counts only the sections that need you; 'all' counts every section shown", () => {
+    // A Done-status MR renders in the collapsed Done section.
+    const done = item({ reason: 'authored', ticket: ticket('Closed', { key: 'ENG-7', statusCategory: 'Done' }) });
+    const args = ['rebase', DEFAULT_CONFIG.statusSections, [], DEFAULT_CONFIG.slack] as const;
+    const active = present(stateWith([authored(), done]), ACTIVE, NOW, ...args, 'active');
+    const all = present(stateWith([authored(), done]), ACTIVE, NOW, ...args, 'all');
+    expect(active.tabTotals.work).toBe(1);
+    expect(all.tabTotals.work).toBe(2);
+  });
+
+  it('never counts ignored MRs, in either mode', () => {
+    const ignored = item({ reason: 'authored', ticket: t('In Development'), ignoreOverride: 'ignored' });
+    const args = ['rebase', DEFAULT_CONFIG.statusSections, [], DEFAULT_CONFIG.slack] as const;
+    for (const mode of ['active', 'all'] as const) {
+      const snap = present(stateWith([authored(), ignored]), ACTIVE, NOW, ...args, mode);
+      expect(snap.ignoredGroups).toHaveLength(1);
+      expect(snap.tabTotals.work).toBe(1);
+    }
+  });
+
+  it('is all zeros before the first poll, so the menu can render immediately', () => {
+    expect(present(initialUiState(), ACTIVE, NOW).tabTotals).toEqual({ work: 0, reviews: 0, participating: 0 });
+  });
+});

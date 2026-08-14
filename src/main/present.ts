@@ -1,5 +1,5 @@
 import { DEFAULT_CONFIG, type Config, type RuleField, type StatusRule } from '../core/config';
-import { FIELD_LABELS, changeTerm, type ForgeName } from '../renderer/contract';
+import { FIELD_LABELS, changeTerm, type ForgeName, type UiTab } from '../renderer/contract';
 import { unresolvedCount } from '../core/correlate';
 import { ticketsMissingMrs, type MissingMr } from '../core/no-mr';
 import { reviewReadiness } from '../core/review-ready';
@@ -105,6 +105,10 @@ export const present = (
     ignoredGroups,
     tabCounts,
     forge,
+    tabTotals: tabTotals(
+      { groups, needsGroups, verificationGroups, doneGroups, otherGroups, noMrGroups: missing.length },
+      tabCounts,
+    ),
     // Raw in-scope count, BEFORE the hidden/stale-closed filters — the same
     // population the tray menu counts, so "tracked" reads identically in both.
     trackedCount: (state.snapshot?.items ?? []).filter((i) => i.inScope).length,
@@ -112,6 +116,47 @@ export const present = (
     jiraEmail: state.jiraEmail,
   };
 }
+
+/**
+ * How many rows each tab holds — the popover's tab labels and the tray menu's
+ * entries both read this, so they cannot drift apart.
+ *
+ * 'active' counts what needs doing (the active + needs-value sections), which is
+ * what makes the labels agree with the header's "N active"; 'all' counts every
+ * section shown — never Ignored, which is silent by definition. Tickets with no
+ * MR contribute one row each to `work` in both modes: they carry no items, so
+ * they would otherwise count as nothing, which is the one thing that feature
+ * exists to prevent.
+ */
+const tabTotals = (
+  sections: {
+    groups: UiGroup[];
+    needsGroups: UiGroup[];
+    verificationGroups: UiStatusGroup[];
+    doneGroups: UiStatusGroup[];
+    otherGroups: UiStatusGroup[];
+    noMrGroups: number;
+  },
+  tabCounts: Config['ui']['tabCounts'],
+): Record<UiTab, number> => {
+  const counted =
+    tabCounts === 'active'
+      ? [...sections.groups, ...sections.needsGroups]
+      : [
+          ...sections.groups,
+          ...sections.needsGroups,
+          ...sections.verificationGroups,
+          ...sections.doneGroups,
+          ...sections.otherGroups,
+        ];
+  const items = counted.flatMap((g) => g.items);
+  const count = (reason: UiItem['reason']): number => items.filter((i) => i.reason === reason).length;
+  return {
+    work: count('authored') + sections.noMrGroups,
+    reviews: count('reviewer'),
+    participating: count('participating'),
+  };
+};
 
 /** Branches it's normal to merge into; anything else earns a warning. */
 const isMainline = (target: string): boolean => {

@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { EditableSettings, RadarApi, UiSnapshot } from '../renderer/contract';
+import type { EditableSettings, RadarApi, UiSnapshot, UiTab } from '../renderer/contract';
 
 /**
  * The only bridge between the popover and the main process.
@@ -68,6 +68,11 @@ const api = {
     const handler = (): void => fn();
     ipcRenderer.on('ui:show-settings', handler);
     return () => ipcRenderer.removeListener('ui:show-settings', handler);
+  },
+  onShowTab: (fn: (tab: UiTab) => void): (() => void) => {
+    const handler = (_e: unknown, tab: UiTab): void => fn(tab);
+    ipcRenderer.on('ui:show-tab', handler);
+    return () => ipcRenderer.removeListener('ui:show-tab', handler);
   },
   close: (): Promise<void> => ipcRenderer.invoke('ui:close'),
 };

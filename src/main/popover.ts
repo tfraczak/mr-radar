@@ -1,4 +1,5 @@
 import { BrowserWindow, nativeTheme, screen } from 'electron';
+import type { UiTab } from '../renderer/contract';
 import { join } from 'node:path';
 
 const WIDTH = 560;
@@ -26,12 +27,21 @@ export class Popover {
    */
   private pendingShowSettings = false;
 
+  /** Same deal for "open on this tab" (the tray's bucket entries). */
+  private pendingTab: UiTab | undefined;
+
   /** True while an async row action is in flight; suppresses close-on-blur. */
   private busy = false;
 
   consumePendingShowSettings(): boolean {
     const pending = this.pendingShowSettings;
     this.pendingShowSettings = false;
+    return pending;
+  }
+
+  consumePendingTab(): UiTab | undefined {
+    const pending = this.pendingTab;
+    this.pendingTab = undefined;
     return pending;
   }
 
@@ -47,11 +57,12 @@ export class Popover {
     this.open(bounds);
   }
 
-  open(bounds: Electron.Rectangle | undefined, opts: { showSettings?: boolean } = {}): void {
+  open(bounds: Electron.Rectangle | undefined, opts: { showSettings?: boolean; showTab?: UiTab } = {}): void {
     if (this.isOpen) {
       this.win?.show();
       this.win?.focus();
       if (opts.showSettings) this.send('ui:show-settings', undefined);
+      if (opts.showTab) this.send('ui:show-tab', opts.showTab);
       return;
     }
 
@@ -85,6 +96,7 @@ export class Popover {
     void this.win.loadFile(join(__dirname, '..', 'renderer', 'index.html'));
 
     if (opts.showSettings) this.pendingShowSettings = true;
+    if (opts.showTab) this.pendingTab = opts.showTab;
     this.win.once('ready-to-show', () => {
       this.position(bounds);
       this.win?.show();
@@ -102,6 +114,7 @@ export class Popover {
     this.win.on('closed', () => {
       this.win = undefined;
       this.pendingShowSettings = false;
+      this.pendingTab = undefined;
     });
   }
 

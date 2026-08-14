@@ -22,6 +22,13 @@ export type ForgeName = 'gitlab' | 'github';
 export const changeTerm = (forge: ForgeName | undefined): 'MR' | 'PR' =>
   forge === 'github' ? 'PR' : 'MR';
 
+/**
+ * The popover's three buckets. 'work' = MRs I authored (plus my tickets with no
+ * MR at all); 'reviews' = a definitive reviewer signal (requested or already
+ * approved); 'participating' = looser — I commented, or I was mentioned.
+ */
+export type UiTab = 'work' | 'reviews' | 'participating';
+
 export type RuleFieldName = 'fixVersions' | 'issueType' | 'dueDate';
 
 /** Humanized field names for the "Needs <field>" affordances. */
@@ -66,6 +73,12 @@ export interface UiSnapshot {
   tabCounts: 'active' | 'all';
   /** The forge this install is watching — decides MR vs PR in every label. */
   forge?: ForgeName | undefined;
+  /**
+   * Per-tab counts, honouring `tabCounts`. Computed once here so the popover's
+   * tab labels and the tray menu's entries can never disagree — the whole point
+   * of two places showing the same number.
+   */
+  tabTotals: Record<UiTab, number>;
   /** Every in-scope MR the radar polls — the tray menu's number, pre-filters. */
   trackedCount: number;
   /** Jira has no stored token yet, so the popover offers a connect field. */
@@ -317,5 +330,7 @@ export interface RadarApi {
   revealConfig(): Promise<void>;
   /** Fires when the tray's "Settings…" item asks the popover to open the panel. */
   onShowSettings(fn: () => void): () => void;
+  /** Fires when a tray menu entry asks the popover to show one bucket. */
+  onShowTab(fn: (tab: UiTab) => void): () => void;
   close(): Promise<void>;
 }
