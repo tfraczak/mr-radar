@@ -77,13 +77,41 @@ try {
   line('web api', existsSync(tokenPath) ? 'not responding' : 'no token file — the app has not served yet');
 }
 
-// 4. The log, which is where a startup crash lands.
+// 4. Can Electron run at all? The decisive question when nothing started: app
+//    control kills it silently, and our code never runs to log anything.
+let electronOk;
+try {
+  const { createRequire } = await import('node:module');
+  const bin = createRequire(import.meta.url)('electron');
+  if (typeof bin !== 'string' || !existsSync(bin)) throw new Error('unresolved');
+  execFileSync(bin, ['--version'], { stdio: 'ignore' });
+  electronOk = true;
+  line('electron', 'runs (distributor-signed binary in node_modules)');
+} catch (err) {
+  electronOk = false;
+  const why = err?.signal ? `killed with ${err.signal}` : `exit ${err?.status ?? '?'}`;
+  line('electron', `WILL NOT RUN (${why}) — application control, not a broken install`);
+}
+
+// 5. The log, which is where a startup crash lands.
 if (existsSync(logPath)) {
   const tail = readFileSync(logPath, 'utf8').trimEnd().split('\n').slice(-5);
   console.log(`\n  last log lines (${logPath}):`);
   for (const l of tail) console.log(`    ${l}`);
 } else {
   console.log(`\n  no log yet at ${logPath}`);
+}
+
+// Electron blocked: the menu bar app can never start here, and there is a
+// fallback that needs no Electron at all.
+if (electronOk === false) {
+  console.log(`
+  The menu bar app cannot run on this machine: something killed Electron before
+  our code executed, which is why there is no icon and nothing in the log. Two
+  ways forward:
+    • ask for this path to be approved, then re-run ./install.sh
+    • use the headless poller instead — plain node, no Electron, same polling and
+      notifications, and the same UI in a browser:  yarn poller:install`);
 }
 
 // The case people actually hit: it IS running, and the icon is off-screen.

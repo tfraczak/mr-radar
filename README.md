@@ -58,8 +58,10 @@ yarn tray:install # register + start the launchd agent
 and whether the app answers on its own port — the first thing to run if no icon
 appears. `yarn tray:uninstall` removes the agent again. For a one-off run without
 installing anything: `yarn install && yarn dev` (dies with the terminal).
-If Electron can't run on your machine at all, there's a headless poller with a
-web UI instead — see its section below (`yarn poller:install`). A normal
+If Electron can't run on your machine at all — application control blocks it on
+some managed Macs — `./install.sh` detects that and offers the headless poller
+instead: plain node, no Electron, same polling and notifications, same UI in a
+browser (see its section below, or `yarn poller:install`). A normal
 packaged `.app` also builds with `yarn package`, a drag-to-Applications disk
 image with `yarn package:dmg`, and a `.pkg` installer with `yarn package:pkg`
 — see "Signing for distribution" below before sharing any of them.
@@ -176,6 +178,7 @@ yarn tray:logs    # follow the running agent's log ("cycle ok · N api calls" is
 
 | Symptom | Fix |
 |---|---|
+| No radar icon, and `yarn tray:status` says Electron **will not run** | Application-control software killed Electron before any of our code ran — that's why there's no icon *and* nothing in the log. Get the printed `node_modules/electron/.../MacOS/Electron` path approved, or use the headless poller, which needs no Electron at all: `yarn poller:install`, then `http://127.0.0.1:8942`. |
 | No radar icon | `yarn tray:status` — it separates the two causes. If it reports the app running and serving, the icon exists and your **menu bar is full**: macOS hides the overflow (behind the notch on laptops) with no indication — ⌘-drag to reorder, use an overflow manager (Ice/Bartender), or just open `http://127.0.0.1:8942`. Otherwise the startup crashed: `yarn tray:logs`, fix, `yarn tray:install`. |
 | Footer shows GitLab red | `glab auth status`, then `glab auth login`. |
 | "Set the Atlassian URL…" | Settings → Jira needs the URL *saved* before a token can be connected. |

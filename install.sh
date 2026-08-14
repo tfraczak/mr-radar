@@ -147,6 +147,20 @@ offer_terminal_notifier() {
   fi
 }
 
+# --- can Electron actually run here? ------------------------------------------
+# Application-control software (ThreatLocker et al) SIGKILLs binaries it has not
+# approved, silently. When that binary is Electron, the menu bar app can never
+# start and the failure looks exactly like a broken install — no icon, no error,
+# nothing in our log because our code never runs. Probe before registering an
+# agent that could not work, and fall back to the headless poller, which runs
+# under plain node and serves the same UI in a browser.
+ELECTRON_BIN=""
+electron_runs() {
+  ELECTRON_BIN=$(node -p "require('electron')" 2>/dev/null) || return 1
+  [ -n "$ELECTRON_BIN" ] && [ -x "$ELECTRON_BIN" ] || return 1
+  "$ELECTRON_BIN" --version >/dev/null 2>&1
+}
+
 step "Checking prerequisites (installing what's missing)"
 ensure_node
 ensure_yarn
@@ -188,7 +202,24 @@ step "Seeding config"
 seed_config
 
 step "Installing the menu bar app under launchd"
-node scripts/install-tray.mjs
+if electron_runs; then
+  node scripts/install-tray.mjs
+else
+  warn "Electron will not run on this machine — it exited non-zero or was killed:"
+  warn "    $ELECTRON_BIN"
+  warn "That is application-control software, not a broken install: this binary is"
+  warn "the distributor-signed Electron from node_modules, and our code never gets"
+  warn "to run. Ask for that path to be approved."
+  warn ""
+  warn "The headless poller needs no Electron — same polling, same notifications,"
+  warn "and the same UI in a browser at http://127.0.0.1:8942."
+  if confirm "Install the headless poller instead?"; then
+    node scripts/install-poller.mjs
+    note "open http://127.0.0.1:8942 — and re-run ./install.sh once Electron is approved"
+  else
+    fail "nothing installed — approve $ELECTRON_BIN, or re-run and choose the poller"
+  fi
+fi
 
 step "Done"
 cat <<'NEXT'
