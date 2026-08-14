@@ -399,11 +399,31 @@ macOS, System Settings → Privacy & Security → "Open Anyway" is the only
 bypass — right-click → Open no longer works for unsigned apps). Opening
 cleanly on other people's Macs takes two things, both automated here:
 
-1. **A Developer ID certificate.** Join the Apple Developer Program
-   ($99/year, individual is fine), then in Xcode → Settings → Accounts →
-   Manage Certificates create a **Developer ID Application** certificate
-   (and **Developer ID Installer** if you'll ship signed .pkg). It lands in
-   your login keychain, where electron-builder finds it by name.
+1. **A Developer ID certificate.** Decide *whose* identity first — it is the
+   trust anchor, not just a build input:
+
+   - **Distributing to yourself only?** Individual enrollment in the Apple
+     Developer Program ($99/year) is fine and usually clears in a day.
+   - **Distributing to a team or a managed fleet?** Use the organization's
+     Apple Developer account, and check whether one already exists before
+     enrolling anything new — a second identity is a second thing for
+     app-control policy to trust, and an individual's certificate walks out
+     of the door with the individual. Organization enrollment needs a D-U-N-S
+     number and someone with authority to bind the legal entity, so it takes
+     days rather than minutes, and on an org account creating Developer ID
+     certificates is typically restricted to the **Account Holder** role —
+     worth confirming who that is early.
+
+   Then create a **Developer ID Application** certificate (plus **Developer ID
+   Installer** if you'll ship a signed .pkg, the usual vehicle for MDM
+   deployment): Xcode → Settings → Accounts → Manage Certificates → **+**, or
+   generate a CSR in Keychain Access and upload it at
+   developer.apple.com/account → Certificates. Either way the private key lands
+   in your login keychain, where electron-builder finds it by name.
+
+   Export the identity as a `.p12` and store it somewhere safe: it is what a CI
+   signer needs (`CSC_LINK` + `CSC_KEY_PASSWORD`), Apple issues only a small
+   number of these, and losing the key means re-issuing.
 2. **Notarization.** Since macOS 10.15 signing alone isn't enough — Apple
    must scan and notarize the build. Generate an app-specific password at
    appleid.apple.com, note your Team ID (developer.apple.com → Membership),
@@ -422,6 +442,18 @@ notary service, waits for the verdict, and staples the ticket — the
 resulting DMG opens on any Mac with only the standard "downloaded from the
 internet" prompt. Regular `yarn package*` builds stay unsigned for local
 use.
+
+Check the result before handing it to anyone:
+
+```bash
+security find-identity -v -p codesigning     # the identity exists at all
+codesign -dvv "release/mac-arm64/MR Radar.app"   # Authority + TeamIdentifier, not adhoc
+spctl -a -vvv -t install "release/mac-arm64/MR Radar.app"  # "accepted … Notarized Developer ID"
+xcrun stapler validate "release/mac-arm64/MR Radar.app"    # the ticket is attached
+```
+
+The **Team ID** those print is the string app-control policy allowlists — that is
+what you hand security, once, for every build you will ever ship.
 
 A signed, notarized app also carries your stable Team ID — exactly the
 identity app-control software (ThreatLocker and similar) can allowlist
