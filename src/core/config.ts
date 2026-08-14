@@ -2,7 +2,7 @@ import { readFileSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { isPinnedHttpsOrigin } from './sources/jira';
-import type { CiProvider } from './types';
+import { EVENT_TYPES, type AppEventType, type CiProvider, type EventAudience } from './types';
 
 /** Where a conditional rule can send a ticket. 'next' = defer to later rules. */
 export type RuleTarget =
@@ -269,14 +269,21 @@ export interface Config {
      */
     method: 'auto' | 'native' | 'terminal-notifier' | 'osascript';
     /**
-     * Notify about CI results on MRs you did NOT author.
+     * Which event types notify, per bucket — the popover's three tabs, keyed by
+     * why the MR is tracked (authored = My work, reviewer = My reviews,
+     * participating).
      *
-     * Off by default: a green suite on someone else's branch is not something
-     * you act on as a reviewer — the row's chip is there when you look. What you
-     * do want from those MRs is people (comments, approvals) and the fact that
-     * the author pushed since you last spoke, which notify regardless.
+     * One matrix rather than a drawer of booleans: what you want to hear about
+     * depends on your relationship to the MR, and only you know that split. The
+     * defaults encode the obvious one — everything on your own MRs; on other
+     * people's, the human traffic and "they pushed since you last spoke", but
+     * not their CI, which is theirs to act on.
+     *
+     * An event whose type is missing from its bucket is suppressed at the
+     * banner, never at the recording, so adding a type back can't retro-fire a
+     * burst of history.
      */
-    ciForOthers: boolean;
+    events: Record<EventAudience, AppEventType[]>;
   };
 }
 
@@ -287,6 +294,9 @@ export const STATE_DIR = join(homedir(), '.local', 'state', 'mr-radar');
 export const DB_PATH = process.env.MR_RADAR_DB ?? join(STATE_DIR, 'mr-radar.db');
 
 export const FORGES = ['auto', 'gitlab', 'github'] as const;
+
+/** The event types that are about people rather than machines. */
+const NON_CI_EVENTS: readonly AppEventType[] = EVENT_TYPES.filter((t) => !t.startsWith('ci_'));
 
 export const DEFAULT_CONFIG: Config = {
   forge: 'auto',
@@ -339,7 +349,19 @@ export const DEFAULT_CONFIG: Config = {
     readyStatuses: ['Code Review'],
     template: 'hey team! {ticketUrl} is ready for review. {title}',
   },
-  notifications: { enabled: true, coalesce: true, sound: 'default', method: 'auto', ciForOthers: false },
+  notifications: {
+    enabled: true,
+    coalesce: true,
+    sound: 'default',
+    method: 'auto',
+    events: {
+      authored: [...EVENT_TYPES],
+      // Everything except the CI family: a green suite on someone else's branch
+      // is not yours to act on, and the nudge to start tests certainly isn't.
+      reviewer: [...NON_CI_EVENTS],
+      participating: [...NON_CI_EVENTS],
+    },
+  },
 };
 
 export const NOTIFICATION_METHODS = ['auto', 'native', 'terminal-notifier', 'osascript'] as const;
@@ -443,6 +465,14 @@ const validate = (cfg: Config, path: string): void => {
       if (c.connector !== 'and' && c.connector !== 'or') problems.push(`statusRules[${i}].also[${j}]: bad connector`);
       if (!RULE_FIELDS.includes(c.field)) problems.push(`statusRules[${i}].also[${j}]: bad field "${c.field}"`);
       if (!RULE_OPS.includes(c.op) || (c.op as RuleOp) === 'always') problems.push(`statusRules[${i}].also[${j}]: bad op "${c.op}"`);
+    }
+  }
+  for (const audience of ['authored', 'reviewer', 'participating'] as const) {
+    const list = cfg.notifications.events?.[audience];
+    if (!Array.isArray(list) || list.some((e) => !(EVENT_TYPES as readonly string[]).includes(e))) {
+      problems.push(
+        `notifications.events.${audience} must be an array of event types (${EVENT_TYPES.join(', ')})`,
+      );
     }
   }
   if (typeof cfg.noMr.enabled !== 'boolean') problems.push('noMr.enabled must be a boolean');

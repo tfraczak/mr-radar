@@ -249,8 +249,13 @@ export interface EditableSettings {
   notificationMethod: string;
   /** The choices to offer for notificationMethod. */
   methodChoices: string[];
-  /** Notify about CI results on MRs you did not author (default off). */
-  notifyCiForOthers: boolean;
+  /**
+   * Which event types notify, per bucket — keyed by why the MR is tracked
+   * ('authored' = My work, 'reviewer' = My reviews, 'participating').
+   */
+  notifyEvents: Record<string, string[]>;
+  /** Every event type, in the order the settings grid should list them. */
+  eventTypeChoices: string[];
   /** How you bring main into a branch — adjusts guidance text (rebase/merge). */
   updateStyle: string;
   /** Master switch for the RWX integration (also needs the rwx CLI). */

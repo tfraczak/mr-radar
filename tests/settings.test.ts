@@ -399,3 +399,48 @@ describe('no-MR settings', () => {
     expect(names).not.toContain('(any status)'); // the sentinel is not a status
   });
 });
+
+describe('notification matrix settings', () => {
+  it('projects the config matrix into the form, with the type vocabulary', () => {
+    const e = toEditable(DEFAULT_CONFIG);
+    expect(e.notifyEvents.authored).toEqual(DEFAULT_CONFIG.notifications.events.authored);
+    expect(e.notifyEvents.reviewer).not.toContain('ci_succeeded'); // the shipped default
+    expect(e.notifyEvents.reviewer).toContain('review_updated');
+    expect(e.eventTypeChoices).toContain('ci_suggest_run');
+  });
+
+  it('round-trips a per-bucket selection', () => {
+    const next = applyEditable(
+      {},
+      editable({
+        notifyEvents: {
+          authored: ['comment', 'ci_failed'],
+          reviewer: ['review_updated', 'comment'],
+          participating: [],
+        },
+      }),
+    );
+    const events = (next.notifications as Record<string, unknown>).events as Record<string, string[]>;
+    expect(events.authored).toEqual(['comment', 'ci_failed']);
+    // Written in the canonical order, not the order the form happened to send.
+    expect(events.reviewer).toEqual(['comment', 'review_updated']);
+    expect(events.participating).toEqual([]);
+  });
+
+  it('drops event types it does not know rather than writing them', () => {
+    const next = applyEditable(
+      {},
+      editable({ notifyEvents: { authored: ['comment', 'not_a_real_event'], reviewer: [], participating: [] } }),
+    );
+    const events = (next.notifications as Record<string, unknown>).events as Record<string, string[]>;
+    expect(events.authored).toEqual(['comment']);
+  });
+
+  it('leaves the matrix alone when an older shell omits it', () => {
+    const stale = editable();
+    delete (stale as Partial<EditableSettings>).notifyEvents;
+    const onDisk = { notifications: { events: { authored: ['comment'], reviewer: [], participating: [] } } };
+    const next = applyEditable(onDisk, stale);
+    expect((next.notifications as Record<string, unknown>).events).toEqual(onDisk.notifications.events);
+  });
+});

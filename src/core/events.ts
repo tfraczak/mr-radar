@@ -1,7 +1,7 @@
 import { unresolvedCount } from './correlate';
 import { ticketKeyCandidates, titleKeyCandidate } from './sources/jira';
 import type { Db } from './db';
-import type { AppEvent, Check, ForgeTodo, WatchItem } from './types';
+import type { AppEvent, AppEventType, Check, EventAudience, ForgeTodo, WatchItem } from './types';
 
 /** Does this MR's branch or title still carry `key`? Guards stale pinning. */
 const stillClaims = (item: WatchItem, key: string | null | undefined): boolean => {
@@ -29,8 +29,11 @@ export interface DiffInput {
   /** Our own username; we don't notify ourselves for comments. */
   me: string;
   now: string;
-  /** Notify about CI on MRs I did not author. Default off — see the config doc. */
-  ciForOthers?: boolean;
+  /**
+   * Which event types notify, per bucket (see notifications.events). Absent =
+   * everything notifies, which is what the tests and older callers expect.
+   */
+  notifyEvents?: Record<EventAudience, AppEventType[]>;
 }
 
 export interface DiffResult {
@@ -41,7 +44,6 @@ export interface DiffResult {
 
 export const diff = (input: DiffInput): DiffResult => {
   const { db, items, todos, me, now } = input;
-  const ciForOthers = input.ciForOthers ?? false;
   const events: AppEvent[] = [];
   const pending: ((db: Db) => void)[] = [];
   // An empty MR table means a first launch or a wiped DB. Todos carry no
@@ -142,7 +144,7 @@ export const diff = (input: DiffInput): DiffResult => {
       }
     }
 
-    events.push(...ciEvents({ db, item, seeding, now, pending, ciForOthers }));
+    events.push(...ciEvents({ db, item, seeding, now, pending }));
 
     pending.push((d) =>
       d.upsertMr(
@@ -192,8 +194,19 @@ export const diff = (input: DiffInput): DiffResult => {
 
   events.push(...todoEvents({ db, items, todos, me, now, pending, seedingAll }));
 
+  // The one place notification scope is decided: what you hear about depends on
+  // your relationship to the MR. Applied to the *output* only — every "we've
+  // seen this" mutation above already ran, so re-enabling a type later reports
+  // what happens next rather than replaying the backlog.
+  const audienceOf = new Map(items.map((i) => [i.key, i.reason]));
+  const wanted = (e: AppEvent): boolean => {
+    if (!input.notifyEvents) return true;
+    const audience = audienceOf.get(e.mrKey) ?? 'authored';
+    return (input.notifyEvents[audience] ?? []).includes(e.type);
+  };
+
   return {
-    events,
+    events: events.filter(wanted),
     commit: (d) => {
       for (const fn of pending) fn(d);
     },
@@ -217,16 +230,10 @@ const ciEvents = (args: {
   seeding: boolean;
   now: string;
   pending: ((db: Db) => void)[];
-  ciForOthers: boolean;
 }): AppEvent[] => {
-  const { db, item, seeding, now, pending, ciForOthers } = args;
+  const { db, item, seeding, now, pending } = args;
   const events: AppEvent[] = [];
   const gate = item.testGate;
-  // CI on an MR I did not author is the author's business — a green suite on
-  // someone else's branch is not something I act on, and the row's chip is
-  // there when I look. The recording below still happens either way, so
-  // flipping this setting on can't retro-fire a burst of old results.
-  const notifiable = item.reason === 'authored' || ciForOthers;
 
   for (const check of item.checks ?? []) {
     // Only report checks for the commit under review; a result for an abandoned
@@ -246,7 +253,7 @@ const ciEvents = (args: {
     // finished when we first saw the MR from notifying on a later cycle (silent
     // seeding for CI results).
     if (!already) pending.push((d) => d.markNotified('ci_result', resultKey, now));
-    if (seeding || already || !notifiable) continue;
+    if (seeding || already) continue;
 
     events.push({
       type: kind,
@@ -259,8 +266,7 @@ const ciEvents = (args: {
     });
   }
 
-  // Not mine to start, so not mine to be nagged about.
-  if (!seeding && notifiable && gate?.kind === 'unverified' && gate.startable) {
+  if (!seeding && gate?.kind === 'unverified' && gate.startable) {
     const definition = item.checks?.find((c) => c.role === 'tests')?.name ?? 'tests';
     const key = suggestRunKey(gate.provider, item.branch, definition, item.headSha);
     if (!db.wasNotified('suggest_run', key)) {

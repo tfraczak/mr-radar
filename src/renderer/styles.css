@@ -2276,3 +2276,31 @@ button.select-trigger {
   text-decoration: underline;
   pointer-events: none;
 }
+
+/* Notification matrix: event types down, buckets across. One grid rather than
+   thirty checkboxes in a list, because the question is two-dimensional. */
+.notify-grid {
+  display: grid;
+  grid-template-columns: 1fr repeat(3, auto);
+  gap: 2px 10px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.notify-head {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--fg-dim);
+  text-align: center;
+  padding-bottom: 2px;
+}
+
+.notify-row-label {
+  font-size: 11px;
+}
+
+.notify-cell {
+  display: flex;
+  justify-content: center;
+  cursor: pointer;
+}

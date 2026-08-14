@@ -408,3 +408,45 @@ export type AppEvent =
     });
 
 export type AppEventType = AppEvent['type'];
+
+/**
+ * Every event type, as data — the notification matrix validates against this
+ * and the settings grid renders a row per entry.
+ */
+export const EVENT_TYPES = [
+  'comment',
+  'approval',
+  'review_submitted',
+  'thread_resolved',
+  'unmergeable',
+  'review_updated',
+  'ci_failed',
+  'ci_succeeded',
+  'ci_aborted',
+  'ci_suggest_run',
+] as const satisfies readonly AppEventType[];
+
+// Compile-time exhaustiveness: a new event type that isn't listed above fails
+// here rather than silently becoming un-notifiable.
+const _everyTypeListed: Record<AppEventType, true> = {
+  comment: true,
+  approval: true,
+  review_submitted: true,
+  thread_resolved: true,
+  unmergeable: true,
+  review_updated: true,
+  ci_failed: true,
+  ci_succeeded: true,
+  ci_aborted: true,
+  ci_suggest_run: true,
+};
+void _everyTypeListed;
+
+/**
+ * Why an MR is tracked — and, because the popover's tabs are exactly this, the
+ * bucket a notification belongs to: authored = My work, reviewer = My reviews,
+ * participating = Participating.
+ */
+export type EventAudience = WatchItem['reason'];
+
+export const EVENT_AUDIENCES = ['authored', 'reviewer', 'participating'] as const satisfies readonly EventAudience[];

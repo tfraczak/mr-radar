@@ -1671,12 +1671,60 @@ const openSettings = async (): Promise<void> => {
   const method = selectField('Notification method', s.methodChoices, s.notificationMethod);
   method.select.title =
     'auto = osascript (always delivers). terminal-notifier adds icon + click-to-open but needs ThreatLocker approval — explicit opt-in only. native = Electron (needs a signed app).';
-  const ciForOthers = checkboxField(
-    `Notify about CI on ${mrs()} you don't author`,
-    s.notifyCiForOthers === true,
+  // Which events notify, per bucket. A grid, because the question is genuinely
+  // two-dimensional: the same event matters differently on your own MR than on
+  // one you're reviewing, and only you know that split.
+  const EVENT_LABELS: Record<string, string> = {
+    comment: 'Comments',
+    approval: 'Approvals',
+    review_submitted: 'Reviews submitted',
+    thread_resolved: 'Threads resolved',
+    unmergeable: 'Merge conflicts',
+    review_updated: 'Updated since your comment',
+    ci_failed: 'CI failed',
+    ci_succeeded: 'CI passed',
+    ci_aborted: 'CI aborted',
+    ci_suggest_run: 'Tests never run (nudge)',
+  };
+  const EVENT_AUDIENCES: { key: string; label: string }[] = [
+    { key: 'authored', label: 'My work' },
+    { key: 'reviewer', label: 'My reviews' },
+    { key: 'participating', label: 'Participating' },
+  ];
+  const chosenEvents = new Map<string, Set<string>>(
+    EVENT_AUDIENCES.map((a) => [a.key, new Set(s.notifyEvents?.[a.key] ?? [])]),
   );
-  ciForOthers.wrap.title =
-    `Off by default: a green suite on someone else's branch is not yours to act on. Comments, approvals and "updated since your comment" notify either way.`;
+  const eventsBlock = el('div', 'status-sections');
+  eventsBlock.append(el('div', 'field-label', 'Which events notify'));
+  const grid = el('div', 'notify-grid');
+  grid.append(el('div', 'notify-head', ''));
+  for (const a of EVENT_AUDIENCES) grid.append(el('div', 'notify-head', a.label));
+  for (const type of s.eventTypeChoices ?? []) {
+    const name = el('div', 'notify-row-label', EVENT_LABELS[type] ?? type);
+    name.title = type;
+    grid.append(name);
+    for (const a of EVENT_AUDIENCES) {
+      const cell = el('label', 'notify-cell');
+      const cb = el('input', 'filter-cb');
+      cb.type = 'checkbox';
+      cb.checked = chosenEvents.get(a.key)?.has(type) ?? false;
+      cb.title = `${EVENT_LABELS[type] ?? type} on ${a.label}`;
+      cb.addEventListener('change', () => {
+        const set = chosenEvents.get(a.key);
+        if (!set) return;
+        if (cb.checked) set.add(type);
+        else set.delete(type);
+      });
+      cell.append(cb);
+      grid.append(cell);
+    }
+  }
+  const eventsHint = el(
+    'div',
+    'field-hint',
+    'Unchecked events are never announced — the row still shows them when you look.',
+  );
+  eventsBlock.append(grid, eventsHint);
   const updateStyle = selectField('Branch update style', s.updateStyleChoices, s.updateStyle);
   const forgeSel = selectField('Forge', s.forgeChoices, s.forge);
   forgeSel.select.title =
@@ -1898,7 +1946,8 @@ const openSettings = async (): Promise<void> => {
       soundChoices: s.soundChoices,
       notificationMethod: method.select.value,
       methodChoices: s.methodChoices,
-      notifyCiForOthers: ciForOthers.input.checked,
+      notifyEvents: Object.fromEntries([...chosenEvents].map(([k, v]) => [k, [...v]])),
+      eventTypeChoices: s.eventTypeChoices,
       updateStyle: updateStyle.select.value,
       rwxEnabled: rwxEnabled.input.checked,
       forge: forgeSel.select.value,
@@ -1951,7 +2000,7 @@ const openSettings = async (): Promise<void> => {
     Jira: paneOf([atlassianUrl.wrap, email.wrap, ownerWrap, statusBlock, routingRules.block, noMrBlock]),
     Polling: paneOf([pollSecs.wrap, recent.wrap, hoursEnabled.wrap, hoursBlock]),
     Slack: paneOf([slackBlock]),
-    Notifications: paneOf([notify.wrap, sound.wrap, method.wrap, ciForOthers.wrap]),
+    Notifications: paneOf([notify.wrap, sound.wrap, method.wrap, eventsBlock]),
     Display: paneOf([theme.wrap, appearance.wrap, tabCountsSel.wrap]),
   };
   const paneNames = Object.keys(settingsPanes);

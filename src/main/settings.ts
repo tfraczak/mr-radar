@@ -5,6 +5,7 @@ import {
   type MrRule,
   type RuleCondition,
   type RuleField, APPEARANCES, NOTIFICATION_METHODS, NOTIFICATION_SOUNDS, RULE_FIELDS, RULE_OPS, RULE_TARGETS, THEMES, type Config, type StatusRule } from '../core/config';
+import { EVENT_AUDIENCES, EVENT_TYPES } from '../core/types';
 import type { Db } from '../core/db';
 import { isPinnedHttpsOrigin } from '../core/sources/jira';
 import type { EditableRule, EditableSettings } from '../renderer/contract';
@@ -96,7 +97,8 @@ export const toEditable = (config: Config, repoChoices: string[] = [], activeFor
     soundChoices: [...NOTIFICATION_SOUNDS],
     notificationMethod: config.notifications.method,
     methodChoices: [...NOTIFICATION_METHODS],
-    notifyCiForOthers: config.notifications.ciForOthers,
+    notifyEvents: { ...config.notifications.events },
+    eventTypeChoices: [...EVENT_TYPES],
     updateStyle: config.git.updateStyle,
     rwxEnabled: config.rwx.enabled,
     forge: config.forge,
@@ -294,8 +296,18 @@ export const applyEditable = (
   if ((NOTIFICATION_METHODS as readonly string[]).includes(s.notificationMethod)) {
     notifications.method = s.notificationMethod;
   }
-  // Absent from an older UI shell's payload: keep whatever is on disk.
-  if (typeof s.notifyCiForOthers === 'boolean') notifications.ciForOthers = s.notifyCiForOthers;
+  // Absent from an older UI shell's payload: keep whatever is on disk. Unknown
+  // event types are dropped rather than written back — a newer shell's extra
+  // type must not become an unvalidatable value in an older app's config.
+  if (s.notifyEvents && typeof s.notifyEvents === 'object') {
+    const events = { ...(asObject(notifications.events) ?? {}) };
+    for (const audience of EVENT_AUDIENCES) {
+      const list = s.notifyEvents[audience];
+      if (!Array.isArray(list)) continue;
+      events[audience] = (EVENT_TYPES as readonly string[]).filter((type) => list.includes(type));
+    }
+    notifications.events = events;
+  }
   next.notifications = notifications;
 
   if ((THEMES as readonly string[]).includes(s.theme) && (APPEARANCES as readonly string[]).includes(s.appearance)) {

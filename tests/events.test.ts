@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { Db } from '../src/core/db';
 import { coalesce, diff, toNotifications } from '../src/core/events';
 import { summarizeThreads, unresolvedCount } from '../src/core/correlate';
+import { EVENT_TYPES } from '../src/core/types';
 import type { AppEvent, Check, ForgeDiscussion, ForgeTodo, TestGate, WatchItem } from '../src/core/types';
 import discussionsGadget from './fixtures/discussions-gadget320.json';
 
@@ -492,8 +493,22 @@ describe('reviewer-side notification rules', () => {
     ...over,
   });
   const reviewing = (over: Partial<WatchItem> = {}) => item({ reason: 'reviewer', ...over });
-  const cycleWith = (items: WatchItem[], ciForOthers: boolean, now = NOW): AppEvent[] => {
-    const { events, commit } = diff({ db, items, todos: [], me: ME, now, ciForOthers });
+  /** The shipped defaults: everything on mine, no CI family on other people's. */
+  const NON_CI = EVENT_TYPES.filter((e) => !e.startsWith('ci_'));
+  const matrix = (reviewerGetsCi: boolean) => ({
+    authored: [...EVENT_TYPES],
+    reviewer: reviewerGetsCi ? [...EVENT_TYPES] : [...NON_CI],
+    participating: [...NON_CI],
+  });
+  const cycleWith = (items: WatchItem[], reviewerGetsCi: boolean, now = NOW): AppEvent[] => {
+    const { events, commit } = diff({
+      db,
+      items,
+      todos: [],
+      me: ME,
+      now,
+      notifyEvents: matrix(reviewerGetsCi),
+    });
     db.transaction(() => {
       commit(db);
       db.recordEvents(events, now, true);
@@ -507,18 +522,20 @@ describe('reviewer-side notification rules', () => {
   });
 
   it('still reports CI on my own MR', () => {
-    cycle([item()]);
-    expect(cycle([item({ checks: [check()] })], [], LATER).map((e) => e.type)).toEqual(['ci_succeeded']);
+    cycleWith([item()], false);
+    expect(cycleWith([item({ checks: [check()] })], false, LATER).map((e) => e.type)).toEqual([
+      'ci_succeeded',
+    ]);
   });
 
-  it('reports a reviewer MR\'s CI when the setting asks for it', () => {
+  it("reports a reviewer MR's CI when the matrix asks for it", () => {
     cycleWith([reviewing()], true);
     expect(cycleWith([reviewing({ checks: [check()] })], true, LATER).map((e) => e.type)).toEqual([
       'ci_succeeded',
     ]);
   });
 
-  it('does not retro-fire old results when the setting is turned on', () => {
+  it('does not retro-fire old results when a type is switched back on', () => {
     // The result was recorded (silently) while the setting was off; flipping it
     // must not produce a banner for a run that finished ages ago.
     cycleWith([reviewing()], false);
@@ -530,10 +547,63 @@ describe('reviewer-side notification rules', () => {
     const gate: TestGate = { kind: 'unverified', provider: 'rwx', unverifiedCommits: 2, startable: true };
     cycleWith([reviewing()], false);
     expect(cycleWith([reviewing({ testGate: gate })], false, LATER)).toEqual([]);
-    // ...but it does on mine.
-    cycle([item({ key: 'acme/rocket!1', iid: 1 })]);
-    const mine = cycle([item({ key: 'acme/rocket!1', iid: 1, testGate: gate })], [], LATER);
+    // ...but it does on mine. Distinct branch: the nudge's dedup key is
+    // provider|branch|definition|sha, and the suppressed one above still
+    // recorded its key — suppression is at the banner, not the bookkeeping.
+    const own = { key: 'acme/rocket!1', iid: 1, branch: 'ENG-200', headSha: 'own-head' };
+    cycleWith([item(own)], false);
+    const mine = cycleWith([item({ ...own, testGate: gate })], false, LATER);
     expect(mine.map((e) => e.type)).toEqual(['ci_suggest_run']);
+  });
+});
+
+describe('the notification matrix', () => {
+  const cycleWith = (items: WatchItem[], notifyEvents: Record<string, string[]> | undefined, now = NOW) => {
+    const { events, commit } = diff({
+      db,
+      items,
+      todos: [],
+      me: ME,
+      now,
+      ...(notifyEvents ? { notifyEvents: notifyEvents as never } : {}),
+    });
+    db.transaction(() => {
+      commit(db);
+      db.recordEvents(events, now, true);
+    });
+    return events;
+  };
+  const withComment = (over: Partial<WatchItem> = {}) =>
+    item({ threads: [thread('T1', [note(1, 'alex.harper')])], ...over });
+
+  it('notifies everything when no matrix is configured', () => {
+    cycleWith([item()], undefined);
+    expect(cycleWith([withComment()], undefined, LATER).map((e) => e.type)).toEqual(['comment']);
+  });
+
+  it('drops a type the bucket does not list', () => {
+    const noComments = { authored: ['approval'], reviewer: [...EVENT_TYPES], participating: [] };
+    cycleWith([item()], noComments);
+    expect(cycleWith([withComment()], noComments, LATER)).toEqual([]);
+  });
+
+  it('routes the same event type differently per bucket', () => {
+    // The user's example: comments on my reviews, nothing on drive-bys.
+    const matrix = { authored: [...EVENT_TYPES], reviewer: ['comment'], participating: [] };
+    const reviewer = { key: 'acme/rocket!11', iid: 11, reason: 'reviewer' as const };
+    const drive = { key: 'acme/rocket!12', iid: 12, reason: 'participating' as const };
+    cycleWith([item(reviewer), item(drive)], matrix);
+    const events = cycleWith([withComment(reviewer), withComment(drive)], matrix, LATER);
+    expect(events.map((e) => e.mrKey)).toEqual(['acme/rocket!11']);
+  });
+
+  it('suppresses at the banner, not at the bookkeeping', () => {
+    // A comment that arrived while its type was off must not fire later when the
+    // type is switched back on — you were not told, but it is not news either.
+    const off = { authored: [], reviewer: [], participating: [] };
+    cycleWith([item()], off);
+    expect(cycleWith([withComment()], off, LATER)).toEqual([]);
+    expect(cycleWith([withComment()], { authored: [...EVENT_TYPES], reviewer: [], participating: [] }, LATER)).toEqual([]);
   });
 });
 

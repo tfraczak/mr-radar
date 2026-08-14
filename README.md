@@ -255,14 +255,20 @@ results. Volume is kept sane:
 - an unverified-tests nudge fires **once per push**, never repeatedly;
 - the very first run (or any run after the database is cleared) seeds silently.
 
-**MRs you review get different rules.** CI results on an MR you didn't author don't
-notify — a green suite on someone else's branch isn't yours to act on, and the row's chip
-is there when you look (Settings → **Notifications** has a switch if you want them). What
-those MRs *do* tell you is that the author pushed since you last spoke: the row grows an
-**updated** badge and the banner reads "updated since your comment", once per push. The
-head commit's date is compared against your newest comment, so it's the real question
-rather than "the MR changed somehow"; the commit list is fetched once per push, not per
-cycle.
+**Which events notify is a grid, not a switch.** Settings → **Notifications** lists every
+event type down the side and the three buckets across the top — *My work*, *My reviews*,
+*Participating* — so you can say "everything on my own MRs, but only comments and
+new-commits on the ones I'm reviewing". Unchecked events are never announced; the row
+still shows them when you look. Suppression happens at the banner, never at the
+recording, so switching a type back on reports what happens next instead of replaying the
+backlog. The shipped default: everything on your own MRs, and on other people's, the human
+traffic (comments, approvals, reviews, conflicts) but not their CI.
+
+**MRs you review get one signal of their own:** the author pushed since you last spoke.
+The row grows an **updated** badge, the attention line reads "New commits since your
+comment", and the banner fires once per push. It compares the head commit's date against
+your newest comment — the real question, rather than "the MR changed somehow" — and the
+commit list is fetched once per push, not per cycle.
 
 Delivery `method` in Settings: `auto` uses `osascript` (always delivers, generic icon);
 `native` uses Electron's notifications (app icon + **click jumps straight to the item** and

@@ -342,7 +342,7 @@ export const pollOnce = async (
     todos,
     me,
     now: nowIso,
-    ciForOthers: config.notifications.ciForOthers,
+    notifyEvents: config.notifications.events,
   });
   // Ignored MRs are silent, not merely hidden: their events never notify,
   // never count as unread, and never enter the durable history.
