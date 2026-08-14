@@ -475,6 +475,20 @@ Electron bump needs re-approval:
 > internal developer tool that runs entirely locally. No hash clause on purpose —
 > a hash needs re-approval on every Electron version bump.
 
+**Lighter still, and worth asking for first:** most app-control products have a
+time-boxed *installation* or *learning* window an admin can grant to one machine
+— new software executed during it is baselined into that endpoint's own policy.
+Ask for 30 minutes of it, run `./install.sh` inside the window, and the binary is
+permitted on that machine with no permanent rule, no hash ticket and no
+certificate. It is the same shape of permission that a developer machine which
+"just works" usually turns out to have. Per-machine, so it does not scale to a
+team — but it is the smallest thing to ask for, and the fastest to get.
+
+Also worth one question before drafting anything: does their catalog already
+carry a built-in definition covering npm-installed Electron or Node tooling? If
+so, attaching an existing policy to the developer group beats writing a custom
+rule.
+
 If the admin wants it tighter, two things to offer rather than argue about:
 an exact per-machine path instead of the leading wildcard
 (`/Users/<user>/…/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron`),
