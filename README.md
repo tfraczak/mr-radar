@@ -427,6 +427,12 @@ A signed, notarized app also carries your stable Team ID — exactly the
 identity app-control software (ThreatLocker and similar) can allowlist
 permanently, instead of chasing ad-hoc hashes that change every build.
 
+Until then, the practical ask for a managed fleet is a **path** rule rather than
+a hash approval: `*/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron`.
+Measured on two Macs — the same Electron bytes run at that path and are blocked
+as "Unrecognized" when copied elsewhere, so the existing permission is
+path-scoped; a hash approval would also die at the next Electron bump.
+
 ## Development
 
 ```bash

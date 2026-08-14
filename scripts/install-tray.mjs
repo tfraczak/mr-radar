@@ -1,17 +1,29 @@
 #!/usr/bin/env node
 /**
- * Install the MENU BAR app as a launchd agent — the ThreatLocker-compatible way.
+ * Install the MENU BAR app as a launchd agent — no bundle of our own to sign.
  *
  *   node scripts/install-tray.mjs            build first: yarn build
  *   node scripts/install-tray.mjs --uninstall
  *
- * Why this can work when the packaged .app is blocked: it runs ONE binary
- * instead of two. Both are ad-hoc signed — `codesign -dvv` on the node_modules
- * Electron reports `Signature=adhoc`, `TeamIdentifier=not set`, same as
- * electron-builder's re-signed output — so neither carries a certificate an
- * app-control policy could trust. The difference is only that this one path can
- * be approved once (by hash) and then reused, and on some machines already is,
- * whereas each `yarn package` produces a fresh bundle to approve.
+ * What this does and does not buy you, measured rather than assumed:
+ *  - it runs ONE unsigned-ish binary instead of shipping a second one. Both the
+ *    node_modules Electron and electron-builder's output are ad-hoc signed
+ *    (`codesign -dvv`: `Signature=adhoc`, `TeamIdentifier=not set`), so neither
+ *    carries a certificate an app-control policy could trust;
+ *  - it needs no bundle rebuild, so an approval keyed to this path or hash keeps
+ *    working, while every `yarn package` mints a fresh thing to approve.
+ * It does NOT dodge application control, and the permission is PATH-scoped, not
+ * hash-scoped — measured, not assumed: the same Electron bytes copied to
+ * /private/tmp were blocked as "Unrecognized" on a machine where the
+ * node_modules copy runs fine, and a teammate's identical file at her own path
+ * was blocked too. Plain CLI Mach-O binaries were not caught at all in the same
+ * test, so the policy is aimed at .app bundles.
+ *
+ * Practical consequence for a rollout: ask for a path rule (a wildcard over
+ * */node_modules/electron/dist/Electron.app/Contents/MacOS/Electron) rather than
+ * a hash approval — a hash dies at the next Electron bump, a path survives it.
+ * Until then the way in is the headless poller: its agent runs plain node, and
+ * nothing in its import graph touches electron.
  *
  * Where Electron is blocked outright, the headless poller is the way in: its
  * agent runs plain node and nothing in its import graph touches electron.
