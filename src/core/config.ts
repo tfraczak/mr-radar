@@ -268,6 +268,15 @@ export interface Config {
      * ad-hoc-signed app often fails to register with macOS.
      */
     method: 'auto' | 'native' | 'terminal-notifier' | 'osascript';
+    /**
+     * Notify about CI results on MRs you did NOT author.
+     *
+     * Off by default: a green suite on someone else's branch is not something
+     * you act on as a reviewer — the row's chip is there when you look. What you
+     * do want from those MRs is people (comments, approvals) and the fact that
+     * the author pushed since you last spoke, which notify regardless.
+     */
+    ciForOthers: boolean;
   };
 }
 
@@ -330,7 +339,7 @@ export const DEFAULT_CONFIG: Config = {
     readyStatuses: ['Code Review'],
     template: 'hey team! {ticketUrl} is ready for review. {title}',
   },
-  notifications: { enabled: true, coalesce: true, sound: 'default', method: 'auto' },
+  notifications: { enabled: true, coalesce: true, sound: 'default', method: 'auto', ciForOthers: false },
 };
 
 export const NOTIFICATION_METHODS = ['auto', 'native', 'terminal-notifier', 'osascript'] as const;

@@ -96,6 +96,7 @@ export const toEditable = (config: Config, repoChoices: string[] = [], activeFor
     soundChoices: [...NOTIFICATION_SOUNDS],
     notificationMethod: config.notifications.method,
     methodChoices: [...NOTIFICATION_METHODS],
+    notifyCiForOthers: config.notifications.ciForOthers,
     updateStyle: config.git.updateStyle,
     rwxEnabled: config.rwx.enabled,
     forge: config.forge,
@@ -293,6 +294,8 @@ export const applyEditable = (
   if ((NOTIFICATION_METHODS as readonly string[]).includes(s.notificationMethod)) {
     notifications.method = s.notificationMethod;
   }
+  // Absent from an older UI shell's payload: keep whatever is on disk.
+  if (typeof s.notifyCiForOthers === 'boolean') notifications.ciForOthers = s.notifyCiForOthers;
   next.notifications = notifications;
 
   if ((THEMES as readonly string[]).includes(s.theme) && (APPEARANCES as readonly string[]).includes(s.appearance)) {

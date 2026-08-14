@@ -806,3 +806,191 @@ describe('re-running a failed suite (the in-flight bridge)', () => {
     });
   });
 });
+
+describe('reviewer freshness (commits since my last comment)', () => {
+  const HEAD = 'head1234';
+  const MY_COMMENT = '2026-07-30T11:00:00Z';
+  const mr = (over: Partial<ForgeMr> = {}): ForgeMr =>
+    ({
+      id: 4,
+      iid: 7900,
+      project_id: 1,
+      title: 'ENG-150: Their work',
+      state: 'opened',
+      sha: HEAD,
+      source_branch: 'ENG-150',
+      target_branch: 'main',
+      web_url: '#',
+      updated_at: '2026-07-30T11:30:00Z',
+      created_at: '2026-07-29T11:00:00Z',
+      user_notes_count: 1,
+      draft: false,
+      has_conflicts: false,
+      author: { id: 2, username: 'alex.harper', name: 'Alex' },
+      references: { full: 'acme/rocket!7900' },
+      ...over,
+    }) as ForgeMr;
+
+  /** One discussion holding a comment of mine at MY_COMMENT. */
+  const myComment = () => [
+    {
+      id: 'T1',
+      individual_note: false,
+      notes: [
+        {
+          id: 1,
+          body: 'please rename this',
+          author: { id: 1, username: 'me', name: 'Me' },
+          created_at: MY_COMMENT,
+          updated_at: MY_COMMENT,
+          system: false,
+          resolvable: true,
+          resolved: false,
+        },
+      ],
+    },
+  ];
+
+  // `head` matters: head_committed_at is cached per sha, so two runs in one
+  // test need different heads or the second reads the first's cached date.
+  const run = async (opts: { committedDate: string; reviewer?: boolean; head?: string }) => {
+    let commitCalls = 0;
+    const rows = [mr({ sha: opts.head ?? HEAD })];
+    const forge = fakeForge({
+      ...(opts.reviewer === false ? { authoredMrs: async () => rows } : { reviewerMrs: async () => rows }),
+      discussions: async () => myComment(),
+      commits: async () => {
+        commitCalls += 1;
+        return [{ id: HEAD, title: 'their fix', committed_date: opts.committedDate }];
+      },
+    });
+    const cfg: Config = { ...config(), recentDaysFallback: 3650 };
+    const first = await pollOnce(deps({ db, forge: forge as never, config: cfg }), {});
+    const again = await pollOnce(deps({ db, forge: forge as never, config: cfg }), {});
+    const pick = (r: Awaited<ReturnType<typeof pollOnce>>) => r.snapshot.items.find((i) => i.iid === 7900);
+    return { first: pick(first), again: pick(again), commitCalls: () => commitCalls };
+  };
+
+  it('flags an MR I review whose head is newer than my comment', async () => {
+    const r = await run({ committedDate: '2026-07-30T11:20:00Z' });
+    expect(r.first?.myLastCommentAt).toBe(MY_COMMENT);
+    expect(r.first?.reviewUpdated).toBe(true);
+  });
+
+  it('does not flag a head older than my comment', async () => {
+    const r = await run({ committedDate: '2026-07-30T10:00:00Z' });
+    expect(r.first?.reviewUpdated).toBe(false);
+  });
+
+  it('compares instants, not strings, across timezone offsets', async () => {
+    // 04:20-0700 IS 11:20Z — later than my 11:00Z comment. Lexically, '0' < '1'
+    // puts it first, which would silently mark a fresh push as old.
+    const later = await run({ committedDate: '2026-07-30T04:20:00-0700', head: 'h-later' });
+    expect(later.first?.reviewUpdated).toBe(true);
+    // And 03:00-0700 IS 10:00Z — genuinely earlier, despite sorting later.
+    const earlier = await run({ committedDate: '2026-07-30T03:00:00-0700', head: 'h-earlier' });
+    expect(earlier.first?.reviewUpdated).toBe(false);
+  });
+
+  it('fetches the commit list once per head, not once per cycle', async () => {
+    const r = await run({ committedDate: '2026-07-30T11:20:00Z' });
+    expect(r.again?.reviewUpdated).toBe(true); // still right on the next cycle
+    expect(r.commitCalls()).toBe(1); // ...without asking again
+  });
+
+  it('asks nothing of my own MRs', async () => {
+    // "I pushed after I commented on my own MR" is just Tuesday.
+    const r = await run({ committedDate: '2026-07-30T11:20:00Z', reviewer: false });
+    expect(r.first?.reviewUpdated).toBeFalsy();
+    expect(r.commitCalls()).toBe(0);
+  });
+
+  it('claims nothing when the commit list is unavailable', async () => {
+    const forge = fakeForge({
+      reviewerMrs: async () => [mr()],
+      discussions: async () => myComment(),
+      commits: async () => {
+        throw new Error('commits unavailable');
+      },
+    });
+    const cfg: Config = { ...config(), recentDaysFallback: 3650 };
+    const result = await pollOnce(deps({ db, forge: forge as never, config: cfg }), {});
+    const item = result.snapshot.items.find((i) => i.iid === 7900);
+    expect(item?.myLastCommentAt).toBe(MY_COMMENT); // known
+    expect(item?.reviewUpdated).toBe(false); // but never guessed
+  });
+});
+
+describe('backfilling my comment history', () => {
+  // A row written before my_last_comment_at existed: NULL means "never read".
+  // One fetch settles it, and "read, none of mine" is recorded as '' so the
+  // fetch does not repeat every cycle forever.
+  const mr = (): ForgeMr =>
+    ({
+      id: 5,
+      iid: 7950,
+      project_id: 1,
+      title: 'ENG-160: Their work',
+      state: 'opened',
+      sha: 'sha7950',
+      source_branch: 'ENG-160',
+      target_branch: 'main',
+      web_url: '#',
+      updated_at: '2026-07-30T11:00:00Z',
+      created_at: '2026-07-29T11:00:00Z',
+      user_notes_count: 2,
+      draft: false,
+      has_conflicts: false,
+      author: { id: 2, username: 'alex.harper', name: 'Alex' },
+      references: { full: 'acme/rocket!7950' },
+    }) as ForgeMr;
+
+  const discussion = (author: string) => [
+    {
+      id: 'T1',
+      individual_note: false,
+      notes: [
+        {
+          id: 7,
+          body: 'a note',
+          author: { id: 9, username: author, name: author },
+          created_at: '2026-07-30T10:00:00Z',
+          updated_at: '2026-07-30T10:00:00Z',
+          system: false,
+          resolvable: true,
+          resolved: false,
+        },
+      ],
+    },
+  ];
+
+  const cycles = async (author: string) => {
+    let fetches = 0;
+    const forge = fakeForge({
+      reviewerMrs: async () => [mr()],
+      discussions: async () => {
+        fetches += 1;
+        return discussion(author);
+      },
+      commits: async () => [{ id: 'sha7950', title: 'x', committed_date: '2026-07-30T11:30:00Z' }],
+    });
+    const cfg: Config = { ...config(), recentDaysFallback: 3650 };
+    await pollOnce(deps({ db, forge: forge as never, config: cfg }), {});
+    const after = fetches;
+    await pollOnce(deps({ db, forge: forge as never, config: cfg }), {});
+    await pollOnce(deps({ db, forge: forge as never, config: cfg }), {});
+    return { firstCycleFetches: after, totalFetches: fetches, row: () => db.getMr('acme/rocket!7950') };
+  };
+
+  it('records my newest comment, then stops asking', async () => {
+    const r = await cycles('me');
+    expect(r.row()?.my_last_comment_at).toBe('2026-07-30T10:00:00Z');
+    expect(r.totalFetches).toBe(r.firstCycleFetches); // quiet cycles ask nothing more
+  });
+
+  it("records 'read, none of mine' so the backfill fires once, not forever", async () => {
+    const r = await cycles('alex.harper');
+    expect(r.row()?.my_last_comment_at).toBe(''); // distinct from NULL
+    expect(r.totalFetches).toBe(r.firstCycleFetches);
+  });
+});

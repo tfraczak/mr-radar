@@ -478,3 +478,110 @@ describe('summarizeThreads on real discussion data', () => {
     expect(typeof positioned?.line).toBe('number');
   });
 });
+
+describe('reviewer-side notification rules', () => {
+  const check = (over: Partial<Check> = {}): Check => ({
+    provider: 'rwx',
+    role: 'tests',
+    name: '.rwx/ci.yml',
+    sha: HEAD,
+    state: 'succeeded',
+    url: 'https://cloud.rwx.com/acme/runs/1',
+    id: 'run-1',
+    createdAt: NOW,
+    ...over,
+  });
+  const reviewing = (over: Partial<WatchItem> = {}) => item({ reason: 'reviewer', ...over });
+  const cycleWith = (items: WatchItem[], ciForOthers: boolean, now = NOW): AppEvent[] => {
+    const { events, commit } = diff({ db, items, todos: [], me: ME, now, ciForOthers });
+    db.transaction(() => {
+      commit(db);
+      db.recordEvents(events, now, true);
+    });
+    return events;
+  };
+
+  it('stays quiet about CI on an MR I only review', () => {
+    cycleWith([reviewing()], false);
+    expect(cycleWith([reviewing({ checks: [check()] })], false, LATER)).toEqual([]);
+  });
+
+  it('still reports CI on my own MR', () => {
+    cycle([item()]);
+    expect(cycle([item({ checks: [check()] })], [], LATER).map((e) => e.type)).toEqual(['ci_succeeded']);
+  });
+
+  it('reports a reviewer MR\'s CI when the setting asks for it', () => {
+    cycleWith([reviewing()], true);
+    expect(cycleWith([reviewing({ checks: [check()] })], true, LATER).map((e) => e.type)).toEqual([
+      'ci_succeeded',
+    ]);
+  });
+
+  it('does not retro-fire old results when the setting is turned on', () => {
+    // The result was recorded (silently) while the setting was off; flipping it
+    // must not produce a banner for a run that finished ages ago.
+    cycleWith([reviewing()], false);
+    cycleWith([reviewing({ checks: [check()] })], false, LATER);
+    expect(cycleWith([reviewing({ checks: [check()] })], true, LATER)).toEqual([]);
+  });
+
+  it('never suggests starting a run on someone else\'s MR', () => {
+    const gate: TestGate = { kind: 'unverified', provider: 'rwx', unverifiedCommits: 2, startable: true };
+    cycleWith([reviewing()], false);
+    expect(cycleWith([reviewing({ testGate: gate })], false, LATER)).toEqual([]);
+    // ...but it does on mine.
+    cycle([item({ key: 'acme/rocket!1', iid: 1 })]);
+    const mine = cycle([item({ key: 'acme/rocket!1', iid: 1, testGate: gate })], [], LATER);
+    expect(mine.map((e) => e.type)).toEqual(['ci_suggest_run']);
+  });
+});
+
+describe('review_updated (commits since my last comment)', () => {
+  const reviewing = (over: Partial<WatchItem> = {}) =>
+    item({ reason: 'reviewer', myLastCommentAt: NOW, ...over });
+
+  it('fires once per push, not once per cycle', () => {
+    cycle([reviewing()]);
+    const first = cycle([reviewing({ reviewUpdated: true })], [], LATER);
+    expect(first.map((e) => e.type)).toEqual(['review_updated']);
+    expect(first[0]).toMatchObject({ mrKey: 'acme/rocket!7576', headSha: HEAD, since: NOW });
+    // Same head, still updated: already said.
+    expect(cycle([reviewing({ reviewUpdated: true })], [], LATER)).toEqual([]);
+  });
+
+  it('fires again after the next push', () => {
+    cycle([reviewing()]);
+    cycle([reviewing({ reviewUpdated: true })], [], LATER);
+    const next = cycle([reviewing({ reviewUpdated: true, headSha: 'newhead' })], [], LATER);
+    expect(next.map((e) => e.type)).toEqual(['review_updated']);
+  });
+
+  it('says nothing on the first sighting of an MR', () => {
+    // Silent seeding: an MR that is already "updated" when we first see it
+    // would otherwise fire on the cycle it appears, like every other signal.
+    expect(cycle([reviewing({ reviewUpdated: true })])).toEqual([]);
+  });
+
+  it('says nothing without the flag, or without a comment of mine', () => {
+    cycle([reviewing()]);
+    expect(cycle([reviewing()], [], LATER)).toEqual([]);
+    const noComment = item({ reason: 'reviewer', reviewUpdated: true });
+    delete noComment.myLastCommentAt;
+    cycle([item({ key: 'acme/rocket!2', iid: 2, reason: 'reviewer' })]);
+    expect(cycle([{ ...noComment, key: 'acme/rocket!2', iid: 2 }], [], LATER)).toEqual([]);
+  });
+
+  it('persists my last comment and the head commit date across a skipped fetch', () => {
+    cycle([reviewing({ headCommittedAt: LATER })]);
+    const row = db.getMr('acme/rocket!7576');
+    expect(row?.my_last_comment_at).toBe(NOW);
+    expect(row?.head_committed_at).toBe(LATER);
+  });
+
+  it('drops a cached commit date when the head moves on', () => {
+    cycle([reviewing({ headCommittedAt: LATER })]);
+    cycle([reviewing({ headSha: 'newhead' })], [], LATER);
+    expect(db.getMr('acme/rocket!7576')?.head_committed_at).toBeNull();
+  });
+});

@@ -797,6 +797,17 @@ const renderRow = (
       createBadge(`→ ${item.targetBranch}`, 'warn', `This ${mr()} targets ${item.targetBranch}, not main`),
     );
   }
+  if (item.reviewUpdated) {
+    row.meta.append(
+      createBadge(
+        'updated',
+        'accent',
+        item.myLastCommentAt
+          ? `New commits since your last comment (${new Date(item.myLastCommentAt).toLocaleString()})`
+          : 'New commits since your last comment',
+      ),
+    );
+  }
   if (item.draft) row.meta.append(createBadge('draft', 'muted'));
   if (item.hasConflicts) row.meta.append(createBadge('conflict', 'bad'));
   if (item.unresolved > 0) {
@@ -1660,6 +1671,12 @@ const openSettings = async (): Promise<void> => {
   const method = selectField('Notification method', s.methodChoices, s.notificationMethod);
   method.select.title =
     'auto = osascript (always delivers). terminal-notifier adds icon + click-to-open but needs ThreatLocker approval — explicit opt-in only. native = Electron (needs a signed app).';
+  const ciForOthers = checkboxField(
+    `Notify about CI on ${mrs()} you don't author`,
+    s.notifyCiForOthers === true,
+  );
+  ciForOthers.wrap.title =
+    `Off by default: a green suite on someone else's branch is not yours to act on. Comments, approvals and "updated since your comment" notify either way.`;
   const updateStyle = selectField('Branch update style', s.updateStyleChoices, s.updateStyle);
   const forgeSel = selectField('Forge', s.forgeChoices, s.forge);
   forgeSel.select.title =
@@ -1881,6 +1898,7 @@ const openSettings = async (): Promise<void> => {
       soundChoices: s.soundChoices,
       notificationMethod: method.select.value,
       methodChoices: s.methodChoices,
+      notifyCiForOthers: ciForOthers.input.checked,
       updateStyle: updateStyle.select.value,
       rwxEnabled: rwxEnabled.input.checked,
       forge: forgeSel.select.value,
@@ -1933,7 +1951,7 @@ const openSettings = async (): Promise<void> => {
     Jira: paneOf([atlassianUrl.wrap, email.wrap, ownerWrap, statusBlock, routingRules.block, noMrBlock]),
     Polling: paneOf([pollSecs.wrap, recent.wrap, hoursEnabled.wrap, hoursBlock]),
     Slack: paneOf([slackBlock]),
-    Notifications: paneOf([notify.wrap, sound.wrap, method.wrap]),
+    Notifications: paneOf([notify.wrap, sound.wrap, method.wrap, ciForOthers.wrap]),
     Display: paneOf([theme.wrap, appearance.wrap, tabCountsSel.wrap]),
   };
   const paneNames = Object.keys(settingsPanes);

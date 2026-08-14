@@ -29,6 +29,8 @@ export interface DiffInput {
   /** Our own username; we don't notify ourselves for comments. */
   me: string;
   now: string;
+  /** Notify about CI on MRs I did not author. Default off — see the config doc. */
+  ciForOthers?: boolean;
 }
 
 export interface DiffResult {
@@ -39,6 +41,7 @@ export interface DiffResult {
 
 export const diff = (input: DiffInput): DiffResult => {
   const { db, items, todos, me, now } = input;
+  const ciForOthers = input.ciForOthers ?? false;
   const events: AppEvent[] = [];
   const pending: ((db: Db) => void)[] = [];
   // An empty MR table means a first launch or a wiped DB. Todos carry no
@@ -123,7 +126,23 @@ export const diff = (input: DiffInput): DiffResult => {
       events.push({ type: 'unmergeable', ...base(item) });
     }
 
-    events.push(...ciEvents({ db, item, seeding, now, pending }));
+    // The reviewer-side signal: the author pushed after my newest comment, so
+    // the ball is back in my court. Keyed by head sha, so it fires once per
+    // push rather than every cycle while the state persists.
+    if (!seeding && item.reviewUpdated && item.myLastCommentAt) {
+      const key = `${item.key}|${item.headSha}`;
+      if (!db.wasNotified('review_updated', key)) {
+        events.push({
+          type: 'review_updated',
+          ...base(item),
+          headSha: item.headSha,
+          since: item.myLastCommentAt,
+        });
+        pending.push((d) => d.markNotified('review_updated', key, now));
+      }
+    }
+
+    events.push(...ciEvents({ db, item, seeding, now, pending, ciForOthers }));
 
     pending.push((d) =>
       d.upsertMr(
@@ -160,6 +179,11 @@ export const diff = (input: DiffInput): DiffResult => {
             : (stillClaims(item, prev?.ticket_key) ? (prev?.ticket_json ?? null) : null),
           unverified_count: item.unverifiedCache ? String(item.unverifiedCache.count) : null,
           unverified_sha: item.unverifiedCache?.sha ?? null,
+          my_last_comment_at: item.myLastCommentAt ?? prev?.my_last_comment_at ?? null,
+          // Cached per head sha: a commit date for a sha that is no longer the
+          // head would answer the wrong question next cycle.
+          head_committed_at:
+            item.headCommittedAt ?? (prev?.head_sha === item.headSha ? (prev?.head_committed_at ?? null) : null),
         },
         now,
       ),
@@ -193,10 +217,16 @@ const ciEvents = (args: {
   seeding: boolean;
   now: string;
   pending: ((db: Db) => void)[];
+  ciForOthers: boolean;
 }): AppEvent[] => {
-  const { db, item, seeding, now, pending } = args;
+  const { db, item, seeding, now, pending, ciForOthers } = args;
   const events: AppEvent[] = [];
   const gate = item.testGate;
+  // CI on an MR I did not author is the author's business — a green suite on
+  // someone else's branch is not something I act on, and the row's chip is
+  // there when I look. The recording below still happens either way, so
+  // flipping this setting on can't retro-fire a burst of old results.
+  const notifiable = item.reason === 'authored' || ciForOthers;
 
   for (const check of item.checks ?? []) {
     // Only report checks for the commit under review; a result for an abandoned
@@ -216,7 +246,7 @@ const ciEvents = (args: {
     // finished when we first saw the MR from notifying on a later cycle (silent
     // seeding for CI results).
     if (!already) pending.push((d) => d.markNotified('ci_result', resultKey, now));
-    if (seeding || already) continue;
+    if (seeding || already || !notifiable) continue;
 
     events.push({
       type: kind,
@@ -229,7 +259,8 @@ const ciEvents = (args: {
     });
   }
 
-  if (!seeding && gate?.kind === 'unverified' && gate.startable) {
+  // Not mine to start, so not mine to be nagged about.
+  if (!seeding && notifiable && gate?.kind === 'unverified' && gate.startable) {
     const definition = item.checks?.find((c) => c.role === 'tests')?.name ?? 'tests';
     const key = suggestRunKey(gate.provider, item.branch, definition, item.headSha);
     if (!db.wasNotified('suggest_run', key)) {
@@ -381,6 +412,11 @@ export const describe = (e: AppEvent): { title: string; body: string } => {
       };
     case 'unmergeable':
       return { title: `${e.mrKey} — merge conflict`, body: e.mrTitle };
+    case 'review_updated':
+      return {
+        title: `${e.mrKey} — updated since your comment`,
+        body: `New commits on ${e.branch} · ${e.mrTitle}`,
+      };
     case 'ci_failed':
       return {
         title: `${e.mrKey} — ${label(e.provider, e.role)} failed`,

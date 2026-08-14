@@ -191,6 +191,10 @@ export class Db {
       // — so between Jira refreshes a Dev Complete ticket with no fix version
       // took its rule's else branch instead of the needs-value one.
       'ALTER TABLE mrs ADD COLUMN ticket_json TEXT',
+      // Reviewer-side freshness. head_committed_at is cached per head_sha so the
+      // commit list is fetched once per push, not once per cycle.
+      'ALTER TABLE mrs ADD COLUMN my_last_comment_at TEXT',
+      'ALTER TABLE mrs ADD COLUMN head_committed_at TEXT',
     ]) {
       try {
         this.db.exec(stmt);
@@ -255,8 +259,9 @@ export class Db {
            key, project_path, project_id, iid, branch, title, head_sha, web_url,
            updated_at, user_notes_count, unresolved, approvals_left, approvals_required,
            approvals_by, has_conflicts, in_scope, reason, ticket_key, ticket_status,
-           ticket_json, unverified_count, unverified_sha, first_seen_at, last_seen_at
-         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+           ticket_json, unverified_count, unverified_sha, my_last_comment_at,
+           head_committed_at, first_seen_at, last_seen_at
+         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
          ON CONFLICT(key) DO UPDATE SET
            project_path = excluded.project_path,
            project_id = excluded.project_id,
@@ -278,6 +283,8 @@ export class Db {
            ticket_status = excluded.ticket_status,
            ticket_json = excluded.ticket_json,
            unverified_count = excluded.unverified_count,
+           my_last_comment_at = excluded.my_last_comment_at,
+           head_committed_at = excluded.head_committed_at,
            unverified_sha = excluded.unverified_sha,
            last_seen_at = excluded.last_seen_at`,
       )
@@ -304,6 +311,8 @@ export class Db {
         row.ticket_json ?? null,
         row.unverified_count ?? null,
         row.unverified_sha ?? null,
+        row.my_last_comment_at ?? null,
+        row.head_committed_at ?? null,
         at,
         at,
       );
@@ -759,6 +768,10 @@ export interface MrRow {
   ticket_json: string | null;
   unverified_count: string | null;
   unverified_sha: string | null;
+  /** My newest comment on this MR (ISO), or null if I have not commented. */
+  my_last_comment_at: string | null;
+  /** Newest commit date for `head_sha` — the cache key is the sha itself. */
+  head_committed_at: string | null;
   ignore_override: string | null;
   first_seen_at: string;
   last_seen_at: string;

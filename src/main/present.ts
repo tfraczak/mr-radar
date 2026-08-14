@@ -425,6 +425,8 @@ const toUiItem = (
     updatedAt: item.updatedAt,
     ...(item.ticket?.dueDate ? { dueDate: item.ticket.dueDate } : {}),
     overdue,
+    ...(item.reviewUpdated ? { reviewUpdated: true } : {}),
+    ...(item.myLastCommentAt ? { myLastCommentAt: item.myLastCommentAt } : {}),
     attention,
     ...(attentionExtra ? { attentionExtra } : {}),
     ci,
@@ -459,6 +461,13 @@ const attentionOf = (
   }
   if (d.ci.tone === 'bad' && item.testGate?.kind === 'verified') {
     return { text: `Tests failing: ${d.ci.detail ?? 'CI'}`, tone: 'bad', rank: 1 };
+  }
+  // The author pushed after I last spoke: my turn again. Above the missing-value
+  // check because this is only ever set on an MR I do NOT author, and someone
+  // else's missing fix version is not the thing I can act on — their new commits
+  // are. The row keeps the "needs a fix version" affordance either way.
+  if (item.reviewUpdated) {
+    return { text: 'New commits since your comment', tone: 'info', rank: 2 };
   }
   // A rule-flagged missing value blocks the pipeline (e.g. Dev Complete
   // without a fix version can't ride a release) — more urgent than review

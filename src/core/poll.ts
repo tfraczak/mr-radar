@@ -11,7 +11,7 @@ import {
 } from './ci';
 import { buildJql, ownerClause, type Config } from './config';
 import { correlate, detailsChanged, summarizeThreads, unresolvedCount } from './correlate';
-import { cachedTicket, type Db } from './db';
+import { cachedTicket, type Db, type MrRow } from './db';
 import { coalesce, diff } from './events';
 import { effectiveIgnore } from './rules';
 import type { ForgeSource } from './sources/forge';
@@ -336,7 +336,14 @@ export const pollOnce = async (
       .filter((r) => r.ignore_override === 'ignored')
       .map((r) => r.key),
   ]);
-  const { events, commit } = diff({ db, items, todos, me, now: nowIso });
+  const { events, commit } = diff({
+    db,
+    items,
+    todos,
+    me,
+    now: nowIso,
+    ciForOthers: config.notifications.ciForOthers,
+  });
   // Ignored MRs are silent, not merely hidden: their events never notify,
   // never count as unread, and never enter the durable history.
   const allEvents = [...watched.events, ...events].filter((e) => !ignoredKeys.has(e.mrKey));
@@ -775,8 +782,14 @@ const enrich = async (args: {
 
   const prev = db.getMr(item.key);
   const changed = detailsChanged(prev, item);
+  // One-time backfill: for an MR I review whose comment history has never been
+  // read (a row from before this column existed), one discussions fetch settles
+  // whether I have commented. Without it the "updated since your comment"
+  // signal stays blind on every existing MR until something else changes.
+  // NULL means never read; '' means read, nothing of mine — so this fires once.
+  const needsMyComments = item.reason !== 'authored' && prev?.my_last_comment_at === null;
 
-  if (changed || forceReconcile) {
+  if (changed || forceReconcile || needsMyComments) {
     const [discussions, approvals] = await Promise.all([
       forge.discussions(item.projectPath, item.iid),
       forge.approvals(item.projectPath, item.iid).catch(() => undefined),
@@ -806,6 +819,8 @@ const enrich = async (args: {
       };
     }
   }
+
+  await reviewFreshness({ deps, item, prev, stats });
 
   const repoRoles = roles.get(item.projectPath) ?? {
     testGate: 'none' as const,
@@ -1077,6 +1092,77 @@ const checkWatchedRuns = async (
   }
   return { events, commit: (d) => mutations.forEach((m) => m(d)), live };
 }
+
+/**
+ * "Has the author pushed since I last spoke?" — the reviewer-side question.
+ *
+ * Only for MRs I did not author: on my own MR, pushing after my own comment is
+ * just Tuesday. My newest comment comes from the discussions we already fetch
+ * (or the persisted value on a cycle that skipped that fetch). The head's commit
+ * date needs one commit-list call, cached per head sha — so it costs one call
+ * per push on the handful of MRs I'm reviewing, not one per cycle.
+ *
+ * Dates are compared as instants, never as strings: forge commit dates carry an
+ * offset (…-0700) while note timestamps are UTC (…Z), so lexical comparison
+ * would silently mis-order them by hours.
+ */
+const reviewFreshness = async (args: {
+  deps: PollDeps;
+  item: WatchItem;
+  prev: MrRow | undefined;
+  stats: { commitFetches: number; apiCalls: number };
+}): Promise<void> => {
+  const { deps, item, prev, stats } = args;
+  const { config, forge, db } = deps;
+  const me = config[forge.name].username ?? '';
+
+  if (item.threads && me) {
+    const mine = item.threads
+      .flatMap((thread) => thread.notes)
+      .filter((note) => note.author === me)
+      .map((note) => note.createdAt);
+    // '' is load-bearing: "read this MR's comments, none were mine", as opposed
+    // to NULL's "never read them". Without the distinction the backfill above
+    // would re-fetch every cycle for every MR I have never commented on.
+    item.myLastCommentAt = mine.length
+      ? mine.reduce((a, b) => (instant(a) > instant(b) ? a : b))
+      : '';
+  } else if (prev?.my_last_comment_at !== null && prev?.my_last_comment_at !== undefined) {
+    item.myLastCommentAt = prev.my_last_comment_at;
+  }
+
+  // My own MR needs none of this, and neither does one I have never commented on.
+  if (item.reason === 'authored' || !item.myLastCommentAt) return;
+
+  if (prev?.head_sha === item.headSha && prev.head_committed_at) {
+    item.headCommittedAt = prev.head_committed_at;
+  } else {
+    try {
+      const commits = await forge.commits(item.projectPath, item.iid);
+      stats.commitFetches += 1;
+      stats.apiCalls += 1;
+      const newest = commits
+        .map((c) => c.committed_date)
+        .filter(Boolean)
+        .reduce<string | undefined>((a, b) => (a === undefined || instant(b) > instant(a) ? b : a), undefined);
+      if (newest) item.headCommittedAt = newest;
+    } catch {
+      // No commit list this cycle: leave it unknown rather than guessing. The
+      // row simply doesn't claim to be updated.
+      void db;
+    }
+  }
+
+  item.reviewUpdated =
+    item.headCommittedAt !== undefined &&
+    instant(item.headCommittedAt) > instant(item.myLastCommentAt);
+};
+
+/** ms since epoch, or 0 for an unparseable date (never NaN in a comparison). */
+const instant = (iso: string): number => {
+  const ms = new Date(iso).getTime();
+  return Number.isFinite(ms) ? ms : 0;
+};
 
 const shouldReconcile = (db: Db, now: Date, config: Config): boolean => {
   const last = db.getMeta('last_reconcile_at');

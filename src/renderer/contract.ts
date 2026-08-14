@@ -164,6 +164,10 @@ export interface UiItem {
   /** Snapshot-data hint that this MR looks announceable for review — shows the
    *  Copy-for-Slack button; the click re-checks fresh before composing. */
   slackReady?: boolean | undefined;
+  /** Commits landed after my newest comment (MRs I review) — an "Updated" badge. */
+  reviewUpdated?: boolean | undefined;
+  /** My newest comment's timestamp, for the badge's tooltip. */
+  myLastCommentAt?: string | undefined;
   ci: {
     label: string;
     tone: 'good' | 'bad' | 'busy' | 'warn' | 'none';
@@ -245,6 +249,8 @@ export interface EditableSettings {
   notificationMethod: string;
   /** The choices to offer for notificationMethod. */
   methodChoices: string[];
+  /** Notify about CI results on MRs you did not author (default off). */
+  notifyCiForOthers: boolean;
   /** How you bring main into a branch — adjusts guidance text (rebase/merge). */
   updateStyle: string;
   /** Master switch for the RWX integration (also needs the rwx CLI). */

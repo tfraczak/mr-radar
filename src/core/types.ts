@@ -298,6 +298,18 @@ export interface WatchItem {
   testGate?: TestGate;
   /** Persisted so the commit list isn't refetched while the head is unchanged. */
   unverifiedCache?: { sha: string; count: number | 'many' };
+
+  // Reviewer-side freshness: has the author pushed since I last spoke?
+  /** ISO timestamp of my newest comment on this MR, if I have commented. */
+  myLastCommentAt?: string;
+  /** ISO commit date of the newest commit on the current head, when known. */
+  headCommittedAt?: string;
+  /**
+   * Commits landed after my newest comment — the ball is back in my court.
+   * Only computed for MRs I did not author: on my own MR, "I pushed after I
+   * commented" is just Tuesday.
+   */
+  reviewUpdated?: boolean;
 }
 
 export interface ThreadSummary {
@@ -353,6 +365,13 @@ export type AppEvent =
   | (EventBase & { type: 'review_submitted'; by: string })
   | (EventBase & { type: 'thread_resolved'; by: string; count: number })
   | (EventBase & { type: 'unmergeable' })
+  | (EventBase & {
+      /** New commits on an MR I review, pushed after my newest comment. */
+      type: 'review_updated';
+      headSha: string;
+      /** My newest comment's timestamp — what "since" means here. */
+      since: string;
+    })
   | (EventBase & {
       type: 'ci_failed';
       provider: CiProvider;

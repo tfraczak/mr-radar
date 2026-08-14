@@ -743,3 +743,40 @@ describe('tabTotals (shared by the popover tabs and the tray menu)', () => {
     expect(present(initialUiState(), ACTIVE, NOW).tabTotals).toEqual({ work: 0, reviews: 0, participating: 0 });
   });
 });
+
+describe('the Updated signal on MRs I review', () => {
+  const reviewing = (over: Partial<WatchItem> = {}) =>
+    item({ reason: 'reviewer', ticket: ticket('Code Review'), threads: [], testGate: { kind: 'none' }, ...over });
+  const rowOf = (i: WatchItem) => {
+    const snap = present(stateWith([i]), ACTIVE, NOW);
+    // needsGroups too: a Dev Complete ticket with no fix version renders there,
+    // and that is exactly the case the priority test below cares about.
+    return [...snap.groups, ...snap.needsGroups, ...snap.otherGroups, ...snap.verificationGroups]
+      .flatMap((g) => g.items)[0];
+  };
+
+  it('says what changed, in place of the standing review request', () => {
+    expect(rowOf(reviewing())?.attention.text).toBe('Your review is requested');
+    const updated = rowOf(reviewing({ reviewUpdated: true, myLastCommentAt: NOW.toISOString() }));
+    expect(updated?.attention.text).toBe('New commits since your comment');
+    expect(updated?.reviewUpdated).toBe(true);
+    expect(updated?.myLastCommentAt).toBe(NOW.toISOString()); // the badge's tooltip
+  });
+
+  it("outranks someone else's missing ticket value — theirs to fix, not mine", () => {
+    const dc = ticket('Dev Complete', { key: 'ENG-8', issueType: 'Story', fixVersions: [] });
+    const row = rowOf(reviewing({ ticket: dc, reviewUpdated: true, myLastCommentAt: NOW.toISOString() }));
+    expect(row?.attention.text).toBe('New commits since your comment');
+  });
+
+  it('outranks a quiet row but never a broken one', () => {
+    const updated = rowOf(reviewing({ reviewUpdated: true, myLastCommentAt: NOW.toISOString() }));
+    const conflicted = rowOf(reviewing({ reviewUpdated: true, myLastCommentAt: NOW.toISOString(), hasConflicts: true }));
+    expect(updated?.attention.rank).toBe(2);
+    expect(conflicted?.attention.text).toMatch(/Merge conflict/); // rank 0 still wins
+  });
+
+  it('is absent when nothing has been pushed since I spoke', () => {
+    expect(rowOf(reviewing())?.reviewUpdated).toBeUndefined();
+  });
+});
