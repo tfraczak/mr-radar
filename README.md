@@ -475,6 +475,17 @@ Electron bump needs re-approval:
 > internal developer tool that runs entirely locally. No hash clause on purpose —
 > a hash needs re-approval on every Electron version bump.
 
+Worth stating in the request, because it narrows what you are asking for: **this
+install needs no administrator rights at all.** There is no `sudo` in
+`install.sh` or any script; the launchd agent is written to
+`~/Library/LaunchAgents` and bootstrapped into the user domain (`gui/$UID`), not
+`/Library/LaunchDaemons`; and everything it touches lives under `$HOME` — the
+checkout, `~/.config/mr-radar`, `~/.local/state/mr-radar`, one Keychain item.
+(Only a first-time Homebrew install would need admin, and that is a prerequisite,
+not this app.) So privilege-elevation tooling is the wrong lever here: what is
+missing is permission to *execute*, which elevation does not grant — app control
+blocks unrecognized binaries for administrators too.
+
 **Lighter still, and worth asking for first:** most app-control products have a
 time-boxed *installation* or *learning* window an admin can grant to one machine
 — new software executed during it is baselined into that endpoint's own policy.
