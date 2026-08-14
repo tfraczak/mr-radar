@@ -137,6 +137,16 @@ const main = async (): Promise<void> => {
   }
 
   tray.update(state);
+  // The entire UI is one menu bar icon, and macOS hides menu bar overflow with
+  // no indication — on a full bar a correct install looks exactly like a failed
+  // one. So the first launch on a machine opens the popover itself: a window is
+  // proof it started, and from there the icon can be found and reordered. Once
+  // only, keyed in the DB, so it never becomes a startup habit.
+  if (!db.getMeta('welcomed')) {
+    db.setMeta('welcomed', new Date().toISOString());
+    log('first launch on this machine — opening the popover so it is visible');
+    popover.open(trayHandle());
+  }
   await runCycle('startup');
 }
 

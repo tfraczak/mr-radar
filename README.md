@@ -36,8 +36,11 @@ brew — and it walks you through `glab auth login` if you aren't authenticated
 yet. The optional [`rwx`](https://rwx.com) CLI is offered during install
 (answer no unless some of your repos gate their specs on RWX).
 
-A **radar icon** appears in your menu bar when it's done. Click it → **Open**
-for the popover, then walk through the first-run setup below.
+A **radar icon** appears in your menu bar when it's done, and the popover opens
+by itself on that first launch — because a full menu bar hides new icons with no
+indication, so a correct install can otherwise look like a failed one. Walk
+through the first-run setup below; if you see no window and no icon, run
+`yarn tray:status`.
 
 ## Manual installation
 
