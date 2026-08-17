@@ -807,7 +807,7 @@ describe('re-running a failed suite (the in-flight bridge)', () => {
   });
 });
 
-describe('reviewer freshness (commits since my last comment)', () => {
+describe('reviewer freshness (commits since my last review)', () => {
   const HEAD = 'head1234';
   const MY_COMMENT = '2026-07-30T11:00:00Z';
   const mr = (over: Partial<ForgeMr> = {}): ForgeMr =>
@@ -874,34 +874,34 @@ describe('reviewer freshness (commits since my last comment)', () => {
   it('flags an MR I review whose head is newer than my comment', async () => {
     const r = await run({ committedDate: '2026-07-30T11:20:00Z' });
     expect(r.first?.myLastCommentAt).toBe(MY_COMMENT);
-    expect(r.first?.reviewUpdated).toBe(true);
+    expect(r.first?.newCommits).toBe(1);
   });
 
   it('does not flag a head older than my comment', async () => {
     const r = await run({ committedDate: '2026-07-30T10:00:00Z' });
-    expect(r.first?.reviewUpdated).toBe(false);
+    expect(r.first?.newCommits).toBe(0);
   });
 
   it('compares instants, not strings, across timezone offsets', async () => {
     // 04:20-0700 IS 11:20Z — later than my 11:00Z comment. Lexically, '0' < '1'
     // puts it first, which would silently mark a fresh push as old.
     const later = await run({ committedDate: '2026-07-30T04:20:00-0700', head: 'h-later' });
-    expect(later.first?.reviewUpdated).toBe(true);
+    expect(later.first?.newCommits).toBe(1);
     // And 03:00-0700 IS 10:00Z — genuinely earlier, despite sorting later.
     const earlier = await run({ committedDate: '2026-07-30T03:00:00-0700', head: 'h-earlier' });
-    expect(earlier.first?.reviewUpdated).toBe(false);
+    expect(earlier.first?.newCommits).toBe(0);
   });
 
   it('fetches the commit list once per head, not once per cycle', async () => {
     const r = await run({ committedDate: '2026-07-30T11:20:00Z' });
-    expect(r.again?.reviewUpdated).toBe(true); // still right on the next cycle
+    expect(r.again?.newCommits).toBe(1); // still right on the next cycle
     expect(r.commitCalls()).toBe(1); // ...without asking again
   });
 
   it('asks nothing of my own MRs', async () => {
     // "I pushed after I commented on my own MR" is just Tuesday.
     const r = await run({ committedDate: '2026-07-30T11:20:00Z', reviewer: false });
-    expect(r.first?.reviewUpdated).toBeFalsy();
+    expect(r.first?.newCommits).toBeFalsy();
     expect(r.commitCalls()).toBe(0);
   });
 
@@ -917,7 +917,7 @@ describe('reviewer freshness (commits since my last comment)', () => {
     const result = await pollOnce(deps({ db, forge: forge as never, config: cfg }), {});
     const item = result.snapshot.items.find((i) => i.iid === 7900);
     expect(item?.myLastCommentAt).toBe(MY_COMMENT); // known
-    expect(item?.reviewUpdated).toBe(false); // but never guessed
+    expect(item?.newCommits).toBe(0); // but never guessed
   });
 });
 
@@ -992,5 +992,95 @@ describe('backfilling my comment history', () => {
     const r = await cycles('alex.harper');
     expect(r.row()?.my_last_comment_at).toBe(''); // distinct from NULL
     expect(r.totalFetches).toBe(r.firstCycleFetches);
+  });
+});
+
+describe('counting new commits since my last review', () => {
+  // The count exists so the wording can be singular or plural, so it has to be
+  // exact — and it has to fall to zero when I comment again, on the very next
+  // cycle, without another commit fetch.
+  const HEAD = 'countinghead';
+  const mr = (): ForgeMr =>
+    ({
+      id: 6,
+      iid: 7970,
+      project_id: 1,
+      title: 'ENG-170: Their work',
+      state: 'opened',
+      sha: HEAD,
+      source_branch: 'ENG-170',
+      target_branch: 'main',
+      web_url: '#',
+      updated_at: '2026-07-30T12:00:00Z',
+      created_at: '2026-07-29T11:00:00Z',
+      user_notes_count: 1,
+      draft: false,
+      has_conflicts: false,
+      author: { id: 2, username: 'alex.harper', name: 'Alex' },
+      references: { full: 'acme/rocket!7970' },
+    }) as ForgeMr;
+
+  const myCommentAt = (at: string) => [
+    {
+      id: 1,
+      individual_note: false,
+      notes: [
+        {
+          id: 1,
+          body: 'take another look at this',
+          author: { id: 1, username: 'me', name: 'Me' },
+          created_at: at,
+          updated_at: at,
+          system: false,
+          resolvable: true,
+          resolved: false,
+        },
+      ],
+      // discussion id must be a string for summarizeThreads
+      ...{ id: 'T1' },
+    },
+  ];
+
+  /** Three commits: two after my 11:00 comment, one before. */
+  const commits = () => [
+    { id: 'c3', title: 'third', committed_date: '2026-07-30T11:40:00Z' },
+    { id: 'c2', title: 'second', committed_date: '2026-07-30T11:20:00Z' },
+    { id: 'c1', title: 'first', committed_date: '2026-07-30T10:00:00Z' },
+  ];
+
+  const run = async (commentAt: string) => {
+    let commitCalls = 0;
+    const forge = fakeForge({
+      reviewerMrs: async () => [mr()],
+      discussions: async () => myCommentAt(commentAt),
+      commits: async () => {
+        commitCalls += 1;
+        return commits();
+      },
+    });
+    const cfg: Config = { ...config(), recentDaysFallback: 3650 };
+    const first = await pollOnce(deps({ db, forge: forge as never, config: cfg }), {});
+    const again = await pollOnce(deps({ db, forge: forge as never, config: cfg }), {});
+    const pick = (r: Awaited<ReturnType<typeof pollOnce>>) => r.snapshot.items.find((i) => i.iid === 7970);
+    return { first: pick(first), again: pick(again), commitCalls: () => commitCalls };
+  };
+
+  it('counts only the commits newer than my comment', async () => {
+    const r = await run('2026-07-30T11:00:00Z');
+    expect(r.first?.newCommits).toBe(2); // 11:20 and 11:40, not 10:00
+  });
+
+  it('keeps the exact count on a cycle that does not refetch', async () => {
+    const r = await run('2026-07-30T11:00:00Z');
+    expect(r.again?.newCommits).toBe(2);
+    expect(r.commitCalls()).toBe(1);
+  });
+
+  it('falls to zero once I comment after the newest commit', async () => {
+    // Recomputed from the cached dates, so a later comment settles it with no
+    // extra fetch — the reason the dates are cached rather than a single flag.
+    const r = await run('2026-07-30T12:00:00Z');
+    expect(r.first?.newCommits).toBe(0);
+    expect(r.again?.newCommits).toBe(0);
   });
 });

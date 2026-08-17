@@ -131,7 +131,7 @@ export const diff = (input: DiffInput): DiffResult => {
     // The reviewer-side signal: the author pushed after my newest comment, so
     // the ball is back in my court. Keyed by head sha, so it fires once per
     // push rather than every cycle while the state persists.
-    if (!seeding && item.reviewUpdated && item.myLastCommentAt) {
+    if (!seeding && (item.newCommits ?? 0) > 0 && item.myLastCommentAt) {
       const key = `${item.key}|${item.headSha}`;
       if (!db.wasNotified('review_updated', key)) {
         events.push({
@@ -139,6 +139,7 @@ export const diff = (input: DiffInput): DiffResult => {
           ...base(item),
           headSha: item.headSha,
           since: item.myLastCommentAt,
+          count: item.newCommits ?? 0,
         });
         pending.push((d) => d.markNotified('review_updated', key, now));
       }
@@ -182,10 +183,11 @@ export const diff = (input: DiffInput): DiffResult => {
           unverified_count: item.unverifiedCache ? String(item.unverifiedCache.count) : null,
           unverified_sha: item.unverifiedCache?.sha ?? null,
           my_last_comment_at: item.myLastCommentAt ?? prev?.my_last_comment_at ?? null,
-          // Cached per head sha: a commit date for a sha that is no longer the
+          // Cached per head sha: commit dates for a sha that is no longer the
           // head would answer the wrong question next cycle.
-          head_committed_at:
-            item.headCommittedAt ?? (prev?.head_sha === item.headSha ? (prev?.head_committed_at ?? null) : null),
+          head_commit_dates: item.headCommitDates
+            ? JSON.stringify(item.headCommitDates)
+            : (prev?.head_sha === item.headSha ? (prev?.head_commit_dates ?? null) : null),
         },
         now,
       ),
@@ -420,8 +422,8 @@ export const describe = (e: AppEvent): { title: string; body: string } => {
       return { title: `${e.mrKey} — merge conflict`, body: e.mrTitle };
     case 'review_updated':
       return {
-        title: `${e.mrKey} — updated since your comment`,
-        body: `New commits on ${e.branch} · ${e.mrTitle}`,
+        title: `${e.mrKey} — updated since your last review`,
+        body: `${e.count} new commit${e.count === 1 ? '' : 's'} on ${e.branch} · ${e.mrTitle}`,
       };
     case 'ci_failed':
       return {

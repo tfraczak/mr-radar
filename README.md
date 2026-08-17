@@ -275,8 +275,9 @@ backlog. The shipped default: everything on your own MRs, and on other people's,
 traffic (comments, approvals, reviews, conflicts) but not their CI.
 
 **MRs you review get one signal of their own:** the author pushed since you last spoke.
-The row grows an **updated** badge, the attention line reads "New commits since your
-comment", and the banner fires once per push. It compares the head commit's date against
+The row grows an **updated** badge, the attention line reads "New commit(s) since your
+last review" — singular when it really is one — and the banner fires once per push with
+the count. It compares the head commit's date against
 your newest comment — the real question, rather than "the MR changed somehow" — and the
 commit list is fetched once per push, not per cycle.
 

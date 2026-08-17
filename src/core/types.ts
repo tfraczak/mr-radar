@@ -302,14 +302,21 @@ export interface WatchItem {
   // Reviewer-side freshness: has the author pushed since I last spoke?
   /** ISO timestamp of my newest comment on this MR, if I have commented. */
   myLastCommentAt?: string;
-  /** ISO commit date of the newest commit on the current head, when known. */
-  headCommittedAt?: string;
   /**
-   * Commits landed after my newest comment — the ball is back in my court.
-   * Only computed for MRs I did not author: on my own MR, "I pushed after I
-   * commented" is just Tuesday.
+   * Commit dates for the current head, cached per head sha.
+   *
+   * The dates rather than just the newest one, because `newCommits` has to be
+   * recomputable without a refetch: commenting again moves my comment forward
+   * and must drop the count to zero on the very next cycle, and a single
+   * "newest commit" date can only answer "any?", never "how many?".
    */
-  reviewUpdated?: boolean;
+  headCommitDates?: string[];
+  /**
+   * How many commits landed after my newest comment — the ball is back in my
+   * court, and by how much. Only computed for MRs I did not author: on my own
+   * MR, "I pushed after I commented" is just Tuesday.
+   */
+  newCommits?: number;
 }
 
 export interface ThreadSummary {
@@ -371,6 +378,8 @@ export type AppEvent =
       headSha: string;
       /** My newest comment's timestamp — what "since" means here. */
       since: string;
+      /** How many commits landed after it. */
+      count: number;
     })
   | (EventBase & {
       type: 'ci_failed';

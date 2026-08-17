@@ -797,14 +797,19 @@ const renderRow = (
       createBadge(`→ ${item.targetBranch}`, 'warn', `This ${mr()} targets ${item.targetBranch}, not main`),
     );
   }
-  if (item.reviewUpdated) {
+  if (item.newCommits) {
+    const n = item.newCommits;
+    // The label stays short; the tooltip carries the count and what "last
+    // review" means operationally — the timestamp of your newest comment.
+    const plural = `${n} commit${n === 1 ? '' : 's'}`;
     row.meta.append(
       createBadge(
         'updated',
-        'accent',
+        'warn', // matches the attention line's amber, so both draw the eye
+
         item.myLastCommentAt
-          ? `New commits since your last comment (${new Date(item.myLastCommentAt).toLocaleString()})`
-          : 'New commits since your last comment',
+          ? `${plural} pushed since your newest comment (${new Date(item.myLastCommentAt).toLocaleString()})`
+          : `${plural} pushed since your last review`,
       ),
     );
   }

@@ -195,6 +195,13 @@ export class Db {
       // commit list is fetched once per push, not once per cycle.
       'ALTER TABLE mrs ADD COLUMN my_last_comment_at TEXT',
       'ALTER TABLE mrs ADD COLUMN head_committed_at TEXT',
+      // Supersedes head_committed_at (now unused, and unremovable — SQLite
+      // additive migrations only). A JSON array of the head's commit dates,
+      // because the count of commits newer than my comment has to survive a
+      // cycle that does not refetch, AND has to fall to zero the moment I
+      // comment again — a single newest-commit date can answer "any?" but never
+      // "how many?".
+      'ALTER TABLE mrs ADD COLUMN head_commit_dates TEXT',
     ]) {
       try {
         this.db.exec(stmt);
@@ -260,7 +267,7 @@ export class Db {
            updated_at, user_notes_count, unresolved, approvals_left, approvals_required,
            approvals_by, has_conflicts, in_scope, reason, ticket_key, ticket_status,
            ticket_json, unverified_count, unverified_sha, my_last_comment_at,
-           head_committed_at, first_seen_at, last_seen_at
+           head_commit_dates, first_seen_at, last_seen_at
          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
          ON CONFLICT(key) DO UPDATE SET
            project_path = excluded.project_path,
@@ -284,7 +291,7 @@ export class Db {
            ticket_json = excluded.ticket_json,
            unverified_count = excluded.unverified_count,
            my_last_comment_at = excluded.my_last_comment_at,
-           head_committed_at = excluded.head_committed_at,
+           head_commit_dates = excluded.head_commit_dates,
            unverified_sha = excluded.unverified_sha,
            last_seen_at = excluded.last_seen_at`,
       )
@@ -312,7 +319,7 @@ export class Db {
         row.unverified_count ?? null,
         row.unverified_sha ?? null,
         row.my_last_comment_at ?? null,
-        row.head_committed_at ?? null,
+        row.head_commit_dates ?? null,
         at,
         at,
       );
@@ -770,8 +777,8 @@ export interface MrRow {
   unverified_sha: string | null;
   /** My newest comment on this MR (ISO), or null if I have not commented. */
   my_last_comment_at: string | null;
-  /** Newest commit date for `head_sha` — the cache key is the sha itself. */
-  head_committed_at: string | null;
+  /** JSON array of the head's commit dates; the cache key is `head_sha`. */
+  head_commit_dates: string | null;
   ignore_override: string | null;
   first_seen_at: string;
   last_seen_at: string;
@@ -826,6 +833,23 @@ export const cachedTicket = (raw: string | null, expectedKey: string): JiraTicke
     ...(str(t.issueType) ? { issueType: str(t.issueType)! } : {}),
     ...(Array.isArray(t.fixVersions) ? { fixVersions: parseFixVersions(JSON.stringify(t.fixVersions)) } : {}),
   };
+};
+
+/**
+ * The cached commit dates for an MR's head, or undefined when there are none to
+ * trust. Defensive like every other JSON column: a malformed value reads as
+ * absent, so a bad row makes the app claim nothing rather than crash a render.
+ */
+export const commitDates = (raw: string | null): string[] | undefined => {
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return undefined;
+    const dates = parsed.filter((d): d is string => typeof d === 'string' && d !== '');
+    return dates.length ? dates : undefined;
+  } catch {
+    return undefined;
+  }
 };
 
 export interface CiRunRow {

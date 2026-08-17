@@ -425,7 +425,7 @@ const toUiItem = (
     updatedAt: item.updatedAt,
     ...(item.ticket?.dueDate ? { dueDate: item.ticket.dueDate } : {}),
     overdue,
-    ...(item.reviewUpdated ? { reviewUpdated: true } : {}),
+    ...(item.newCommits ? { newCommits: item.newCommits } : {}),
     ...(item.myLastCommentAt ? { myLastCommentAt: item.myLastCommentAt } : {}),
     attention,
     ...(attentionExtra ? { attentionExtra } : {}),
@@ -466,8 +466,13 @@ const attentionOf = (
   // check because this is only ever set on an MR I do NOT author, and someone
   // else's missing fix version is not the thing I can act on — their new commits
   // are. The row keeps the "needs a fix version" affordance either way.
-  if (item.reviewUpdated) {
-    return { text: 'New commits since your comment', tone: 'info', rank: 2 };
+  if (item.newCommits) {
+    const n = item.newCommits;
+    // 'warn' (amber), not 'info': in accent blue this read as ordinary next to
+    // "Your review is requested", and it is not ordinary — someone is waiting
+    // on you. Deliberately not 'bad': red stays the colour of something broken
+    // (conflicts, failing suites), which is only legible if it stays rare.
+    return { text: `New commit${n === 1 ? '' : 's'} since your last review`, tone: 'warn', rank: 2 };
   }
   // A rule-flagged missing value blocks the pipeline (e.g. Dev Complete
   // without a fix version can't ride a release) — more urgent than review

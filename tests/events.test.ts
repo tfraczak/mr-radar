@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { Db } from '../src/core/db';
+import { Db, commitDates } from '../src/core/db';
 import { coalesce, diff, toNotifications } from '../src/core/events';
 import { summarizeThreads, unresolvedCount } from '../src/core/correlate';
 import { EVENT_TYPES } from '../src/core/types';
@@ -607,51 +607,51 @@ describe('the notification matrix', () => {
   });
 });
 
-describe('review_updated (commits since my last comment)', () => {
+describe('review_updated (commits since my last review)', () => {
   const reviewing = (over: Partial<WatchItem> = {}) =>
     item({ reason: 'reviewer', myLastCommentAt: NOW, ...over });
 
   it('fires once per push, not once per cycle', () => {
     cycle([reviewing()]);
-    const first = cycle([reviewing({ reviewUpdated: true })], [], LATER);
+    const first = cycle([reviewing({ newCommits: 1 })], [], LATER);
     expect(first.map((e) => e.type)).toEqual(['review_updated']);
-    expect(first[0]).toMatchObject({ mrKey: 'acme/rocket!7576', headSha: HEAD, since: NOW });
+    expect(first[0]).toMatchObject({ mrKey: 'acme/rocket!7576', headSha: HEAD, since: NOW, count: 1 });
     // Same head, still updated: already said.
-    expect(cycle([reviewing({ reviewUpdated: true })], [], LATER)).toEqual([]);
+    expect(cycle([reviewing({ newCommits: 1 })], [], LATER)).toEqual([]);
   });
 
   it('fires again after the next push', () => {
     cycle([reviewing()]);
-    cycle([reviewing({ reviewUpdated: true })], [], LATER);
-    const next = cycle([reviewing({ reviewUpdated: true, headSha: 'newhead' })], [], LATER);
+    cycle([reviewing({ newCommits: 1 })], [], LATER);
+    const next = cycle([reviewing({ newCommits: 2, headSha: 'newhead' })], [], LATER);
     expect(next.map((e) => e.type)).toEqual(['review_updated']);
   });
 
   it('says nothing on the first sighting of an MR', () => {
     // Silent seeding: an MR that is already "updated" when we first see it
     // would otherwise fire on the cycle it appears, like every other signal.
-    expect(cycle([reviewing({ reviewUpdated: true })])).toEqual([]);
+    expect(cycle([reviewing({ newCommits: 1 })])).toEqual([]);
   });
 
   it('says nothing without the flag, or without a comment of mine', () => {
     cycle([reviewing()]);
     expect(cycle([reviewing()], [], LATER)).toEqual([]);
-    const noComment = item({ reason: 'reviewer', reviewUpdated: true });
+    const noComment = item({ reason: 'reviewer', newCommits: 1 });
     delete noComment.myLastCommentAt;
     cycle([item({ key: 'acme/rocket!2', iid: 2, reason: 'reviewer' })]);
     expect(cycle([{ ...noComment, key: 'acme/rocket!2', iid: 2 }], [], LATER)).toEqual([]);
   });
 
-  it('persists my last comment and the head commit date across a skipped fetch', () => {
-    cycle([reviewing({ headCommittedAt: LATER })]);
+  it('persists my last comment and the head commit dates across a skipped fetch', () => {
+    cycle([reviewing({ headCommitDates: [LATER, NOW] })]);
     const row = db.getMr('acme/rocket!7576');
     expect(row?.my_last_comment_at).toBe(NOW);
-    expect(row?.head_committed_at).toBe(LATER);
+    expect(commitDates(row?.head_commit_dates ?? null)).toEqual([LATER, NOW]);
   });
 
-  it('drops a cached commit date when the head moves on', () => {
-    cycle([reviewing({ headCommittedAt: LATER })]);
+  it('drops the cached commit dates when the head moves on', () => {
+    cycle([reviewing({ headCommitDates: [LATER] })]);
     cycle([reviewing({ headSha: 'newhead' })], [], LATER);
-    expect(db.getMr('acme/rocket!7576')?.head_committed_at).toBeNull();
+    expect(db.getMr('acme/rocket!7576')?.head_commit_dates).toBeNull();
   });
 });

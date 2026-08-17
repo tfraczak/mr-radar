@@ -11,7 +11,7 @@ import {
 } from './ci';
 import { buildJql, ownerClause, type Config } from './config';
 import { correlate, detailsChanged, summarizeThreads, unresolvedCount } from './correlate';
-import { cachedTicket, type Db, type MrRow } from './db';
+import { cachedTicket, commitDates, type Db, type MrRow } from './db';
 import { coalesce, diff } from './events';
 import { effectiveIgnore } from './rules';
 import type { ForgeSource } from './sources/forge';
@@ -1134,28 +1134,28 @@ const reviewFreshness = async (args: {
   // My own MR needs none of this, and neither does one I have never commented on.
   if (item.reason === 'authored' || !item.myLastCommentAt) return;
 
-  if (prev?.head_sha === item.headSha && prev.head_committed_at) {
-    item.headCommittedAt = prev.head_committed_at;
+  const cached = prev?.head_sha === item.headSha ? commitDates(prev.head_commit_dates) : undefined;
+  if (cached) {
+    item.headCommitDates = cached;
   } else {
     try {
       const commits = await forge.commits(item.projectPath, item.iid);
       stats.commitFetches += 1;
       stats.apiCalls += 1;
-      const newest = commits
-        .map((c) => c.committed_date)
-        .filter(Boolean)
-        .reduce<string | undefined>((a, b) => (a === undefined || instant(b) > instant(a) ? b : a), undefined);
-      if (newest) item.headCommittedAt = newest;
+      const dates = commits.map((c) => c.committed_date).filter(Boolean);
+      if (dates.length) item.headCommitDates = dates;
     } catch {
       // No commit list this cycle: leave it unknown rather than guessing. The
-      // row simply doesn't claim to be updated.
+      // row simply doesn't claim anything.
       void db;
     }
   }
 
-  item.reviewUpdated =
-    item.headCommittedAt !== undefined &&
-    instant(item.headCommittedAt) > instant(item.myLastCommentAt);
+  // Counted every cycle from the cached dates rather than stored, so commenting
+  // again drops it to zero immediately — without a refetch, and without the
+  // count going stale against a comment that moved.
+  const since = item.myLastCommentAt;
+  item.newCommits = (item.headCommitDates ?? []).filter((d) => instant(d) > instant(since)).length;
 };
 
 /** ms since epoch, or 0 for an unparseable date (never NaN in a comparison). */

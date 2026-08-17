@@ -164,8 +164,9 @@ export interface UiItem {
   /** Snapshot-data hint that this MR looks announceable for review — shows the
    *  Copy-for-Slack button; the click re-checks fresh before composing. */
   slackReady?: boolean | undefined;
-  /** Commits landed after my newest comment (MRs I review) — an "Updated" badge. */
-  reviewUpdated?: boolean | undefined;
+  /** How many commits landed after my newest comment (MRs I review). Drives the
+   *  "updated" badge and the singular/plural of its attention line. */
+  newCommits?: number | undefined;
   /** My newest comment's timestamp, for the badge's tooltip. */
   myLastCommentAt?: string | undefined;
   ci: {

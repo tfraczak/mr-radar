@@ -757,26 +757,38 @@ describe('the Updated signal on MRs I review', () => {
 
   it('says what changed, in place of the standing review request', () => {
     expect(rowOf(reviewing())?.attention.text).toBe('Your review is requested');
-    const updated = rowOf(reviewing({ reviewUpdated: true, myLastCommentAt: NOW.toISOString() }));
-    expect(updated?.attention.text).toBe('New commits since your comment');
-    expect(updated?.reviewUpdated).toBe(true);
+    const updated = rowOf(reviewing({ newCommits: 3, myLastCommentAt: NOW.toISOString() }));
+    expect(updated?.attention.text).toBe('New commits since your last review');
+    // Amber, not the accent blue of a standing review request: this one means
+    // someone is waiting on you. Red stays reserved for broken things.
+    expect(updated?.attention.tone).toBe('warn');
+    expect(updated?.newCommits).toBe(3);
     expect(updated?.myLastCommentAt).toBe(NOW.toISOString()); // the badge's tooltip
   });
 
   it("outranks someone else's missing ticket value — theirs to fix, not mine", () => {
     const dc = ticket('Dev Complete', { key: 'ENG-8', issueType: 'Story', fixVersions: [] });
-    const row = rowOf(reviewing({ ticket: dc, reviewUpdated: true, myLastCommentAt: NOW.toISOString() }));
-    expect(row?.attention.text).toBe('New commits since your comment');
+    const row = rowOf(reviewing({ ticket: dc, newCommits: 2, myLastCommentAt: NOW.toISOString() }));
+    expect(row?.attention.text).toBe('New commits since your last review');
   });
 
   it('outranks a quiet row but never a broken one', () => {
-    const updated = rowOf(reviewing({ reviewUpdated: true, myLastCommentAt: NOW.toISOString() }));
-    const conflicted = rowOf(reviewing({ reviewUpdated: true, myLastCommentAt: NOW.toISOString(), hasConflicts: true }));
+    const updated = rowOf(reviewing({ newCommits: 1, myLastCommentAt: NOW.toISOString() }));
+    const conflicted = rowOf(reviewing({ newCommits: 1, myLastCommentAt: NOW.toISOString(), hasConflicts: true }));
     expect(updated?.attention.rank).toBe(2);
     expect(conflicted?.attention.text).toMatch(/Merge conflict/); // rank 0 still wins
   });
 
+  it('pluralizes by the real count: one commit is singular', () => {
+    const one = rowOf(reviewing({ newCommits: 1, myLastCommentAt: NOW.toISOString() }));
+    expect(one?.attention.text).toBe('New commit since your last review');
+    const two = rowOf(reviewing({ newCommits: 2, myLastCommentAt: NOW.toISOString() }));
+    expect(two?.attention.text).toBe('New commits since your last review');
+    const many = rowOf(reviewing({ newCommits: 11, myLastCommentAt: NOW.toISOString() }));
+    expect(many?.attention.text).toBe('New commits since your last review');
+  });
+
   it('is absent when nothing has been pushed since I spoke', () => {
-    expect(rowOf(reviewing())?.reviewUpdated).toBeUndefined();
+    expect(rowOf(reviewing())?.newCommits).toBeUndefined();
   });
 });
